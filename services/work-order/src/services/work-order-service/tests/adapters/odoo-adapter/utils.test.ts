@@ -58,6 +58,26 @@ describe('odoo-adapter utils', () => {
       expect(result.CloseRequestPending).toBe(false)
     })
 
+    it('should read RentalObjectCode from the linked rental property', () => {
+      const result = transformWorkOrder({
+        ...odooWorkOrderMock,
+        rental_property_id: [7, '306-001-01-0101'],
+      })
+
+      expect(result.RentalObjectCode).toBe('306-001-01-0101')
+    })
+
+    // Lokal and Bilplats ärenden keep their rentalId on facility_id or
+    // parking_space_id, so Odoo returns false here.
+    it('should fall back to an empty RentalObjectCode when no rental property is linked', () => {
+      const result = transformWorkOrder({
+        ...odooWorkOrderMock,
+        rental_property_id: false,
+      })
+
+      expect(result.RentalObjectCode).toBe('')
+    })
+
     it('should map maintenance team to resursgrupp name', () => {
       const withTeam = transformWorkOrder({
         ...odooWorkOrderMock,

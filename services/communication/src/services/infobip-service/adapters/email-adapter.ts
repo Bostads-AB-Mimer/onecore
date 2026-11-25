@@ -155,7 +155,7 @@ const sendTemplateEmailWithAttachments = async (params: {
 }
 
 export const sendEmail = async (message: Email) => {
-  logger.info({ to: message.to, subject: message.subject }, 'Sending email')
+  logger.info({ subject: message.subject }, 'Sending email')
 
   try {
     const response = await sendEmailV4([
@@ -166,10 +166,7 @@ export const sendEmail = async (message: Email) => {
       },
     ])
 
-    logger.info(
-      { to: message.to, subject: message.subject },
-      'Sending email complete'
-    )
+    logger.info({ subject: message.subject }, 'Sending email complete')
     return response
   } catch (error) {
     logger.error(error)

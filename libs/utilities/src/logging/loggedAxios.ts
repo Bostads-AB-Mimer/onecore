@@ -13,34 +13,6 @@ const getCorrelationId = (): string | undefined | null => {
   return null
 }
 
-const REDACTED_HEADERS = new Set([
-  'authorization',
-  'proxy-authorization',
-  'x-api-key',
-  'ocp-apim-subscription-key',
-  'cookie',
-  'set-cookie',
-])
-
-// Catches credential headers not in the explicit list (x-auth-token, x-functions-key...).
-const REDACTED_HEADER_PATTERN =
-  /auth|token|secret|passw|key|sign|credential|session|jwt|cookie/i
-
-const isCredentialHeader = (name: string) =>
-  REDACTED_HEADERS.has(name.toLowerCase()) || REDACTED_HEADER_PATTERN.test(name)
-
-// Credentials must never reach logs. Exported for tests and for callers that
-// log headers outside the axios interceptors (e.g. SOAP clients).
-export const redactHeaders = (
-  headers: Record<string, unknown> | undefined
-): Record<string, unknown> => {
-  const result: Record<string, unknown> = {}
-  for (const [name, value] of Object.entries(headers ?? {})) {
-    result[name] = isCredentialHeader(name) ? '[REDACTED]' : value
-  }
-  return result
-}
-
 let loggingExlusionFilters: RegExp[] | null = null
 
 export const setExclusionFilters = (exlusionFilters: RegExp[]) => {
@@ -76,7 +48,6 @@ axios.interceptors.request.use((request) => {
 
   const requestFields = {
     url: request.url,
-    headers: redactHeaders(request.headers),
     method: request.method,
     correlationId: request.headers['x-correlation-id'],
   }
@@ -98,7 +69,6 @@ axios.interceptors.response.use((response) => {
 
   const responseFields = {
     status: response.status,
-    headers: redactHeaders(response.headers),
     url: response.config.url,
     correlationId,
   }

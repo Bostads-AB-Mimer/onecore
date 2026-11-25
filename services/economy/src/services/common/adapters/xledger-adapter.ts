@@ -81,6 +81,46 @@ export const retryDelayMs = (attempt: number, random = Math.random) => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+/**
+ * Thrown when Xledger could not be reached or answered that it is down, so
+ * callers can tell "try again later" apart from other failures.
+ */
+export class XledgerUnavailableError extends Error {
+  constructor(readonly status?: number) {
+    super(`Xledger unavailable${status ? ` (status ${status})` : ''}`)
+    this.name = 'XledgerUnavailableError'
+  }
+}
+
+const RETRY_ERROR_CODES = new Set([
+  'BAD_REQUEST.BURST_RATE_LIMIT_REACHED',
+  'BAD_REQUEST.BURST_LIMIT_REACHED',
+  'BAD_REQUEST.CONCURRENCY_LIMIT_REACHED',
+])
+
+// Xledger is down or the request never reached it. 504 is left out since it
+// may also mean a slow query, and retrying that only adds load.
+const UNAVAILABLE_STATUSES = new Set([502, 503])
+const UNAVAILABLE_CODES = new Set(['ECONNREFUSED', 'ECONNRESET'])
+
+const getUnavailableStatus = (
+  err: unknown
+): { status?: number } | undefined => {
+  if (!axios.isAxiosError(err)) return undefined
+  const status = err.response?.status
+  if (status !== undefined) {
+    return UNAVAILABLE_STATUSES.has(status) ? { status } : undefined
+  }
+  return err.code && UNAVAILABLE_CODES.has(err.code) ? {} : undefined
+}
+
+// Only reads are retried. A write may already have been applied when Xledger
+// (or a gateway in front of it) answers with an error, so a retry could, for
+// example, create a miscellaneous invoice twice. Every write in this adapter
+// is a GraphQL mutation or a file upload.
+const isRead = (query: XledgerGraphQlQuery, attachment?: unknown) =>
+  !attachment && !/^\s*mutation\b/.test(query.query)
+
 let inFlight = 0
 const waiting: Array<() => void> = []
 
@@ -103,23 +143,55 @@ const makeXledgerRequest = async (
   query: XledgerGraphQlQuery,
   attachment?: any // TODO formidable file PersistentFileStorage
 ): Promise<any> => {
-  const { maxAttempts } = xledgerRequestPolicy
+  const { maxAttempts, unavailableMaxAttempts } = xledgerRequestPolicy
+  let unavailableAttempts = 0
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     await acquireSlot()
-    let result: XledgerResponse
+    let result: XledgerResponse | undefined
     try {
       result = await makeXledgerHttpRequest(query, attachment)
-    } catch (err) {
+    } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.code === 'ECONNABORTED') {
         logger.warn(
           { attempt, timeoutMs: xledgerRequestPolicy.timeoutMs, inFlight },
           `Xledger request timed out\n${stringifyGraphQlQuery(query)}`
         )
       }
-      throw err
+      const unavailable = getUnavailableStatus(err)
+      if (!unavailable) throw err
+
+      unavailableAttempts++
+      const retryable = isRead(query, attachment)
+      const isLast =
+        !retryable ||
+        unavailableAttempts >= unavailableMaxAttempts ||
+        attempt === maxAttempts
+      logger.warn(
+        {
+          attempt: unavailableAttempts,
+          maxAttempts: unavailableMaxAttempts,
+          status: unavailable.status,
+          code: axios.isAxiosError(err) ? err.code : undefined,
+          retryable,
+        },
+        !retryable
+          ? 'Xledger unavailable, not retrying a write since it may have been applied'
+          : isLast
+            ? 'Xledger unavailable, giving up'
+            : 'Xledger unavailable, waiting and retrying'
+      )
+      // A write may have been applied, so it must not look like "try again later".
+      if (!retryable) throw err
+      if (isLast) throw new XledgerUnavailableError(unavailable.status)
     } finally {
       releaseSlot()
+    }
+
+    // No result means Xledger was unavailable and we try again.
+    if (!result) {
+      await sleep(retryDelayMs(unavailableAttempts))
+      continue
     }
 
     if (result.status === 'ok') {
@@ -142,7 +214,7 @@ const makeXledgerRequest = async (
       result.data.map((error: any) => error.message).join('\n')
     )
     logger.error(
-      result.data,
+      { err: error },
       `Error making Xledger request\n${stringifyGraphQlQuery(query)}\n(${getCallerFromError(error)})`
     )
     throw error
@@ -184,9 +256,7 @@ const makeXledgerHttpRequest = async (
 
   if (result.status === 200) {
     if (result.data && result.data.errors) {
-      if (
-        result.data.errors[0].code === 'BAD_REQUEST.BURST_RATE_LIMIT_REACHED'
-      ) {
+      if (RETRY_ERROR_CODES.has(result.data.errors[0].code)) {
         return { status: 'retry', data: {} }
       } else {
         return { status: 'error', data: result.data.errors, query: query.query }
@@ -429,7 +499,7 @@ export const getCustomer = async (contactCode: string) => {
   const result = await makeXledgerRequest(query)
 
   if (result.data?.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   return result.data?.customers?.edges?.[0]?.node ?? null
@@ -580,7 +650,7 @@ const getCustomerDbId = async (contactCode: string): Promise<string | null> => {
 
   const result = await makeXledgerRequest(query)
 
-  return result.data?.customers?.edges?.[0].node.dbId ?? null
+  return result.data?.customers?.edges?.[0]?.node?.dbId ?? null
 }
 
 export const getCustomers = async (
@@ -625,7 +695,7 @@ export const getCustomers = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const customers = result.data.customers.edges.map((e: any) =>
@@ -639,6 +709,59 @@ export const getCustomers = async (
   }
 
   return customers
+}
+
+const CUSTOMER_CODE_CHUNK_SIZE = 100
+
+export const getExistingCustomerCodes = async (
+  contactCodes: string[]
+): Promise<string[]> => {
+  const query = gql`
+    query ($first: Int!, $filter: Customer_Filter, $after: String) {
+      customers(first: $first, filter: $filter, after: $after) {
+        edges {
+          cursor
+          node {
+            code
+          }
+        }
+        pageInfo {
+          hasNextPage
+        }
+      }
+    }
+  `
+  const existing: string[] = []
+
+  for (let i = 0; i < contactCodes.length; i += CUSTOMER_CODE_CHUNK_SIZE) {
+    const chunk = contactCodes.slice(i, i + CUSTOMER_CODE_CHUNK_SIZE)
+    let after: string | undefined
+
+    for (;;) {
+      const result = await makeXledgerRequest({
+        query,
+        variables: {
+          first: CUSTOMER_CODE_CHUNK_SIZE,
+          filter: { code_in: chunk },
+          after,
+        },
+      })
+
+      const {
+        edges,
+        pageInfo,
+      }: {
+        edges: { cursor: string; node: { code: string } }[]
+        pageInfo: { hasNextPage: boolean }
+      } = result.data.customers
+      existing.push(...edges.map((edge) => String(edge.node.code).trim()))
+
+      if (!pageInfo.hasNextPage || edges.length === 0) break
+      after = edges[edges.length - 1].cursor
+    }
+  }
+
+  return existing
 }
 
 export const getProjects = async (
@@ -670,7 +793,7 @@ export const getProjects = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const projects = result.data.projects.edges.map((e: any) =>
@@ -719,7 +842,7 @@ export const getContacts = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const contacts = result.data.contacts.edges.map((e: any) =>
@@ -1098,6 +1221,78 @@ export const getInvoicesByContactCode = async (
   return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
 }
 
+/*
+ * Fetches invoices by invoice number, regardless of which customer they are
+ * billed to. Used to enrich invoices that were found via a shared lease in
+ * Xpand (MIM-1160) — those belong to another paying contact, so the
+ * contact-scoped lookup above cannot reach them. The headerTransactionSourceDbId
+ * filter is required: without it the same invoice number also matches payment
+ * and credit transaction rows.
+ */
+export const getInvoicesByInvoiceNumbers = async (
+  invoiceNumbers: string[]
+): Promise<ParsedXledgerInvoice[]> => {
+  const CHUNK_SIZE = 50
+  // One invoice number can match several transaction rows (e.g. a regular row
+  // plus a loss row on account 1529), so the page size must be well above the
+  // chunk size — Xledger truncates at `first` without reporting it.
+  const PAGE_SIZE = 10000
+  const invoices: ParsedXledgerInvoice[] = []
+
+  for (let i = 0; i < invoiceNumbers.length; i += CHUNK_SIZE) {
+    const chunk = invoiceNumbers.slice(i, i + CHUNK_SIZE)
+
+    // Invoice numbers are passed as GraphQL variables, never interpolated
+    // into the query document.
+    const query = {
+      query: gql`
+        query($filter: ARTransaction_Filter, $first: Int) {
+          arTransactions(first: $first, filter: $filter) {
+            edges {
+              node {
+                ${invoiceNodeFragment}
+              }
+            }
+          }
+        }
+      `,
+      variables: {
+        first: PAGE_SIZE,
+        filter: {
+          invoiceNumber_in: chunk,
+          headerTransactionSourceDbId_in: [
+            TransactionSourceDbId.SO,
+            TransactionSourceDbId.AR,
+            TransactionSourceDbId.OS,
+          ],
+        },
+      },
+    }
+
+    try {
+      const result = await makeXledgerRequest(query)
+      const edges = result.data?.arTransactions?.edges ?? []
+
+      if (edges.length >= PAGE_SIZE) {
+        logger.warn(
+          { invoiceNumbers: chunk.length, returnedRows: edges.length },
+          'Xledger invoice-number lookup hit the page size, results may be truncated'
+        )
+      }
+
+      invoices.push(...edges.map(transformToInvoice))
+    } catch (err: unknown) {
+      logger.error(
+        { err, invoiceNumbers: chunk.length },
+        'adapter.getInvoicesByInvoiceNumbers'
+      )
+      throw err
+    }
+  }
+
+  return invoices
+}
+
 export const getInvoices = async (from?: Date, to?: Date) => {
   const query = {
     query: gql`
@@ -1246,6 +1441,51 @@ export async function getInvoiceByInvoiceNumber(
   } catch (err) {
     logger.error(err, 'Error getting invoice from Xledger')
     throw err
+  }
+}
+
+/*
+ * Downloads the PDF Xledger keeps for an invoice (e.g. a miscellaneous
+ * invoice). invoiceFile.url is a link Xledger hands out that opens without an
+ * Xledger login, so no auth header is sent with it.
+ */
+export async function getInvoiceFile(
+  invoiceNumber: string
+): Promise<
+  AdapterResult<Buffer, 'invoice-not-found' | 'file-not-found' | 'unknown'>
+> {
+  let parsed: ParsedXledgerInvoice | null
+  try {
+    parsed = await getInvoiceByInvoiceNumber(invoiceNumber)
+  } catch {
+    // getInvoiceByInvoiceNumber has already logged the failure.
+    return { ok: false, err: 'unknown' }
+  }
+  if (!parsed) return { ok: false, err: 'invoice-not-found' }
+
+  const fileUrl = parsed.invoice.invoiceFileUrl
+  if (!fileUrl) return { ok: false, err: 'file-not-found' }
+
+  try {
+    const response = await axios.get(fileUrl, {
+      responseType: 'arraybuffer',
+      timeout: xledgerRequestPolicy.timeoutMs,
+      validateStatus: () => true,
+    })
+
+    if (response.status === 404) return { ok: false, err: 'file-not-found' }
+    if (response.status !== 200) {
+      logger.error(
+        { invoiceNumber, status: response.status },
+        'xledger-adapter.getInvoiceFile'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: Buffer.from(response.data) }
+  } catch (err: unknown) {
+    logger.error({ err, invoiceNumber }, 'xledger-adapter.getInvoiceFile')
+    return { ok: false, err: 'unknown' }
   }
 }
 

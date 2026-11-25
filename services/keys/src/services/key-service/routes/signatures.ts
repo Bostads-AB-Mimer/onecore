@@ -257,7 +257,10 @@ export const routes = (router: KoaRouter) => {
       const webhookPayload = ctx.request.body as SimpleSignWebhookPayload
 
       logger.info(
-        { documentId: webhookPayload.id, status: webhookPayload.status },
+        {
+          documentId: webhookPayload.id,
+          documentStatus: webhookPayload.status,
+        },
         'SimpleSign webhook received'
       )
 

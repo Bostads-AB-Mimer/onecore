@@ -215,13 +215,13 @@ describe('POST /rental-objects/:rentalObjectCode/type/sync', () => {
   it('returns 500 when the Tenfast lookup fails', async () => {
     getRentalObject.mockResolvedValueOnce({
       ok: false,
-      err: 'could-not-find-rental-object',
+      err: 'could-not-fetch-rental-object',
     })
 
     const res = await post({ code: 'POÄNGFRITT' })
 
     expect(res.status).toBe(500)
-    expect(res.body.error).toBe('could-not-find-rental-object')
+    expect(res.body.error).toBe('could-not-fetch-rental-object')
     expect(updateRentalObjectCategory).not.toHaveBeenCalled()
   })
 

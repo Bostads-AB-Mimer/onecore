@@ -147,11 +147,15 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       dayjs().subtract(6, 'month').toDate()
     )
     if (!debtCollectionInvoices.ok) {
+      // The credit check fails closed: without invoices the application stops.
+      const isUnavailable = debtCollectionInvoices.err === 'unavailable'
       return endFailingProcess(
         log,
-        CreateNoteOfInterestErrorCodes.InternalError,
-        500,
-        `Failed to get invoices for contact ${applicantContact.contactCode}: ${debtCollectionInvoices.statusCode} ${debtCollectionInvoices.err}`
+        isUnavailable
+          ? CreateNoteOfInterestErrorCodes.ServiceUnavailable
+          : CreateNoteOfInterestErrorCodes.InternalError,
+        isUnavailable ? 503 : 500,
+        `Failed to get invoices for contact ${applicantContact.contactCode}: ${debtCollectionInvoices.statusCode ?? 'no status'} ${debtCollectionInvoices.err}`
       )
     }
     const creditCheck = debtCollectionInvoices.data.length === 0
@@ -192,7 +196,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         log.push(`Sökande placerad i kö för parkeringsplats`)
       } else {
         logger.error(
-          result,
+          { status: result.status, statusText: result.statusText },
           `Could not add applicant to parking space waiting list`
         )
 
@@ -339,7 +343,7 @@ const endFailingProcess = (
   if (error) log.push(error)
 
   logger.debug(log)
-  logger.error(error ?? processErrorCode, details)
+  logger.error({ err: error, errorCode: processErrorCode }, details)
 
   sendNotificationToRole(
     'dev',

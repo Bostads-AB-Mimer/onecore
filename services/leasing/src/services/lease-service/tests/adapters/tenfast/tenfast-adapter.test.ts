@@ -56,7 +56,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     })
   })
 
-  it('should return error "could-not-find-rental-object" when status is not 200 or 404', async () => {
+  it('should return error "could-not-fetch-rental-object" when status is not 200 or 404', async () => {
     // Arrange
     const mockResponse = {
       status: 500,
@@ -70,7 +70,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     // Assert
     expect(result).toEqual({
       ok: false,
-      err: 'could-not-find-rental-object',
+      err: 'could-not-fetch-rental-object',
     })
   })
 
@@ -92,7 +92,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     })
   })
 
-  it('should return error "could-not-find-rental-object" when request throws an exception', async () => {
+  it('should return error "could-not-fetch-rental-object" when request throws an exception', async () => {
     // Arrange
     ;(request as jest.Mock).mockRejectedValue(new Error('Network error'))
 
@@ -102,7 +102,7 @@ describe(tenfastAdapter.getRentalObject, () => {
     // Assert
     expect(result).toEqual({
       ok: false,
-      err: 'could-not-find-rental-object',
+      err: 'could-not-fetch-rental-object',
     })
   })
 })
@@ -263,7 +263,7 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     // Arrange
     const upcomingLease = factory.tenfastLease.build({
       startDate: new Date('2026-06-01'), // starts in the future
-      endDate: new Date('2027-06-01'),
+      endDate: null, // until further notice
       stage: 'upcoming',
     })
     const rentalObjectWithUpcoming = factory.tenfastRentalObject.build({
@@ -448,6 +448,146 @@ describe(tenfastAdapter.getAvailabilityForVacantRentalObjects, () => {
     mockTenfastResponses({
       givenNotice: [terminatingLease],
       claimed: [upcomingLease],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toHaveLength(0)
+  })
+
+  it('includes a rental object given notice whose upcoming lease is also given notice, vacant the day after the upcoming lease ends', async () => {
+    // Arrange — 307-705-00-0033 on production (AVTAL-517)
+    const hyresobjekt = [
+      factory.tenfastRentalObject.build({
+        externalId: 'R2010',
+        avtal: undefined,
+      }),
+    ]
+    const terminatingLease = factory.tenfastLease.build({
+      externalId: '307-705-00-0033/12',
+      stage: 'terminationScheduled',
+      endDate: new Date('2099-12-31'),
+      hyresobjekt,
+    })
+    const terminatedUpcomingLease = factory.tenfastLease.build({
+      externalId: '307-705-00-0033/13',
+      stage: 'upcoming',
+      endDate: new Date('2100-01-31'),
+      cancellation: { requested: true },
+      hyresobjekt,
+    })
+    mockTenfastResponses({
+      givenNotice: [terminatingLease],
+      claimed: [terminatedUpcomingLease],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        rentalObjectCode: 'R2010',
+        vacantFrom: new Date('2100-02-01T00:00:00.000Z'),
+      }),
+    ])
+  })
+
+  it('includes a vacant rental object whose only upcoming lease has an end date, even if its own leases miss it', async () => {
+    // Arrange — includeAvtal only returns an object's 10 latest leases.
+    const rentalObject = factory.tenfastRentalObject.build({
+      externalId: 'R2011',
+      avtal: [],
+    })
+    mockTenfastResponses({
+      vacantOrSoonVacant: [rentalObject],
+      claimed: [
+        {
+          stage: 'upcoming',
+          endDate: '2099-12-31T00:00:00.000Z',
+          cancellation: { requested: true, cancelled: false },
+          hyresobjekt: [{ externalId: 'R2011' }],
+        },
+      ],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toEqual([
+      expect.objectContaining({
+        rentalObjectCode: 'R2011',
+        vacantFrom: new Date('2100-01-01T00:00:00.000Z'),
+      }),
+    ])
+  })
+
+  it('excludes a rental object whose upcoming lease has an end date that cannot be read', async () => {
+    // Arrange — the lease is kept without an end rather than failing the list.
+    const claimed = factory.tenfastRentalObject.build({
+      externalId: 'R2013',
+      avtal: [],
+    })
+    const free = factory.tenfastRentalObject.build({
+      externalId: 'R2014',
+      avtal: [],
+    })
+    mockTenfastResponses({
+      vacantOrSoonVacant: [claimed, free],
+      claimed: [
+        {
+          stage: 'upcoming',
+          endDate: 'not-a-date',
+          cancellation: { requested: true, cancelled: null },
+          hyresobjekt: [{ externalId: 'R2013' }],
+        },
+      ],
+    })
+
+    // Act
+    const result = await tenfastAdapter.getAvailabilityForVacantRentalObjects(
+      tenfastAdapter.RentalObjectType.ParkingSpace
+    )
+
+    // Assert
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.data).toEqual([
+      expect.objectContaining({ rentalObjectCode: 'R2014' }),
+    ])
+  })
+
+  it('excludes a rental object with a terminated upcoming lease if a draft follows it', async () => {
+    // Arrange
+    const rentalObject = factory.tenfastRentalObject.build({
+      externalId: 'R2012',
+      avtal: [],
+    })
+    mockTenfastResponses({
+      vacantOrSoonVacant: [rentalObject],
+      claimed: [
+        {
+          stage: 'upcoming',
+          endDate: '2099-12-31T00:00:00.000Z',
+          hyresobjekt: [{ externalId: 'R2012' }],
+        },
+        { stage: 'draft', hyresobjekt: [{ externalId: 'R2012' }] },
+      ],
     })
 
     // Act
@@ -787,7 +927,13 @@ describe(tenfastAdapter.createLease, () => {
     const fromDate = new Date('2099-11-01T00:00:00.000Z')
 
     const createLeaseFrom = (date: Date) =>
-      tenfastAdapter.createLease(factory.contact.build(), 'R1001', date, false)
+      tenfastAdapter.createLease(
+        factory.contact.build(),
+        'R1001',
+        date,
+        false,
+        []
+      )
 
     it.each(['upcoming', 'draft', 'signingInProgress'])(
       'returns "rental-object-not-available" without writing anything when a next tenant has a %s lease',
@@ -902,8 +1048,11 @@ describe(tenfastAdapter.createLease, () => {
       data: mockRentalObject,
     })
 
-    // Mock tenfastApi.request to return a successful lease response
-    const mockLease = factory.tenfastLease.build()
+    // Mock tenfastApi.request to return a successful lease response, created
+    // with the id createLease sends (the object has no earlier leases)
+    const mockLease = factory.tenfastLease.build({
+      externalId: 'RENTAL_CODE/01',
+    })
     const mockLeaseResponse = {
       status: 200,
       data: mockLease,
@@ -917,7 +1066,8 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      false
+      false,
+      []
     )
 
     // Assert
@@ -943,7 +1093,7 @@ describe(tenfastAdapter.createLease, () => {
     ;(request as jest.Mock).mockResolvedValue({
       status: 200,
       data: {
-        externalId: '216-704-00-0022/02',
+        externalId: 'RENTAL_CODE/01',
         hyresgaster: ['tenant-object-id'],
         hyresobjekt: ['rental-object-id'],
       },
@@ -955,11 +1105,150 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       new Date(),
-      false
+      false,
+      []
     )
 
     // Assert
-    expect(result).toEqual({ ok: true, data: '216-704-00-0022/02' })
+    expect(result).toEqual({ ok: true, data: 'RENTAL_CODE/01' })
+  })
+
+  describe('lease number (AVTAL-612)', () => {
+    const code = '704-703-00-0006'
+    let tenantSpy: jest.SpyInstance
+    let rentalObjectSpy: jest.SpyInstance
+    let errorSpy: jest.SpyInstance
+    let sentLease: { externalId?: string } | undefined
+
+    beforeEach(() => {
+      sentLease = undefined
+      tenantSpy = jest
+        .spyOn(tenfastAdapter, 'getTenantByContactCode')
+        .mockResolvedValue({ ok: true, data: factory.tenfastTenant.build() })
+      rentalObjectSpy = jest
+        .spyOn(tenfastAdapter, 'getRentalObject')
+        .mockResolvedValue({
+          ok: true,
+          data: factory.tenfastRentalObject.build(),
+        })
+      errorSpy = jest.spyOn(logger, 'error')
+      ;(request as jest.Mock).mockReset()
+      // Tenfast answers with the id it was sent.
+      ;(request as jest.Mock).mockImplementation(({ data }) => {
+        sentLease = data
+        return Promise.resolve({
+          status: 200,
+          data: { externalId: data.externalId },
+        })
+      })
+    })
+
+    afterEach(() => {
+      tenantSpy.mockRestore()
+      rentalObjectSpy.mockRestore()
+      errorSpy.mockRestore()
+    })
+
+    const createLease = (earlierLeaseIds: string[]) =>
+      tenfastAdapter.createLease(
+        factory.contact.build(),
+        code,
+        new Date(),
+        false,
+        earlierLeaseIds
+      )
+
+    it('sends /01 when the object has no leases in Tenfast or Xpand', async () => {
+      const result = await createLease([])
+
+      expect(sentLease?.externalId).toBe(`${code}/01`)
+      expect(result).toEqual({ ok: true, data: `${code}/01` })
+    })
+
+    it('continues from the earlier leases when Tenfast has none, as on an object vacant at the migration', async () => {
+      const result = await createLease([`${code}/01`, `${code}/04`])
+
+      expect(sentLease?.externalId).toBe(`${code}/05`)
+      expect(result).toEqual({ ok: true, data: `${code}/05` })
+    })
+
+    it('continues from the earlier leases when they go higher than the Tenfast leases, as on an object that already got a clashing number', async () => {
+      leaseStagesSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [
+          { externalId: `${code}/01`, stage: 'terminated', endDate: null },
+          { stage: 'voided', endDate: null },
+        ],
+      })
+
+      await createLease([`${code}/03`, `${code}/04`])
+
+      expect(sentLease?.externalId).toBe(`${code}/05`)
+    })
+
+    it('continues from the highest of the Tenfast leases, voided ones included, and the earlier leases', async () => {
+      leaseStagesSpy.mockResolvedValueOnce({
+        ok: true,
+        data: [
+          { externalId: `${code}/05`, stage: 'terminated', endDate: null },
+          { externalId: `${code}/07M`, stage: 'voided', endDate: null },
+        ],
+      })
+
+      await createLease([`${code}/06`])
+
+      expect(sentLease?.externalId).toBe(`${code}/08`)
+    })
+
+    it.each([
+      [400, 'create-lease-bad-request'],
+      [409, 'lease-could-not-be-created'],
+    ])(
+      'logs the id it sent, once, when Tenfast refuses the lease with %i',
+      async (status, err) => {
+        ;(request as jest.Mock).mockResolvedValue({
+          status,
+          data: { error: 'refused' },
+        })
+
+        const result = await createLease([`${code}/04`])
+
+        expect(result).toEqual({ ok: false, err })
+        expect(errorSpy).toHaveBeenCalledTimes(1)
+        expect(errorSpy).toHaveBeenCalledWith(
+          { externalId: `${code}/05`, status, error: 'refused' },
+          expect.stringContaining('did not create the lease with this id')
+        )
+      }
+    )
+
+    it('logs the id it sent when the create throws, as on a 5xx reply or a timeout', async () => {
+      ;(request as jest.Mock).mockRejectedValue(new Error('timeout'))
+
+      const result = await createLease([`${code}/04`])
+
+      expect(result).toEqual({ ok: false, err: 'lease-could-not-be-created' })
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ externalId: `${code}/05` }),
+        expect.stringContaining('caught exception')
+      )
+    })
+
+    it('returns the id Tenfast created the lease with, and logs it, when it is not the one sent', async () => {
+      ;(request as jest.Mock).mockResolvedValue({
+        status: 200,
+        data: { externalId: `${code}/01` },
+      })
+
+      const result = await createLease([`${code}/04`])
+
+      expect(result).toEqual({ ok: true, data: `${code}/01` })
+      expect(errorSpy).toHaveBeenCalledWith(
+        { sentExternalId: `${code}/05`, externalId: `${code}/01` },
+        expect.stringContaining('another id than the one sent')
+      )
+    })
   })
 
   describe('VAT rent row article swap', () => {
@@ -992,6 +1281,7 @@ describe(tenfastAdapter.createLease, () => {
       const rentRow = factory.tenfastInvoiceRow.build({
         article: baseArticle._id,
         vat: 0,
+        consolidationLabel: 'Hyra lokal',
       })
       const mockRentalObject = factory.tenfastRentalObject.build({
         hyror: [rentRow],
@@ -1017,11 +1307,18 @@ describe(tenfastAdapter.createLease, () => {
       // Act
       const contact = factory.contact.build()
       const fromDate = new Date()
-      await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, true)
+      await tenfastAdapter.createLease(
+        contact,
+        'RENTAL_CODE',
+        fromDate,
+        true,
+        []
+      )
 
       // Assert
       expect(leaseRequestData.hyror[0].article).toBe(vatArticle._id)
       expect(leaseRequestData.hyror[0].vat).toBe(0.25)
+      expect(leaseRequestData.hyror[0].consolidationLabel).toBe('Hyra lokal')
       expect(leaseRequestData.vatEnabled).toBe(true)
     })
 
@@ -1066,7 +1363,13 @@ describe(tenfastAdapter.createLease, () => {
       // Act
       const contact = factory.contact.build()
       const fromDate = new Date()
-      await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, true)
+      await tenfastAdapter.createLease(
+        contact,
+        'RENTAL_CODE',
+        fromDate,
+        true,
+        []
+      )
 
       // Assert
       expect(leaseRequestData.hyror[0].article).toBe(baseArticle._id)
@@ -1107,7 +1410,8 @@ describe(tenfastAdapter.createLease, () => {
         contact,
         'RENTAL_CODE',
         fromDate,
-        true
+        true,
+        []
       )
 
       // Assert
@@ -1168,7 +1472,13 @@ describe(tenfastAdapter.createLease, () => {
       // Act
       const contact = factory.contact.build()
       const fromDate = new Date()
-      await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, true)
+      await tenfastAdapter.createLease(
+        contact,
+        'RENTAL_CODE',
+        fromDate,
+        true,
+        []
+      )
 
       // Assert
       expect(leaseRequestData.hyror[0].article).toBe(vatArticle._id)
@@ -1191,6 +1501,8 @@ describe(tenfastAdapter.createLease, () => {
     const rentRow = factory.tenfastInvoiceRow.build({
       article: 'some-article-id',
       vat: 0.25,
+      includeInContract: false,
+      consolidationLabel: 'Hyra bilplats',
     })
     const mockRentalObject = factory.tenfastRentalObject.build({
       hyror: [rentRow],
@@ -1211,7 +1523,13 @@ describe(tenfastAdapter.createLease, () => {
     // Act
     const contact = factory.contact.build()
     const fromDate = new Date()
-    await tenfastAdapter.createLease(contact, 'RENTAL_CODE', fromDate, false)
+    await tenfastAdapter.createLease(
+      contact,
+      'RENTAL_CODE',
+      fromDate,
+      false,
+      []
+    )
 
     // Assert
     const requestedUrls = (request as jest.Mock).mock.calls.map(
@@ -1222,7 +1540,11 @@ describe(tenfastAdapter.createLease, () => {
     ).toBe(false)
     expect(leaseRequestData.hyror[0].article).toBe('some-article-id')
     expect(leaseRequestData.hyror[0].vat).toBe(0.25)
+    // Read for the rent total only, never sent back to Tenfast.
+    expect(leaseRequestData.hyror[0]).not.toHaveProperty('includeInContract')
+    expect(leaseRequestData.hyror[0].consolidationLabel).toBe('Hyra bilplats')
     expect(leaseRequestData.vatEnabled).toBe(false)
+    expect(leaseRequestData.aviseringsTyp).toBe('stralfors')
   })
 
   it('should return lease when all dependencies succeed and status is 201', async () => {
@@ -1253,7 +1575,8 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      false
+      false,
+      []
     )
 
     // Assert
@@ -1285,7 +1608,8 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      false
+      false,
+      []
     )
 
     // Assert
@@ -1310,7 +1634,8 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      true
+      true,
+      []
     )
 
     // Assert
@@ -1330,7 +1655,7 @@ describe(tenfastAdapter.createLease, () => {
 
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: false,
-      err: 'could-not-find-rental-object',
+      err: 'could-not-fetch-rental-object',
     })
 
     const contact = factory.contact.build()
@@ -1341,7 +1666,8 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      true
+      true,
+      []
     )
 
     // Assert
@@ -1375,7 +1701,8 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      true
+      true,
+      []
     )
 
     // Assert
@@ -1412,7 +1739,8 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      false
+      false,
+      []
     )
 
     // Assert
@@ -1449,7 +1777,8 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      false
+      false,
+      []
     )
 
     // Assert
@@ -1481,7 +1810,8 @@ describe(tenfastAdapter.createLease, () => {
       contact,
       'RENTAL_CODE',
       fromDate,
-      false
+      false,
+      []
     )
 
     // Assert
@@ -1562,7 +1892,16 @@ describe(tenfastAdapter.importLease, () => {
       data: mockTenant,
     })
 
-    const mockRentalObject = factory.tenfastRentalObject.build()
+    // includeInContract is read for the rent total only, never sent back.
+    // consolidationLabel must reach the lease's rows.
+    const mockRentalObject = factory.tenfastRentalObject.build({
+      hyror: [
+        factory.tenfastInvoiceRow.build({
+          includeInContract: false,
+          consolidationLabel: 'Hyra bostad',
+        }),
+      ],
+    })
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: true,
       data: mockRentalObject,
@@ -1593,17 +1932,21 @@ describe(tenfastAdapter.importLease, () => {
       hyresobjekt: [mockRentalObject._id],
       startDate: fromDate.toISOString(),
       avtalsbyggare: false,
+      aviseringsTyp: 'stralfors',
       aviseringsFrekvens: '1m',
       forskottAvisering: '2v',
       betalningsOffset: '1d',
       betalasForskott: true,
-      hyror: (mockRentalObject.hyror ?? []).map(({ _id, ...rest }) => ({
-        ...rest,
-        hyresobjekt: mockRentalObject._id,
-      })),
+      hyror: (mockRentalObject.hyror ?? []).map(
+        ({ _id, includeInContract: _includeInContract, ...rest }) => ({
+          ...rest,
+          hyresobjekt: mockRentalObject._id,
+        })
+      ),
       method: 'import',
       signed: true,
     })
+    expect(call.data.hyror[0].consolidationLabel).toBe('Hyra bostad')
   })
 
   it('returns "could-not-retrieve-tenant" when getTenantByContactCode fails', async () => {
@@ -1690,7 +2033,7 @@ describe(tenfastAdapter.importLease, () => {
 
     jest.spyOn(tenfastAdapter, 'getRentalObject').mockResolvedValue({
       ok: false,
-      err: 'could-not-find-rental-object',
+      err: 'could-not-fetch-rental-object',
     })
 
     const result = await tenfastAdapter.importLease(

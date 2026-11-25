@@ -3,6 +3,7 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import { keys } from '@onecore/types'
 import { LogsApi } from '../../adapters/keys-adapter'
 import { contactsAdapter } from '../../adapters/contacts-adapter'
+import { revealProtectedTenantList } from '../../processes/contacts'
 import { transformContacts } from '../../api/v1/contacts/transform'
 
 export const getUserName = (ctx: KoaRouter.RouterContext): string =>
@@ -64,6 +65,7 @@ export const enrichWithContacts = async (
   // sidecar never takes the whole route down with it.
   const result = await contactsAdapter
     .getByContactCodeBatch(codes)
+    .then((r) => revealProtectedTenantList(r))
     .catch((err: unknown) => ({ ok: false, err }) as const)
 
   if (!result.ok) {

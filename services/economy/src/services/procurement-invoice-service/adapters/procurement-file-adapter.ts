@@ -263,19 +263,20 @@ const getXmlFilenames = async () => {
 }
 
 /**
- * Copy file from sftp to local filesystem
- *
- * @param filename
- * @returns
+ * Copy files from sftp to local filesystem, using a single connection
  */
-const getFile = async (filename: string) => {
+const getFiles = async (filenames: string[]) => {
+  if (filenames.length === 0) return
+
   const sftp = new SftpClient()
   try {
     await sftp.connect(sftpConfig)
-    await sftp.fastGet(
-      path.join(directory, filename),
-      path.join(config.procurementInvoices.importDirectory, filename)
-    )
+    for (const filename of filenames) {
+      await sftp.fastGet(
+        path.join(directory, filename),
+        path.join(config.procurementInvoices.importDirectory, filename)
+      )
+    }
   } catch (err) {
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
@@ -283,30 +284,19 @@ const getFile = async (filename: string) => {
   }
 }
 
-const markAsImportedSftp = async (filename: string) => {
-  const sftp = new SftpClient()
-  try {
-    await sftp.connect(sftpConfig)
-    await sftp.rename(
-      path.join(directory, filename),
-      path.join(directory, filename.replace('.xml', '.xml-imported'))
-    )
-  } catch (err) {
-    throw new Error('SFTP : ' + JSON.stringify(err))
-  } finally {
-    await sftp.end()
-  }
-}
+const importedFilename = (filename: string) =>
+  filename.replace(/\.xml$/i, '.xml-imported')
 
-export const getNewProcurementInvoiceRows = async () => {
+export const getNewProcurementInvoiceRows = async (): Promise<{
+  rows: InvoiceDataRow[]
+  filenames: string[]
+}> => {
   const xmlFilenames = await getXmlFilenames()
   logger.info(
     { numberOfFiles: xmlFilenames.length },
     'Got xml filenames, copying files from sftp'
   )
-  for (const xmlFilename of xmlFilenames) {
-    await getFile(xmlFilename)
-  }
+  await getFiles(xmlFilenames)
   logger.info({ numberOfFiles: xmlFilenames.length }, 'Processing xml files')
 
   const xmlFiles = await readXmlFiles(xmlFilenames)
@@ -323,20 +313,59 @@ export const getNewProcurementInvoiceRows = async () => {
     }
   }
 
-  return invoiceRows
+  return { rows: invoiceRows, filenames: xmlFilenames }
 }
 
-export const markProcurementFilesAsImported = async () => {
-  const files = await fs.readdir(config.procurementInvoices.importDirectory)
+/**
+ * Renames the given files on the sftp server to *.xml-imported, using a
+ * single connection, and removes the local copies.
+ *
+ * Does not throw: a file that cannot be renamed is reported in `failed` and
+ * will be picked up again by the next run, where its invoices are skipped
+ * because they are already recorded as exported.
+ */
+export const markProcurementFilesAsImported = async (
+  filenames: string[]
+): Promise<{ marked: string[]; failed: Record<string, string> }> => {
+  const marked: string[] = []
+  const failed: Record<string, string> = {}
 
-  const xmlFileNames = files.filter((file) => {
-    return file.endsWith('.xml')
-  })
+  if (filenames.length === 0) return { marked, failed }
 
-  for (const file of xmlFileNames) {
-    await fs.unlink(path.join(config.procurementInvoices.importDirectory, file))
-    await markAsImportedSftp(file)
+  const sftp = new SftpClient()
+  try {
+    await sftp.connect(sftpConfig)
+
+    for (const filename of filenames) {
+      try {
+        await sftp.rename(
+          path.join(directory, filename),
+          path.join(directory, importedFilename(filename))
+        )
+        marked.push(filename)
+      } catch (err) {
+        failed[filename] = err instanceof Error ? err.message : String(err)
+        logger.error({ err, filename }, 'Could not mark file as imported')
+      }
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    logger.error({ err }, 'Could not connect to sftp to mark files as imported')
+    filenames
+      .filter((filename) => !marked.includes(filename) && !failed[filename])
+      .forEach((filename) => (failed[filename] = message))
+  } finally {
+    await sftp.end().catch(() => undefined)
   }
 
-  return files.length
+  for (const filename of filenames) {
+    await fs.rm(
+      path.join(config.procurementInvoices.importDirectory, filename),
+      {
+        force: true,
+      }
+    )
+  }
+
+  return { marked, failed }
 }

@@ -22,6 +22,7 @@ import {
   TenfastArticleSchema,
   TenfastArticle,
   TenfastContactRelationsSchema,
+  NotificationTypeSchema,
 } from './schemas'
 import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
@@ -29,6 +30,7 @@ import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
 import {
   CLAIMING_STAGES,
+  getNextLeaseId,
   getVacantFrom,
   isClaimingLease,
   LeaseStageInfo,
@@ -37,6 +39,11 @@ import {
 
 const tenfastBaseUrl = config.tenfast.baseUrl
 const tenfastCompanyId = config.tenfast.companyId
+
+// Every lease we create or import in Tenfast is invoiced through Strålfors
+// (print/distribution). Without it Tenfast defaults to "Aviseras ej".
+const NEW_LEASE_NOTIFICATION_TYPE: z.infer<typeof NotificationTypeSchema> =
+  'stralfors'
 
 type SchemaError = { tag: 'schema-error'; error: z.ZodError }
 
@@ -108,11 +115,18 @@ const fetchAllPages = async <
   return records
 }
 
+/**
+ * Creates a lease on the rental object and returns its id. The id continues
+ * from the highest number among the object's Tenfast leases (voided ones
+ * included) and `earlierLeaseIds`, the object's leases in Xpand: leases that
+ * ended before the migration exist only there (AVTAL-612).
+ */
 export const createLease = async (
   contact: Contact,
   rentalObjectCode: string,
   fromDate: Date,
-  includeVAT: boolean
+  includeVAT: boolean,
+  earlierLeaseIds: string[]
 ): Promise<
   AdapterResult<
     string,
@@ -173,8 +187,20 @@ export const createLease = async (
     }
   }
 
+  // Not atomic either, like the availability check: two leases created on the
+  // object at the same moment get the same id. Whether Tenfast refuses an id
+  // it already has, and with what error, is unknown, so a failed create is
+  // logged with the id rather than retried with the next one.
+  const newLeaseId = getNextLeaseId(rentalObjectCode, [
+    ...earlierLeaseIds,
+    ...leasesResult.data.flatMap((lease) =>
+      lease.externalId ? [lease.externalId] : []
+    ),
+  ])
+
   try {
     const createLeaseRequestData = buildLeaseRequestData(
+      newLeaseId,
       tenantResult.data,
       rentalObjectResponse.data,
       fromDate,
@@ -187,16 +213,23 @@ export const createLease = async (
       url: `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}`,
       data: createLeaseRequestData,
     })
-    if (leaseResponse.status === 400)
-      return handleTenfastError(
-        leaseResponse.data.error,
-        'create-lease-bad-request'
+    if (leaseResponse.status !== 200 && leaseResponse.status !== 201) {
+      logger.error(
+        {
+          externalId: newLeaseId,
+          status: leaseResponse.status,
+          error: leaseResponse.data?.error,
+        },
+        'tenfast-adapter.createLease: Tenfast did not create the lease with this id'
       )
-    else if (leaseResponse.status !== 200 && leaseResponse.status !== 201)
-      return handleTenfastError(
-        { error: leaseResponse.data.error, status: leaseResponse.status },
-        'lease-could-not-be-created'
-      )
+      return {
+        ok: false,
+        err:
+          leaseResponse.status === 400
+            ? 'create-lease-bad-request'
+            : 'lease-could-not-be-created',
+      }
+    }
 
     // Only the id is needed by callers (see leases.ts route docs: response
     // is { LeaseId: string }) — no need to parse the full lease shape, which
@@ -206,14 +239,24 @@ export const createLease = async (
     if (typeof leaseId !== 'string' || !leaseId)
       return handleTenfastError(leaseResponse.data, 'could-not-parse-lease')
 
+    // The lease was created, so its id is returned whichever it is, but an id
+    // other than ours means Tenfast numbered it and it can clash with Xpand.
+    if (leaseId !== newLeaseId)
+      logger.error(
+        { sentExternalId: newLeaseId, externalId: leaseId },
+        'tenfast-adapter.createLease: Tenfast created the lease with another id than the one sent'
+      )
+
     return { ok: true, data: leaseId }
   } catch (err) {
+    // A 5xx reply, a timeout or a network error lands here. Tenfast may still
+    // have created the lease, so the id it would have is logged too.
     const responseData = isAxiosError(err) ? err.response?.data : undefined
     logger.error(
-      { err, responseData },
+      { err, responseData, externalId: newLeaseId },
       'tenfast-adapter.createLease: caught exception'
     )
-    return handleTenfastError(err, 'lease-could-not-be-created')
+    return { ok: false, err: 'lease-could-not-be-created' }
   }
 }
 
@@ -287,15 +330,20 @@ export const importLease = async (
       hyresobjekt: [rentalObject._id],
       startDate: fromDate.toISOString(),
       avtalsbyggare: false,
+      aviseringsTyp: NEW_LEASE_NOTIFICATION_TYPE,
       aviseringsFrekvens: '1m',
       forskottAvisering: '2v',
       betalningsOffset: '1d',
       betalasForskott: true,
       // this might be changed later to just pass entire rentalObject.hyror
-      hyror: (rentalObject.hyror ?? []).map(({ _id, ...rest }) => ({
-        ...rest,
-        hyresobjekt: rentalObject._id,
-      })),
+      hyror: (rentalObject.hyror ?? []).map(
+        // includeInContract is read for the rent total only and is not sent
+        // back, so Tenfast keeps deciding it for the lease's rows.
+        ({ _id, includeInContract: _includeInContract, ...rest }) => ({
+          ...rest,
+          hyresobjekt: rentalObject._id,
+        })
+      ),
       method: 'import',
       signed: true,
     }
@@ -485,12 +533,17 @@ export async function getLeasesUpdatedSince(
   }
 }
 
+/**
+ * Looks up one rental object by its code. An object Tenfast does not have is
+ * `{ ok: true, data: null }`; `could-not-fetch-rental-object` means the lookup
+ * itself failed (timeout, 5xx, network), so the object may well exist.
+ */
 export const getRentalObject = async (
   rentalObjectCode: string
 ): Promise<
   AdapterResult<
     TenfastRentalObject | null,
-    'could-not-find-rental-object' | 'could-not-parse-rental-object'
+    'could-not-fetch-rental-object' | 'could-not-parse-rental-object'
   >
 > => {
   try {
@@ -507,7 +560,7 @@ export const getRentalObject = async (
           error: rentalObjectResponse.data.error,
           status: rentalObjectResponse.status,
         },
-        'could-not-find-rental-object'
+        'could-not-fetch-rental-object'
       )
 
     const parsed = TenfastRentalObjectSchema.safeParse(
@@ -517,8 +570,8 @@ export const getRentalObject = async (
       return handleTenfastError(parsed.error, 'could-not-parse-rental-object')
 
     return { ok: true, data: parsed.data }
-  } catch (err: any) {
-    return handleTenfastError(err, 'could-not-find-rental-object')
+  } catch (err: unknown) {
+    return handleTenfastError(err, 'could-not-fetch-rental-object')
   }
 }
 
@@ -785,58 +838,71 @@ export const getAvailabilityForVacantRentalObjects = async (
     }
   }
 
-  type ClaimedRentalObjectIdsResult =
-    | { ok: true; ids: Set<string> }
+  type NextLeasesResult =
+    | {
+        ok: true
+        claimedIds: Set<string>
+        endingLeasesByRentalObjectId: Map<string, LeaseStageInfo[]>
+      }
     | { ok: false; err: 'could-not-find-claimed-leases' }
 
-  // Rental objects a next tenant already has a lease for (CLAIMING_STAGES:
-  // signed and upcoming, or still a draft or out for signing), which must not
-  // be published as available. Searched for directly rather than read from
-  // each object's own leases: a terminationScheduled lease's record has no
-  // visibility into other leases on the object, and includeAvtal only returns
-  // an object's 10 latest. Tenfast's `reserved` state isn't used: it isn't
-  // always recomputed when a lease changes, and voided leases count as
-  // reserved (both confirmed by Tenfast as bugs, 2026-11).
+  // The leases a next tenant has for a rental object (CLAIMING_STAGES: signed
+  // and upcoming, or still a draft or out for signing), split in two. Those
+  // that claim the object (isClaimingLease) give the objects which must not be
+  // published as available. An upcoming lease that already has an end doesn't
+  // claim the object but moves its vacantFrom, so those are kept per object.
+  // Searched for directly rather than read from each object's own leases: a
+  // terminationScheduled lease's record has no visibility into other leases on
+  // the object, and includeAvtal only returns an object's 10 latest. Tenfast's
+  // `reserved` state isn't used: it isn't always recomputed when a lease
+  // changes, and voided leases count as reserved (both confirmed by Tenfast as
+  // bugs, 2026-11).
   // filter[stage] takes a comma-separated list.
-  const fetchClaimedRentalObjectIds =
-    async (): Promise<ClaimedRentalObjectIdsResult> => {
-      try {
-        const leases = await fetchAllPages(
-          (paginate) =>
-            `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=${CLAIMING_STAGES.join(',')}&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt&paginate=${paginate}`,
-          TenfastPaginatedLeaseRentalObjectsResponseSchema
-        )
-        return {
-          ok: true,
-          ids: new Set(
-            leases.flatMap((lease) =>
-              (lease.hyresobjekt ?? []).flatMap((ro) =>
-                ro.externalId ? [ro.externalId] : []
-              )
-            )
-          ),
+  const fetchNextLeases = async (): Promise<NextLeasesResult> => {
+    try {
+      const leases = await fetchAllPages(
+        (paginate) =>
+          `${tenfastBaseUrl}/v1/hyresvard/avtal/search?hyresvard=${tenfastCompanyId}&filter[stage]=${CLAIMING_STAGES.join(',')}&filter[hyresobjekt][typ]=${type}&populate=hyresobjekt&paginate=${paginate}`,
+        TenfastPaginatedLeaseRentalObjectsResponseSchema
+      )
+      const claimedIds = new Set<string>()
+      const endingLeasesByRentalObjectId = new Map<string, LeaseStageInfo[]>()
+      for (const { hyresobjekt, ...lease } of leases) {
+        const claiming = isClaimingLease(lease)
+        for (const { externalId } of hyresobjekt ?? []) {
+          if (!externalId) continue
+          if (claiming) {
+            claimedIds.add(externalId)
+            continue
+          }
+          const endingLeases = endingLeasesByRentalObjectId.get(externalId)
+          if (endingLeases) endingLeases.push(lease)
+          else endingLeasesByRentalObjectId.set(externalId, [lease])
         }
-      } catch (err) {
-        return handleTenfastError(err, 'could-not-find-claimed-leases')
       }
+      return { ok: true, claimedIds, endingLeasesByRentalObjectId }
+    } catch (err) {
+      return handleTenfastError(err, 'could-not-find-claimed-leases')
     }
+  }
 
   try {
     const [
       tagsById,
       vacantOrSoonVacantResult,
       terminatingLeasesResult,
-      claimedRentalObjectIdsResult,
+      nextLeasesResult,
     ] = await Promise.all([
       getTags(),
       fetchVacantOrSoonVacant(),
       fetchTerminatingLeases(),
-      fetchClaimedRentalObjectIds(),
+      fetchNextLeases(),
     ])
 
     if (!vacantOrSoonVacantResult.ok) return vacantOrSoonVacantResult
     if (!terminatingLeasesResult.ok) return terminatingLeasesResult
-    if (!claimedRentalObjectIdsResult.ok) return claimedRentalObjectIdsResult
+    if (!nextLeasesResult.ok) return nextLeasesResult
+    const { claimedIds, endingLeasesByRentalObjectId } = nextLeasesResult
 
     // Exclude records already claimed by a next tenant. Hidden rather than
     // flagged, as decided with the product owner (AVTAL-215): leasing watches
@@ -844,17 +910,14 @@ export const getAvailabilityForVacantRentalObjects = async (
     // so one with a lease we can't read is never offered (isClaimingLease).
     const availableRecords = vacantOrSoonVacantResult.records.filter(
       (record) =>
-        !claimedRentalObjectIdsResult.ids.has(record.externalId) &&
+        !claimedIds.has(record.externalId) &&
         !(record.avtal ?? []).some(isClaimingLease)
     )
 
     const recordsFromTerminatingLeases = terminatingLeasesResult.leases.flatMap(
       (lease) =>
         (lease.hyresobjekt ?? [])
-          .filter(
-            (rentalObject) =>
-              !claimedRentalObjectIdsResult.ids.has(rentalObject.externalId)
-          )
+          .filter((rentalObject) => !claimedIds.has(rentalObject.externalId))
           .map((rentalObject) => ({
             ...rentalObject,
             avtal: [lease],
@@ -874,10 +937,23 @@ export const getAvailabilityForVacantRentalObjects = async (
       return true
     })
 
+    // An upcoming lease that already has an end is added to the object's
+    // leases, so vacantFrom is the day after the latest end (AVTAL-517). It
+    // may be there already from includeAvtal, which doesn't change the date.
     return {
       ok: true,
       data: combinedRecords.map((record) =>
-        mapTenfastRentalObjectToAvailabilityInfo(false, record, tagsById)
+        mapTenfastRentalObjectToAvailabilityInfo(
+          false,
+          {
+            ...record,
+            avtal: [
+              ...(record.avtal ?? []),
+              ...(endingLeasesByRentalObjectId.get(record.externalId) ?? []),
+            ],
+          },
+          tagsById
+        )
       ),
     }
   } catch (err: any) {
@@ -1203,6 +1279,7 @@ function handleTenfastError<E extends string>(
 }
 
 function buildLeaseRequestData(
+  externalId: string,
   tenant: TenfastTenant,
   rentalObject: TenfastRentalObject,
   fromDate: Date,
@@ -1214,17 +1291,25 @@ function buildLeaseRequestData(
   // Confirmed with product (AVTAL-326, 2026-10): existing VAT on a rental
   // object's own rows must not be stripped just because this particular
   // lease doesn't itself require VAT.
+  // includeInContract is read for the rent total only and is not sent back,
+  // so Tenfast keeps deciding it for the lease's rows.
+  const rentalObjectRows = (rentalObject.hyror ?? []).map(
+    ({ includeInContract: _includeInContract, ...row }) => row
+  )
   const hyror = includeVAT
-    ? applyVatToRentRows(rentalObject.hyror ?? [], articles)
-    : (rentalObject.hyror ?? [])
+    ? applyVatToRentRows(rentalObjectRows, articles)
+    : rentalObjectRows
 
   return {
+    // `<rental object code>/NN`. Tenfast uses it as the lease number instead
+    // of numbering the lease itself (confirmed by Tenfast on AVTAL-612).
+    externalId,
     hyresgaster: [tenant?._id],
     hyresobjekt: [rentalObject._id],
     avtalsbyggare: true,
     hyror,
     startDate: fromDate.toISOString(),
-    aviseringsTyp: 'none',
+    aviseringsTyp: NEW_LEASE_NOTIFICATION_TYPE,
     uppsagningstid: '3m',
     aviseringsFrekvens: '1m',
     forskottAvisering: '2v', //specifies how far in advance the rent invoice should be created

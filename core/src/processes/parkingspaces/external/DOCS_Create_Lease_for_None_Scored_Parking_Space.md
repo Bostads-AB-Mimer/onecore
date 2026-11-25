@@ -2,6 +2,8 @@
 
 En sökande ansöker om en icke-poängsatt bilplats (först till kvarn), antingen direkt via Mina Sidor eller å sökandens vägnar av en handläggare via Uthyrningsgränssnittet. Processen validerar annons och sökande, gör en automatisk kreditkontroll (extern via Creditsafe, eller intern via betalningshistorik om sökanden redan har ett kontrakt) och skapar kontraktet i Tenfast vid godkännande. Sökanden och uthyrningsteamet notifieras om utfallet oavsett utgång.
 
+Tenfast samaviserar bilplatsen med hyresgästens andra avtal om hyresgästerna och aviseringsinställningarna matchar. Det sker redan när bilplatsen skapas, innan den är signerad, men den kommer med på avin först när den har signerats. Se [Samavisering](../../invoicedistribution/DOCS_Co_Invoicing.md).
+
 ## Flödesdiagram
 
 Processens beslutslogik: vilka kontroller som styr om flödet går vidare till nästa steg, och vad som händer vid godkännande, nekande eller fel. System- och integrationsdetaljer är medvetet utelämnade här — se sekvensdiagrammet nedan för det.
@@ -22,7 +24,10 @@ F --> |Yes| H[Perform Internal Credit Check<br/>Debt Collection Invoices]
 L --> I{Is Applicant Eligible for Lease?}
 H --> I
 I --> |No| M[Send Notification to Applicant]
-I --> |Yes| T[Determine VAT Rate]
+I --> |Yes| S[Get Tenant's Housing Contracts]
+S --> U{Was the Lookup Successful?}
+U --> |No| O
+U --> |Yes| T[Determine VAT:<br/>no VAT with a housing contract<br/>in the residential area]
 T --> J[Create Lease]
 J --> K{Was Lease Created?}
 K --> |No| O
@@ -106,18 +111,34 @@ sequenceDiagram
     end
 
     break when fetching Invoices for Internal Credit Check fails
-        Core-->User: show error message
+        Note over Economy: Xledger down: retried, then 503
+        Core-->User: fetch-invoices-failed, 503 when invoices are temporarily unavailable, otherwise 500
     end
 
     alt Is Applicant Eligible for Lease
         Core ->> Leasing: Get Tenant
         Leasing ->> XPandDB: Get Contact and Estate Codes
-        XPandDB -->> Leasing: Tenant
-        Leasing -->> Core: Tenant
-        note over Core: Determine VAT rate from tenant<br/>and residential area rules.
+        XPandDB -->> Leasing: Contact
+        Leasing ->> Tenfast: Get Leases
+        Tenfast -->> Leasing: Leases
+        Leasing -->> Core: Tenant, or 404: not a tenant, no tenant in Tenfast,<br/>no leases, or no valid housing contract
+
+        break when the Tenant lookup fails for any other reason (technical error)
+            Core-->User: 500 get-tenant-failed, no lease created
+        end
+
+        note over Core: VAT: none if the tenant has a current or upcoming<br/>housing contract in the parking space's residential area,<br/>otherwise VAT. A housing contract that has not reached<br/>Tenfast yet is not seen, so the lease gets VAT. That<br/>holds also when the contact has no tenant in Tenfast.
 
         note over Core: Start date: the one given, otherwise the day<br/>the parking space is free (vacantFrom, or today).
         Core ->> Leasing: Create Lease
+        Leasing ->> XPandDB: Get Lease Ids on Rental Object
+        XPandDB -->> Leasing: Lease Ids
+
+        break when the Lease Ids cannot be read from XPand
+            Leasing -->> Core: 500 could-not-get-xpand-lease-ids
+            Core-->User: show error message, no lease created
+        end
+
         Leasing ->> Tenfast: Search Leases on Rental Object
         Tenfast -->> Leasing: Leases
 
@@ -126,7 +147,8 @@ sequenceDiagram
             Core-->User: 409, listing status unchanged
         end
 
-        Leasing ->> Tenfast: Create Lease
+        note over Leasing: Lease id: the highest number among the<br/>XPand and Tenfast leases on the object,<br/>voided ones included, plus 1 (AVTAL-612).
+        Leasing ->> Tenfast: Create Lease with that id
         Tenfast -->> Leasing: Create Lease Result
         Leasing -->> Core: Create Lease Result
 
@@ -140,7 +162,8 @@ sequenceDiagram
         Communication -->> User: Success Notification
         Core ->> Communication: Notify Leasing Team of Success
         Communication -->> LeasingTeam: Success Notification
-        Core -->> User: Lease Created
+        Core -->> User: Lease Created, with the VAT decision and its reason
+        note over User: The internal portal shows the VAT decision<br/>and writes it into the listing comment.
     else
         Core ->> Communication: Notify Applicant of Failure
         Communication -->> User: Failure Notification

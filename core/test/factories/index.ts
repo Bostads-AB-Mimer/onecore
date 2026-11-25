@@ -75,5 +75,8 @@ export { SyncContactToEconomyPayloadFactory as syncContactToEconomyPayload } fro
 export { SyncContactToWorkOrderPayloadFactory as syncContactToWorkOrderPayload } from './sync-contact'
 export { LeaseChangeFactory as leaseChange } from './lease-change'
 export { DomainContactFactory as domainContact } from './domain-contact'
-export { ContactsServiceContactFactory as contactsServiceContact } from './contacts-service-contact'
+export {
+  ContactsServiceContactFactory as contactsServiceContact,
+  contactsServiceOrganisationWithoutNumber,
+} from './contacts-service-contact'
 export { KvvAreaWithCostCenterFactory as kvvAreaWithCostCenter } from './kvv-area-with-cost-center'

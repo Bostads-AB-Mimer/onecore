@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 
-import { LeaseStatusBadge } from '@/entities/lease'
+import { findActiveLease, LeaseStatusBadge } from '@/entities/lease'
 
 import type { Lease } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
@@ -58,13 +58,11 @@ interface LeaseOption {
   lease: Lease | null // null = "Inget kontrakt" sentinel
 }
 
-// At most three options: the active (Current/AboutToEnd) lease if one exists,
+// At most three options: the active lease (see findActiveLease) if one exists,
 // the most recent Ended lease if one exists, and the "no contract" sentinel.
 // The first entry is the default selection.
 function buildLeaseOptions(leases: Lease[]): LeaseOption[] {
-  const activeLease = leases.find(
-    (l) => l.status === 'Current' || l.status === 'AboutToEnd'
-  )
+  const activeLease = findActiveLease(leases)
   const latestEndedLease = leases
     .filter((l) => l.status === 'Ended')
     .sort(

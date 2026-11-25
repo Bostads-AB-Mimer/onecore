@@ -7,8 +7,9 @@ import { convertHomeInsuranceToXlsx } from '../processes/reports/converters/exce
 import * as sftpAdapter from '../adapters/sftp-adapter'
 
 export async function handleHomeInsuranceExport() {
-  const dateStr = new Date().toISOString().split('T')[0]
-  const fileName = `Hemforsakring_LF_${dateStr}.xlsx`
+  // Länsförsäkringar expects this exact file name. The daily upload replaces
+  // the previous day's file on the SFTP server.
+  const fileName = 'NyMimer_Hemforsakring.xlsx'
 
   logger.info('Starting home insurance export')
 

@@ -409,6 +409,18 @@ describe('GET /contacts/:contactCode/tenant', () => {
     expect(res.body.type).toEqual('contact-leases-not-found')
   })
 
+  it('responds with 404 when contact has no tenant in Tenfast', async () => {
+    jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
+      ok: false,
+      err: 'tenfast-tenant-not-found',
+    })
+
+    const res = await request(app.callback()).get('/contacts/1231234/tenant')
+
+    expect(res.status).toBe(404)
+    expect(res.body.type).toEqual('tenfast-tenant-not-found')
+  })
+
   it('responds with 500 on unexpected errors', async () => {
     jest.spyOn(tenants, 'getTenant').mockResolvedValueOnce({
       ok: false,

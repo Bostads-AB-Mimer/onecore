@@ -4,18 +4,18 @@ import {
   sendNonScoredParkingSpaceDeniedEmail,
 } from '../../../adapters/communication-adapter'
 import { ProcessResult, ProcessStatus } from '../../../common/types'
-import { ListingStatus, ReplyToOfferErrorCodes } from '@onecore/types'
+import { leasing, ListingStatus, ReplyToOfferErrorCodes } from '@onecore/types'
 import {
   createLease,
   getContactByContactCode,
   getCreditInformation,
   getActiveListingByRentalObjectCode,
   getTenantByContactCode,
-  getLeasesForContactCode,
+  getLeasesByContactCode,
   getParkingSpaceByCode,
   updateListingStatus,
 } from '../../../adapters/leasing-adapter'
-import { isTenantAllowedToRentAParkingSpaceInThisResidentialArea } from '../../../services/lease-service/helpers/lease'
+import { decideParkingSpaceVat } from '../../../services/lease-service/helpers/lease'
 import { calculateVacantFrom } from '../../../common/helpers'
 import { logger } from '@onecore/utilities'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
@@ -124,14 +124,19 @@ export const createLeaseForExternalParkingSpace = async (
 
     let creditCheck = false
 
-    // Applicants with a current or upcoming lease (any object type) count as
+    // Applicants with any lease that has not ended (any object type) count as
     // existing tenants and get the internal payment-history check.
-    const applicantLeases = await getLeasesForContactCode(
+    const applicantLeases = await getLeasesByContactCode(
       applicantContact.contactCode,
       {
-        includeUpcomingLeases: true,
-        includeTerminatedLeases: false,
-        includeContacts: false,
+        status: [
+          'current',
+          'upcoming',
+          'about-to-end',
+          'preliminary-terminated',
+          'pending-signature',
+          'not-sent',
+        ],
       }
     )
     const applicantHasNoLease = applicantLeases.length === 0
@@ -159,6 +164,7 @@ export const createLeaseForExternalParkingSpace = async (
         logger.error(
           {
             err: debtCollectionInvoices.err,
+            status: debtCollectionInvoices.statusCode,
             rentalObjectCode: listing.rentalObjectCode,
             contactCode: applicantContact.contactCode,
           },
@@ -167,7 +173,8 @@ export const createLeaseForExternalParkingSpace = async (
         return {
           processStatus: ProcessStatus.failed,
           error: 'fetch-invoices-failed',
-          httpStatus: 500,
+          // 503 tells the caller that trying again later may work.
+          httpStatus: debtCollectionInvoices.err === 'unavailable' ? 503 : 500,
           response: {
             message: `Could not fetch invoices for applicant.`,
           },
@@ -188,22 +195,46 @@ export const createLeaseForExternalParkingSpace = async (
       const tenantResult = await getTenantByContactCode(
         applicantContact.contactCode
       )
-      const includeVAT =
-        !tenantResult.ok ||
-        !isTenantAllowedToRentAParkingSpaceInThisResidentialArea(
-          rentalObject.residentialAreaCode,
-          tenantResult.data
+      const vatDecision = decideParkingSpaceVat(
+        rentalObject.residentialAreaCode,
+        tenantResult
+      )
+
+      if (!vatDecision.ok) {
+        // VAT depends on the tenant's housing contracts. Without them we
+        // cannot decide, so no lease is created rather than one with VAT.
+        log.push(
+          `Kunde inte hämta sökandens bostadskontrakt för momsbedömningen. Inget kontrakt skapades.`
         )
+        logger.error(
+          {
+            err: tenantResult.ok ? undefined : tenantResult.err,
+            rentalObjectCode: listing.rentalObjectCode,
+            contactCode: applicantContact.contactCode,
+          },
+          'Could not get tenant to decide VAT for parking space lease'
+        )
+        return {
+          processStatus: ProcessStatus.failed,
+          error: vatDecision.err,
+          httpStatus: 500,
+          response: {
+            message: `Could not get the applicant's housing contracts to decide VAT. No lease was created.`,
+          },
+        }
+      }
+
+      const vat = vatDecision.data
 
       log.push(
-        `Momsbedömning: ${includeVAT ? 'Moms inkluderas (inget bostadsavtal i samma område)' : 'Ingen moms (bostadsavtal finns i samma område)'}`
+        `Momsbedömning: ${leasing.v1.ParkingSpaceVatDecisionLabel[vat.reason]}`
       )
       const createLeaseResult = await createLease(
         listing.rentalObjectCode,
         applicantContact.contactCode,
         leaseStartDate,
         '001',
-        includeVAT
+        vat.includeVAT
       )
 
       if (
@@ -310,6 +341,7 @@ export const createLeaseForExternalParkingSpace = async (
           leaseId,
           message: 'Parking space lease created.',
           creditCheckType: applicantHasNoLease ? 'extern' : 'intern',
+          vat,
         },
         httpStatus: 200,
       }

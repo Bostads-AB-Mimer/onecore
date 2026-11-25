@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { economy } from '@onecore/types'
 import { Receipt } from 'lucide-react'
 import { parseAsString, useQueryState } from 'nuqs'
 
@@ -14,6 +13,7 @@ import { TabLayout } from '@/shared/ui/layout/TabLayout'
 import { Skeleton } from '@/shared/ui/Skeleton'
 import TableSkeleton from '@/shared/ui/TableSkeleton'
 
+import { getInvoiceDeliveryMethod } from '../lib/invoiceDeliveryMethod'
 import { InvoicesTable } from './InvoicesTable'
 
 interface TenantLedgerTabContentProps {
@@ -40,23 +40,6 @@ const InfoRow = ({
   </div>
 )
 
-const CHANNEL_LABELS: Record<string, string> = {
-  eInvoiceB2C: 'E-faktura',
-  eInvoiceB2B: 'E-faktura',
-  Kivra: 'Kivra',
-}
-
-const getInvoiceDeliveryMethod = (
-  invoiceChannels: economy.ChannelLookupResponse
-) => {
-  const availableChannel =
-    invoiceChannels.candidates[0]?.availableInChannels.find(
-      (channel) => channel in CHANNEL_LABELS
-    )
-
-  return availableChannel ? CHANNEL_LABELS[availableChannel] : 'Pappersfaktura'
-}
-
 const PaymentInformation = ({
   nationalRegistrationNumber,
   isIndividual,
@@ -72,6 +55,15 @@ const PaymentInformation = ({
 
   const isLoading = invoiceChannels.isLoading || autogiroConsent.isLoading
 
+  // A failed request is passed on as undefined so it is not mistaken for
+  // "no consent" or "no digital channel"
+  const invoiceDeliveryMethod = getInvoiceDeliveryMethod({
+    invoiceChannels: invoiceChannels.error ? undefined : invoiceChannels.data,
+    hasAutogiroConsent: autogiroConsent.error
+      ? undefined
+      : Boolean(autogiroConsent.data),
+  })
+
   return (
     <Card>
       <CardHeader>
@@ -81,18 +73,12 @@ const PaymentInformation = ({
         {isLoading ? (
           <Skeleton className="h-8 w-full" />
         ) : (
-          invoiceChannels.data && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-              <InfoRow
-                label="Alternativ för avisering"
-                value={
-                  autogiroConsent.data
-                    ? 'Autogiro'
-                    : getInvoiceDeliveryMethod(invoiceChannels.data)
-                }
-              />
-            </div>
-          )
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+            <InfoRow
+              label="Aviseringssätt"
+              value={invoiceDeliveryMethod ?? 'Kunde inte hämtas'}
+            />
+          </div>
         )}
       </CardContent>
     </Card>

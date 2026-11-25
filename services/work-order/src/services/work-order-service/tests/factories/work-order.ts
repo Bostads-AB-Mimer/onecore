@@ -59,7 +59,7 @@ export const OdooWorkOrderFactory = Factory.define<OdooWorkOrder>(
     call_between: '08:00 - 17:00',
     space_code: 'TV',
     equipment_code: 'TT',
-    rental_property_id: `987-654-321/${sequence}`,
+    rental_property_id: [sequence, '987-654-321'],
     create_date: new Date().toDateString(),
     write_date: new Date().toDateString(),
     due_date: new Date().toDateString(),

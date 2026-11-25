@@ -2,13 +2,17 @@ import knex from 'knex'
 import { ContactCode } from '@src/domain'
 import { currentInvoiceAddress } from './address-sql'
 import { DbContactRow } from './db-model'
-import { isLeaseHolderColumn, LEASE_HOLDER } from './relation-sql'
 
 export type ContactIncludeOptions = {
   includePhone?: boolean
   includeEmail?: boolean
   includeAddress?: boolean
   includeRelations?: boolean
+  /**
+   * The caller (core) has verified that every requested contact is a tenant
+   * on a lease in Tenfast, so protected identities are returned unredacted.
+   */
+  verifiedTenants?: boolean
 }
 
 const BASE_COLUMNS = [
@@ -68,18 +72,11 @@ export const contactsByCodesQuery = async (
   const trimmed = contactCodes.map((c) => c.trim())
   const placeholders = trimmed.map(() => '?').join(', ')
 
-  // The code filter lives in the CTE and the join to it narrows `cmctc`, so
-  // the codes are bound once (MSSQL's 2100-parameter cap).
   let query = db
-    .with(LEASE_HOLDER, (lh) => {
-      lh.select('cmctc.keycmctc', isLeaseHolderColumn(db, new Date()))
-        .from('cmctc')
-        .whereRaw(`TRIM(cmctc.cmctckod) IN (${placeholders})`, trimmed)
-    })
-    .from(LEASE_HOLDER)
-    .join('cmctc', 'cmctc.keycmctc', `${LEASE_HOLDER}.keycmctc`)
+    .from('cmctc')
+    .whereRaw(`TRIM(cmctc.cmctckod) IN (${placeholders})`, trimmed)
 
-  const columns = [...BASE_COLUMNS, `${LEASE_HOLDER}.isLeaseHolder`]
+  const columns: string[] = [...BASE_COLUMNS]
 
   if (options.includeAddress) {
     query = query.leftJoin('cmadr', (join) => {

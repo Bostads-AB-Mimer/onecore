@@ -1,4 +1,8 @@
-import { extractPhoneNumber, extractPhoneNumberComment } from '@xpand/transform'
+import {
+  extractPhoneNumber,
+  extractPhoneNumberComment,
+  transformPhoneNumber,
+} from '@xpand/transform'
 
 describe('extractPhoneNumber', () => {
   it.each([
@@ -176,4 +180,35 @@ describe('extractPhoneNumber', () => {
       expect(extractPhoneNumberComment(rawInput, numberPart)).toEqual(expected)
     }
   )
+})
+
+describe('transformPhoneNumber', () => {
+  const dbRow = {
+    phoneId: '_0J415R7SA     ',
+    ownerObjectKey: '_0J4157CC1     ',
+    phoneType: 'mobil          ',
+    phoneNumber: '0701112233',
+    isPrimaryPhone: 1,
+  }
+
+  it('marks the number of a main row as primary', () => {
+    expect(transformPhoneNumber(dbRow)).toEqual([
+      expect.objectContaining({ phoneNumber: '0701112233', isPrimary: true }),
+    ])
+  })
+
+  it('does not mark the number of a non-main row as primary', () => {
+    expect(transformPhoneNumber({ ...dbRow, isPrimaryPhone: 0 })).toEqual([
+      expect.objectContaining({ isPrimary: false }),
+    ])
+  })
+
+  it('marks only the first of several numbers in a main row as primary', () => {
+    const numbers = transformPhoneNumber({
+      ...dbRow,
+      phoneNumber: '0701112233, 0704445566',
+    })
+
+    expect(numbers.map((n) => n.isPrimary)).toEqual([true, false])
+  })
 })

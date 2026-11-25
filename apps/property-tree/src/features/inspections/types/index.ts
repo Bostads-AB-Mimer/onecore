@@ -89,7 +89,8 @@ export interface TenantInfoCardData {
   fullName: string
   moveInDate?: string | null
   moveOutDate?: string | null
-  isAboutToLeave?: boolean
+  /** Set when the lease is terminated; 'preliminary' is not yet confirmed. */
+  termination?: 'confirmed' | 'preliminary'
 }
 
 /**

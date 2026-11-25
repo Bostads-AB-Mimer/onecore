@@ -171,3 +171,15 @@ CREATE TABLE hyavk (
   fdate DATETIME NULL,
   tdate DATETIME NULL
 )
+GO
+
+IF OBJECT_ID(N'cmlog', N'U') IS NULL
+CREATE TABLE cmlog (
+  keycmlog CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NOT NULL PRIMARY KEY,
+  keydbtbl CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  keycode CHAR(15) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  logtime DATETIME NULL,
+  logcat VARCHAR(60) COLLATE SQL_Latin1_General_CP1_CI_AS NULL,
+  logmemo VARCHAR(MAX) COLLATE SQL_Latin1_General_CP1_CI_AS NULL
+)
+GO

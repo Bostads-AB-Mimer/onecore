@@ -55,7 +55,10 @@ export const OdooWorkOrderSchema = z.object({
   close_request_pending: z.boolean().optional(),
   space_code: z.string(),
   equipment_code: z.string(),
-  rental_property_id: z.string(),
+  rental_property_id: z.union([
+    z.tuple([z.number(), z.string()]),
+    z.literal(false),
+  ]), // false on Lokal, Bilplats and property/building-level ärenden
   create_date: z.coerce.string(),
   due_date: z.coerce.string().nullable(),
   write_date: z.coerce.string(),

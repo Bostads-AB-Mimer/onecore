@@ -2,6 +2,7 @@ import {
   getLatestStartedLease,
   getLatestTenancyCutoff,
   getLeasedUntil,
+  getNextLeaseId,
   getVacantFrom,
   isClaimingLease,
   mapTenfastRentalObjectToAvailabilityInfo,
@@ -253,6 +254,61 @@ describe('tenfast-rental-object-helpers', () => {
       }
     )
 
+    it('is vacant the day after a terminated successor ends', () => {
+      // 307-705-00-0033 on production: /12 ends 2026-12-31, /13 is signed to
+      // start after it and already given notice to 2027-01-31 (AVTAL-517)
+      expect(
+        getVacantFrom([
+          terminated('2026-12-31'),
+          terminated('2027-01-31', 'upcoming'),
+        ])
+      ).toEqual(new Date('2027-02-01T00:00:00.000Z'))
+    })
+
+    it('is vacant the day after a single upcoming lease with an end date', () => {
+      // 307-904-00-0019 on production: no lease running, only one to come
+      expect(getVacantFrom([terminated('2026-12-31', 'upcoming')])).toEqual(
+        new Date('2027-01-01T00:00:00.000Z')
+      )
+    })
+
+    it('is vacant the day after the latest end, never between two leases', () => {
+      // The successor starts a month after the running lease ends: that
+      // month is not offered.
+      expect(
+        getVacantFrom([
+          terminated('2026-06-30'),
+          factory.tenfastLease.build({
+            stage: 'upcoming',
+            startDate: new Date('2026-08-01'),
+            endDate: new Date('2026-09-30'),
+            cancellation: notice(true),
+          }),
+        ])
+      ).toEqual(new Date('2026-10-01T00:00:00.000Z'))
+    })
+
+    it('is not vacant when the notice on an upcoming lease was withdrawn', () => {
+      const withdrawn = factory.tenfastLease.build({
+        stage: 'upcoming',
+        endDate: new Date('2026-09-30'),
+        cancellation: notice(true, true),
+      })
+      expect(
+        getVacantFrom([terminated('2026-06-30'), withdrawn])
+      ).toBeUndefined()
+    })
+
+    it('is not vacant on a draft, even after a terminated successor', () => {
+      expect(
+        getVacantFrom([
+          terminated('2026-06-30'),
+          terminated('2026-09-30', 'upcoming'),
+          { stage: 'draft', endDate: null },
+        ])
+      ).toBeUndefined()
+    })
+
     it('ignores leases that never hold the object', () => {
       expect(
         getVacantFrom([
@@ -348,6 +404,33 @@ describe('tenfast-rental-object-helpers', () => {
       )
       expect(result.rent.amount).toBe(1250)
       expect(result.rent.vat).toBe(250)
+    })
+
+    it('gives the total as the rent of today', () => {
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        factory.tenfastRentalObject.build()
+      )
+      expect(result.rent.asOf).toEqual(TODAY)
+    })
+
+    it('marks rows Tenfast leaves out of the rent total', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        hyror: [
+          factory.tenfastInvoiceRow.build({ includeInContract: true }),
+          factory.tenfastInvoiceRow.build({ includeInContract: false }),
+          factory.tenfastInvoiceRow.build(),
+        ],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
+      expect(result.rent.rows.map((row) => row.includedInRent)).toEqual([
+        true,
+        false,
+        true,
+      ])
     })
   })
 
@@ -480,9 +563,95 @@ describe('tenfast-rental-object-helpers', () => {
       expect(isClaimingLease({ stage })).toBe(false)
     })
 
+    it('does not count an upcoming lease given notice as claiming the object', () => {
+      expect(isClaimingLease(terminated('2026-09-30', 'upcoming'))).toBe(false)
+    })
+
+    it('counts an upcoming fixed-term lease as claiming the object', () => {
+      // An end date without notice.
+      expect(
+        isClaimingLease({
+          stage: 'upcoming',
+          endDate: new Date('2026-09-30'),
+          cancellation: { requested: false, cancelled: false },
+        })
+      ).toBe(true)
+    })
+
+    it('counts an upcoming lease with an end date as claiming the object when its cancellation is missing', () => {
+      // Without it a withdrawn notice can't be told from one that stands.
+      expect(
+        isClaimingLease({ stage: 'upcoming', endDate: new Date('2026-09-30') })
+      ).toBe(true)
+    })
+
+    it('counts an upcoming lease as claiming the object when its notice was withdrawn', () => {
+      expect(
+        isClaimingLease({
+          stage: 'upcoming',
+          endDate: new Date('2026-09-30'),
+          cancellation: { requested: true, cancelled: true },
+        })
+      ).toBe(true)
+    })
+
+    it.each(['draft', 'signingInProgress'])(
+      'counts a %s lease as claiming the object even with an end date',
+      (stage) => {
+        expect(
+          isClaimingLease({ stage, endDate: new Date('2026-09-30') })
+        ).toBe(true)
+      }
+    )
+
     it('counts a lease with a missing or unknown stage as claiming the object', () => {
       expect(isClaimingLease({})).toBe(true)
       expect(isClaimingLease({ stage: 'someNewStage' })).toBe(true)
+    })
+  })
+
+  describe(getNextLeaseId, () => {
+    const code = '704-703-00-0006'
+
+    it('starts at /01 on an object without earlier leases', () => {
+      expect(getNextLeaseId(code, [])).toBe(`${code}/01`)
+    })
+
+    it('continues from the highest number, padded to two digits', () => {
+      expect(
+        getNextLeaseId(code, [`${code}/01`, `${code}/04`, `${code}/02`])
+      ).toBe(`${code}/05`)
+    })
+
+    it('counts the leading digits of a number with letters after it', () => {
+      expect(getNextLeaseId(code, [`${code}/03`, `${code}/13M`])).toBe(
+        `${code}/14`
+      )
+      expect(getNextLeaseId(code, [`${code}/04T`])).toBe(`${code}/05`)
+    })
+
+    it('goes past two digits', () => {
+      expect(getNextLeaseId(code, [`${code}/99`])).toBe(`${code}/100`)
+      expect(getNextLeaseId(code, [`${code}/123`])).toBe(`${code}/124`)
+    })
+
+    it('skips ids of other rental objects and ids without a number', () => {
+      expect(
+        getNextLeaseId(code, [
+          '704-703-00-0060/09',
+          `${code}0/07`,
+          `${code}/M`,
+          `${code}/02`,
+        ])
+      ).toBe(`${code}/03`)
+    })
+
+    it('reads ids with padding left around them', () => {
+      expect(getNextLeaseId(code, [` ${code}/06  `])).toBe(`${code}/07`)
+    })
+
+    it('matches the rental object code trimmed and ignoring case', () => {
+      expect(getNextLeaseId('p123 ', ['P123/04', 'p123/05m'])).toBe('p123/06')
     })
   })
 })

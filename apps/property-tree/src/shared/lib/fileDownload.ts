@@ -16,9 +16,15 @@ export function downloadFileFromBase64(
     byteNumbers[i] = byteCharacters.charCodeAt(i)
   }
   const byteArray = new Uint8Array(byteNumbers)
-  const blob = new Blob([byteArray], { type: mimeType })
+  downloadBlob(new Blob([byteArray], { type: mimeType }), filename)
+}
 
-  // Create download link
+/**
+ * Saves a blob as a file
+ * @param blob - The file contents
+ * @param filename - The name to save the file as
+ */
+export function downloadBlob(blob: Blob, filename: string): void {
   const url = window.URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url

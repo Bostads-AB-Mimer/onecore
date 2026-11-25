@@ -9,11 +9,16 @@ import {
   enrichInvoiceWithAccounting,
   getActiveRentalBlocksWithAccounting,
   getRentalSpecificRules,
+  getInvoicesByContactCode as getXpandInvoicesByContactCode,
+  getInvoiceRows as getXpandInvoiceListRows,
 } from './adapters/xpand-db-adapter'
 import {
   getAllInvoicePaymentEvents,
   getInvoiceByInvoiceNumber,
   getInvoicesByContactCode as getXledgerInvoicesByContactCode,
+  getInvoicesByInvoiceNumbers as getXledgerInvoicesByInvoiceNumbers,
+  ParsedXledgerInvoice,
+  getExistingCustomerCodes,
   getPeriodInformationFromDateStrings,
   setInvoiceRowsTaxRule,
   transformContact,
@@ -53,12 +58,11 @@ import {
   getInvoiceByOcr,
   setGracePeriod,
   getInvoicesByContactCode as getTenfastInvoicesByContactCode,
-  getInvoicesForTenant,
-  getTenantByContactCode,
   getAutogiroConsentByNationalRegistrationNumber,
   getInvoicesNotExported,
   getInvoicesByOcr,
   getRentalLosses,
+  getRecipientCodesOfInvoicesNotExported,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import config, { isRentalLossExcludedAccount } from '@src/common/config'
 import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
@@ -136,28 +140,227 @@ export const getLeaseDetails = async (invoiceIds: string[]) => {
   )
 }
 
+// A loss is recorded in Xledger as a transaction on this account.
+const LOSS_ACCOUNT_CODE = '1529'
+
+// Mimer's company code in Xpand.
+const XPAND_MIMER_COMPANY_ID = '001'
+
+const normalizeContactCode = (contactCode: string) =>
+  contactCode.trim().toUpperCase()
+
+// Keeps the first entry per invoice id, like Array.find would.
+const firstByInvoiceId = <T>(items: T[], getInvoiceId: (item: T) => string) => {
+  const byId = new Map<string, T>()
+  for (const item of items) {
+    const invoiceId = getInvoiceId(item)
+    if (!byId.has(invoiceId)) {
+      byId.set(invoiceId, item)
+    }
+  }
+  return byId
+}
+
+/*
+ * Replaces Xpand invoices with their Xledger counterpart, looked up by invoice
+ * number. Xledger owns payment status, debt collection, remaining amount and
+ * the invoice PDF, but its transform carries no lease context — leaseIds is
+ * empty and transactionTypeName generated — so those values are kept from the
+ * Xpand invoice.
+ *
+ * Mirrors the contact-scoped merge: one Xledger invoice yields exactly one
+ * result, even if several Xpand rows share its invoice number.
+ */
+const enrichFromXledgerByNumber = (
+  xpandInvoices: Invoice[],
+  xledgerInvoices: ParsedXledgerInvoice[]
+): Invoice[] => {
+  const lossInvoiceIds = new Set<string>()
+  const regularById = new Map<string, ParsedXledgerInvoice>()
+  for (const parsed of xledgerInvoices) {
+    if (parsed.invoice.accountCode === LOSS_ACCOUNT_CODE) {
+      lossInvoiceIds.add(parsed.invoice.invoiceId)
+    } else if (!regularById.has(parsed.invoice.invoiceId)) {
+      regularById.set(parsed.invoice.invoiceId, parsed)
+    }
+  }
+
+  const enrichedInvoiceIds = new Set<string>()
+  const result: Invoice[] = []
+  for (const xpandInvoice of xpandInvoices) {
+    const xledgerInvoice = regularById.get(xpandInvoice.invoiceId)
+    const isExpectedLoss = lossInvoiceIds.has(xpandInvoice.invoiceId)
+
+    if (!xledgerInvoice) {
+      // An invoice can be recorded in Xledger as a loss only, with no
+      // regular transaction row to enrich from.
+      result.push(
+        isExpectedLoss ? { ...xpandInvoice, expectedLoss: true } : xpandInvoice
+      )
+      continue
+    }
+
+    if (enrichedInvoiceIds.has(xpandInvoice.invoiceId)) {
+      continue
+    }
+    enrichedInvoiceIds.add(xpandInvoice.invoiceId)
+
+    result.push(
+      withInvoiceDeferral(
+        {
+          ...xledgerInvoice.invoice,
+          leaseIds: xpandInvoice.leaseIds,
+          transactionType: xpandInvoice.transactionType,
+          transactionTypeName: xpandInvoice.transactionTypeName,
+          fromDate: xpandInvoice.fromDate ?? xledgerInvoice.invoice.fromDate,
+          toDate: xpandInvoice.toDate ?? xledgerInvoice.invoice.toDate,
+          ...(isExpectedLoss ? { expectedLoss: true } : {}),
+        },
+        { defermentEndDate: xledgerInvoice.defermentEndDate }
+      )
+    )
+  }
+
+  return result
+}
+
+// Upper bound on how long the invoice list waits for each Xpand call (customer
+// card, Mina sidor, credit check). The invoice-list DB client already cancels
+// a single query after 10 s; a call can run a few queries, so this caps the
+// whole call and also covers waiting for a connection.
+const XPAND_TIMEOUT_MS = 15_000
+
+class XpandTimeoutError extends Error {}
+
+const withXpandTimeout = <T>(promise: Promise<T>): Promise<T> => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new XpandTimeoutError('Xpand did not answer in time')),
+      XPAND_TIMEOUT_MS
+    )
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+
+// The adapter logs its own failures, including the DB client's own request
+// timeout. Only this outer timeout is logged here.
+const logXpandFailure = (err: unknown, contactCode: string, what: string) => {
+  if (err instanceof XpandTimeoutError) {
+    logger.error(
+      { contactCode, timeoutMs: XPAND_TIMEOUT_MS },
+      `getInvoicesByContactCode: ${what} timed out`
+    )
+  } else {
+    logger.warn(
+      { contactCode },
+      `getInvoicesByContactCode: ${what} unavailable`
+    )
+  }
+}
+
+// Xpand is best-effort: when it is unavailable the list is still returned from
+// Xledger and Tenfast. Returns undefined in that case, so the caller can skip
+// the other Xpand queries.
+const getXpandInvoicesIfAvailable = async (
+  contactCode: string,
+  from?: Date
+): Promise<Invoice[] | undefined> => {
+  try {
+    return (
+      (await withXpandTimeout(
+        getXpandInvoicesByContactCode(contactCode, { from })
+      )) ?? []
+    )
+  } catch (err: unknown) {
+    logXpandFailure(err, contactCode, 'Xpand invoices')
+    return undefined
+  }
+}
+
+/*
+ * Invoices for a shared lease billed to the other lease holder (MIM-1160) are
+ * missed by the contact-scoped Xledger lookup, so their Xledger data is
+ * fetched by invoice number instead. Best-effort: falls back to the plain
+ * Xpand invoices.
+ */
+const enrichHouseholdInvoices = async (
+  householdInvoices: Invoice[],
+  contactCode: string
+): Promise<Invoice[]> => {
+  if (householdInvoices.length === 0) {
+    return householdInvoices
+  }
+
+  try {
+    const xledgerByNumber = await getXledgerInvoicesByInvoiceNumbers(
+      householdInvoices.map((invoice) => invoice.invoiceId)
+    )
+    return enrichFromXledgerByNumber(householdInvoices, xledgerByNumber)
+  } catch {
+    logger.warn(
+      { contactCode },
+      'getInvoicesByContactCode: could not enrich household invoices from Xledger, returning them from Xpand'
+    )
+    return householdInvoices
+  }
+}
+
+// Returns undefined when Xpand is unavailable, so the caller keeps the rows
+// the invoices already have. The adapter logs the failure itself.
+const getXpandInvoiceRowsByInvoiceId = async (
+  invoiceIds: string[],
+  contactCode: string
+): Promise<Map<string, InvoiceRow[]> | undefined> => {
+  try {
+    const rows = await withXpandTimeout(
+      getXpandInvoiceListRows(XPAND_MIMER_COMPANY_ID, invoiceIds)
+    )
+    const rowsByInvoiceId = new Map<string, InvoiceRow[]>()
+    for (const row of rows) {
+      const invoiceRows = rowsByInvoiceId.get(row.invoiceNumber) ?? []
+      invoiceRows.push(row)
+      rowsByInvoiceId.set(row.invoiceNumber, invoiceRows)
+    }
+    return rowsByInvoiceId
+  } catch (err: unknown) {
+    logXpandFailure(err, contactCode, 'Xpand invoice rows')
+    return undefined
+  }
+}
+
+// A rent notice PDF is fetched from Tenfast by OCR. Credited Tenfast invoices
+// have no OCR (invoiceId is ''), so there is nothing to look up.
+const hasRentNoticePdf = (tenfastInvoice: Invoice): boolean =>
+  tenfastInvoice.invoiceId !== ''
+
+/*
+ * A contact's invoices from Xledger, Tenfast and Xpand.
+ *
+ * Xledger is the base list. Tenfast adds invoices not yet in Xledger, Xpand
+ * adds invoices that predate Xledger (the contact's own, and those billed to
+ * a co-holder on a shared lease). For the period and the invoice rows,
+ * Tenfast takes precedence over Xpand, and Xpand over Xledger.
+ */
 export const getInvoicesByContactCode = async (
   contactCode: string,
   filters?: { from?: Date }
-) => {
-  const xledgerInvoices =
-    (await getXledgerInvoicesByContactCode(contactCode, {
-      from: filters?.from,
-    })) ?? []
-  const tenfastInvoices = await getTenfastInvoicesByContactCode(contactCode, {
-    from: filters?.from,
-  })
-
-  const xledgerInvoiceIds = xledgerInvoices.map(
-    (parsed) => parsed.invoice.invoiceId
-  )
+): Promise<Invoice[]> => {
+  const from = filters?.from
+  const [xledgerResult, tenfastInvoices, xpandResult] = await Promise.all([
+    getXledgerInvoicesByContactCode(contactCode, { from }),
+    getTenfastInvoicesByContactCode(contactCode, { from }),
+    getXpandInvoicesIfAvailable(contactCode, from),
+  ])
+  const xledgerInvoices = xledgerResult ?? []
+  const isXpandAvailable = xpandResult !== undefined
+  const xpandInvoices = xpandResult ?? []
 
   const regularInvoices: typeof xledgerInvoices = []
   const losses: typeof xledgerInvoices = []
 
   xledgerInvoices.forEach((parsed) => {
-    // A loss is recorded as a transaction on account 1529
-    if (parsed.invoice.accountCode === '1529') {
+    if (parsed.invoice.accountCode === LOSS_ACCOUNT_CODE) {
       losses.push(parsed)
     } else {
       regularInvoices.push(parsed)
@@ -174,42 +377,105 @@ export const getInvoicesByContactCode = async (
     }
   })
 
-  // If invoice exists in tenfast, use period (fromDate, toDate) from tenfast invoice
-  // Otherwise use period from xledger invoice
-  return regularInvoices
-    .map((parsed) => {
-      const tenfastInvoice = tenfastInvoices.find(
-        (invoice) => invoice.invoice.invoiceId === parsed.invoice.invoiceId
-      )
+  const xledgerInvoiceIds = new Set(
+    xledgerInvoices.map((parsed) => parsed.invoice.invoiceId)
+  )
+  const tenfastById = firstByInvoiceId(
+    tenfastInvoices,
+    (parsed) => parsed.invoice.invoiceId
+  )
+  const xpandById = firstByInvoiceId(
+    xpandInvoices,
+    (invoice) => invoice.invoiceId
+  )
 
-      const invoice = {
-        ...parsed.invoice,
-        ...(tenfastInvoice?.invoice.fromDate &&
-          tenfastInvoice.invoice.toDate && {
-            fromDate: tenfastInvoice.invoice.fromDate,
-            toDate: tenfastInvoice.invoice.toDate,
-          }),
-        ...(tenfastInvoice && {
-          invoiceRows: tenfastInvoice.invoice.invoiceRows,
-        }),
-      }
-
-      return withInvoiceDeferral(invoice, {
-        defermentEndDate: parsed.defermentEndDate,
-        tenfastDeferral: tenfastInvoice?.tenfastDeferral,
-      })
-    })
-    .concat(
-      tenfastInvoices
-        .filter(
-          (parsed) => !xledgerInvoiceIds.includes(parsed.invoice.invoiceId)
-        )
-        .map((parsed) =>
-          withInvoiceDeferral(parsed.invoice, {
-            tenfastDeferral: parsed.tenfastDeferral,
-          })
-        )
+  const xledgerBasedInvoices = regularInvoices.map((parsed) => {
+    const tenfastParsed = tenfastById.get(parsed.invoice.invoiceId)
+    const tenfastInvoice = tenfastParsed?.invoice
+    const xpandInvoice = xpandById.get(parsed.invoice.invoiceId)
+    const periodSource = [tenfastInvoice, xpandInvoice].find(
+      (source) => source?.fromDate && source.toDate
     )
+
+    const invoice = {
+      ...parsed.invoice,
+      ...(periodSource && {
+        fromDate: periodSource.fromDate,
+        toDate: periodSource.toDate,
+      }),
+      ...(tenfastInvoice && {
+        invoiceRows: tenfastInvoice.invoiceRows,
+        hasRentNoticePdf: hasRentNoticePdf(tenfastInvoice),
+      }),
+    }
+
+    return withInvoiceDeferral(invoice, {
+      defermentEndDate: parsed.defermentEndDate,
+      tenfastDeferral: tenfastParsed?.tenfastDeferral,
+    })
+  })
+
+  const tenfastOnlyInvoices = tenfastInvoices
+    .filter((parsed) => !xledgerInvoiceIds.has(parsed.invoice.invoiceId))
+    .map((parsed) =>
+      withInvoiceDeferral(
+        {
+          ...parsed.invoice,
+          hasRentNoticePdf: hasRentNoticePdf(parsed.invoice),
+        },
+        { tenfastDeferral: parsed.tenfastDeferral }
+      )
+    )
+
+  const xpandOnlyInvoices = xpandInvoices.filter(
+    (invoice) =>
+      !xledgerInvoiceIds.has(invoice.invoiceId) &&
+      !tenfastById.has(invoice.invoiceId)
+  )
+  // The contact's own Xpand-only invoices predate Xledger, so looking them up
+  // there would only add round trips that return nothing.
+  const isBilledToOtherContact = (invoice: Invoice) =>
+    normalizeContactCode(invoice.reference) !==
+    normalizeContactCode(contactCode)
+  const ownXpandOnlyInvoices = xpandOnlyInvoices.filter(
+    (invoice) => !isBilledToOtherContact(invoice)
+  )
+
+  // Invoices in Tenfast keep Tenfast's rows; all others get Xpand's rows.
+  const invoiceIdsNeedingXpandRows = [
+    ...new Set(
+      regularInvoices
+        .map((parsed) => parsed.invoice.invoiceId)
+        .filter((invoiceId) => !tenfastById.has(invoiceId))
+        .concat(xpandOnlyInvoices.map((invoice) => invoice.invoiceId))
+    ),
+  ]
+
+  const [householdInvoices, xpandRowsByInvoiceId] = await Promise.all([
+    enrichHouseholdInvoices(
+      xpandOnlyInvoices.filter(isBilledToOtherContact),
+      contactCode
+    ),
+    // Xpand didn't answer the invoice lookup: don't wait for it a second time.
+    isXpandAvailable
+      ? getXpandInvoiceRowsByInvoiceId(invoiceIdsNeedingXpandRows, contactCode)
+      : undefined,
+  ])
+
+  const withXpandRows = (invoice: Invoice): Invoice =>
+    xpandRowsByInvoiceId && !tenfastById.has(invoice.invoiceId)
+      ? {
+          ...invoice,
+          invoiceRows: xpandRowsByInvoiceId.get(invoice.invoiceId) ?? [],
+        }
+      : invoice
+
+  return [
+    ...xledgerBasedInvoices,
+    ...tenfastOnlyInvoices,
+    ...ownXpandOnlyInvoices,
+    ...householdInvoices,
+  ].map(withXpandRows)
 }
 
 type DeferInvoiceError = economy.DeferralErrorCode | 'unknown'
@@ -352,68 +618,6 @@ export const getInvoiceDetails = async (
   })
 }
 
-export const getInvoiceDetailsForContactCode = async (
-  contactCode: string,
-  from?: Date
-): Promise<Invoice[]> => {
-  const tenfastTenantResult = await getTenantByContactCode(contactCode)
-  if (!tenfastTenantResult.ok || tenfastTenantResult.data === null) {
-    return []
-  }
-
-  const tenfastInvoicesResult = await getInvoicesForTenant(
-    tenfastTenantResult.data._id,
-    from
-  )
-  if (!tenfastInvoicesResult.ok) {
-    return []
-  }
-
-  return enrichInvoices(
-    tenfastInvoicesResult.data.map((parsed) =>
-      withInvoiceDeferral(parsed.invoice, {
-        tenfastDeferral: parsed.tenfastDeferral,
-      })
-    )
-  )
-}
-
-const enrichInvoices = async (invoices: Invoice[]): Promise<Invoice[]> => {
-  const allInvoiceRows = invoices.flatMap((i) => i.invoiceRows)
-  const articleIds = allInvoiceRows.reduce<string[]>((acc, ir) => {
-    if (ir.rentArticle) {
-      acc.push(ir.rentArticle)
-    }
-    return acc
-  }, [])
-
-  const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticle(id))
-  )
-  const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
-    if (ar.ok) {
-      acc.push(ar.data)
-    }
-    return acc
-  }, [])
-
-  return invoices.map((i): Invoice => {
-    return {
-      ...i,
-      invoiceRows: i.invoiceRows.map((ir) => {
-        const article = articles.find((a) => {
-          return a._id === ir.rentArticle
-        })
-
-        return {
-          ...ir,
-          invoiceRowText: article?.title ?? null,
-        }
-      }),
-    }
-  })
-}
-
 const enrichInvoiceRowsWithText = async (
   invoiceRows: InvoiceRow[]
 ): Promise<InvoiceRow[]> => {
@@ -424,8 +628,9 @@ const enrichInvoiceRowsWithText = async (
     return acc
   }, [])
 
+  // One lookup per article, even when several rows use it.
   const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticle(id))
+    [...new Set(articleIds)].map((id) => getInvoiceArticle(id))
   )
   const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
     if (ar.ok) {
@@ -552,6 +757,108 @@ const prepareInvoicesForAccounting = async (
   return { invoices: prepared, errors }
 }
 
+export const isInternalRecipient = (contactCode: string | undefined) =>
+  contactCode?.startsWith('I') ?? false
+
+export type InvoiceRecipientsMissingAsCustomersResult =
+  | { ok: true; data: economy.InvoiceRecipientsMissingAsCustomersResponse }
+  | {
+      ok: false
+      err: economy.InvoiceRecipientsMissingAsCustomersErrorResponse['error']
+      reason: string
+    }
+
+export const getInvoiceRecipientsMissingAsCustomers = async (
+  companyId: string
+): Promise<InvoiceRecipientsMissingAsCustomersResult> => {
+  const company = config.companies.find(
+    (company) => company.xpandId.localeCompare(companyId) === 0
+  )
+  if (!company) {
+    return {
+      ok: false,
+      err: 'unknown-company',
+      reason: `Could not find company ${companyId}`,
+    }
+  }
+
+  const recipientsResult = await getRecipientCodesOfInvoicesNotExported(company)
+  if (!recipientsResult.ok) {
+    return { ok: false, err: 'tenfast-failed', reason: recipientsResult.err }
+  }
+
+  const recipients = recipientsResult.data.filter(
+    (code) => !isInternalRecipient(code)
+  )
+  if (recipients.length === 0) {
+    return { ok: true, data: { recipients: 0, missingCustomerCodes: [] } }
+  }
+
+  try {
+    const existing = new Set(await getExistingCustomerCodes(recipients))
+    return {
+      ok: true,
+      data: {
+        recipients: recipients.length,
+        missingCustomerCodes: recipients.filter((code) => !existing.has(code)),
+      },
+    }
+  } catch (err: unknown) {
+    logger.error(
+      { companyId, error: errorMessage(err) },
+      'Could not look up existing Xledger customers'
+    )
+    return { ok: false, err: 'xledger-failed', reason: errorMessage(err) }
+  }
+}
+
+const holdBackInvoicesWithMissingCustomer = async (
+  invoices: InvoiceWithAccounting[]
+): Promise<{
+  invoices: InvoiceWithAccounting[]
+  errors: economy.RentalInvoiceExportError[]
+  missingCustomerCodes: string[]
+}> => {
+  const recipientCodes = [
+    ...new Set(
+      invoices.flatMap((invoice) =>
+        invoice.recipientContactCode
+          ? [invoice.recipientContactCode.trim()]
+          : []
+      )
+    ),
+  ]
+  if (recipientCodes.length === 0) {
+    return { invoices, errors: [], missingCustomerCodes: [] }
+  }
+
+  const existing = new Set(await getExistingCustomerCodes(recipientCodes))
+  const missingCustomerCodes = recipientCodes.filter(
+    (code) => !existing.has(code)
+  )
+  if (missingCustomerCodes.length === 0) {
+    return { invoices, errors: [], missingCustomerCodes }
+  }
+
+  const missing = new Set(missingCustomerCodes)
+  const errors: economy.RentalInvoiceExportError[] = []
+  const kept: InvoiceWithAccounting[] = []
+  for (const invoice of invoices) {
+    const code = invoice.recipientContactCode?.trim()
+    if (code && missing.has(code)) {
+      errors.push({
+        invoiceNumber: invoice.invoiceId,
+        code: 'missing-customer',
+        error: `Customer ${code} is missing in Xledger`,
+      })
+    } else {
+      kept.push(invoice)
+    }
+  }
+
+  return { invoices: kept, errors, missingCustomerCodes }
+}
+
 export const exportRentalInvoicesAccounting = async (
   companyId: string,
   numberOfChunks: number = 1
@@ -559,12 +866,14 @@ export const exportRentalInvoicesAccounting = async (
   exportedInvoices: InvoiceWithAccounting[]
   skippedInvoices: InvoiceWithAccounting[]
   errors: economy.RentalInvoiceExportError[]
+  missingCustomerCodes: string[]
 }> => {
   try {
     const errors: economy.RentalInvoiceExportError[] = []
     const CHUNK_SIZE = 1000 // 100
     const invoices: InvoiceWithAccounting[] = []
     const skippedInvoices: InvoiceWithAccounting[] = []
+    const missingCustomerCodes = new Set<string>()
 
     const company = config.companies.find(
       (company) => company.xpandId.localeCompare(companyId) === 0
@@ -591,11 +900,11 @@ export const exportRentalInvoicesAccounting = async (
 
       // TODO: add logic for internal customers instead of filtering them out.
       let chunkInvoices = invoicesResult.data.invoices.filter((invoice) => {
-        return !invoice.recipientContactCode?.startsWith('I')
+        return !isInternalRecipient(invoice.recipientContactCode)
       })
 
       let skipped = invoicesResult.data.invoices.filter((invoice) => {
-        return invoice.recipientContactCode?.startsWith('I')
+        return isInternalRecipient(invoice.recipientContactCode)
       })
 
       skippedInvoices.push(...skipped)
@@ -612,8 +921,16 @@ export const exportRentalInvoicesAccounting = async (
           exportedInvoices: [],
           skippedInvoices,
           errors,
+          missingCustomerCodes: [...missingCustomerCodes],
         }
       }
+
+      const heldBack = await holdBackInvoicesWithMissingCustomer(chunkInvoices)
+      errors.push(...heldBack.errors)
+      heldBack.missingCustomerCodes.forEach((code) =>
+        missingCustomerCodes.add(code)
+      )
+      chunkInvoices = heldBack.invoices
 
       const prepared = await prepareInvoicesForAccounting(
         company,
@@ -650,6 +967,7 @@ export const exportRentalInvoicesAccounting = async (
       exportedInvoices: invoices,
       skippedInvoices,
       errors,
+      missingCustomerCodes: [...missingCustomerCodes],
     }
   } catch (error: any) {
     logger.error(error, 'Error importing invoices')
@@ -694,11 +1012,11 @@ export const exportRentalInvoicesAccountingByOcr = async (
 
   // TODO: add logic for internal customers instead of filtering them out.
   const skippedInvoices = invoicesResult.data.invoices.filter((invoice) => {
-    return invoice.recipientContactCode?.startsWith('I')
+    return isInternalRecipient(invoice.recipientContactCode)
   })
 
   const relevantInvoices = invoicesResult.data.invoices.filter((invoice) => {
-    return !invoice.recipientContactCode?.startsWith('I')
+    return !isInternalRecipient(invoice.recipientContactCode)
   })
 
   const prepared = await prepareInvoicesForAccounting(company, relevantInvoices)

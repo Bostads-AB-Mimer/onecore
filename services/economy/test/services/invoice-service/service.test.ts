@@ -75,6 +75,7 @@ jest.mock(
 jest.mock('@src/services/common/adapters/xledger-adapter', () => ({
   ...jest.requireActual('@src/services/common/adapters/xledger-adapter'),
   getInvoiceByInvoiceNumber: jest.fn(),
+  getExistingCustomerCodes: jest.fn(),
   getPeriodInformationFromDateStrings: jest.fn(() => ({
     periodStart: '',
     periods: '',
@@ -101,6 +102,7 @@ import {
 // Import the actual modules to get proper typing
 import {
   getInvoiceByInvoiceNumber,
+  getExistingCustomerCodes,
   getPeriodInformationFromDateStrings,
   uploadFile,
 } from '@src/services/common/adapters/xledger-adapter'
@@ -379,8 +381,8 @@ describe('Rental Invoice Service', () => {
 
       const result = await getInvoiceDetails('55123456')
 
-      // Should call getInvoiceArticle for each unique article ID
-      expect(mockGetInvoiceArticle).toHaveBeenCalledTimes(2)
+      // Should call getInvoiceArticle once per unique article ID
+      expect(mockGetInvoiceArticle).toHaveBeenCalledTimes(1)
       expect(mockGetInvoiceArticle).toHaveBeenCalledWith('HYRAB')
 
       expect(result).toEqual({
@@ -589,6 +591,9 @@ const buildInvoice = (
 describe('Rental Invoice Accounting', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    ;(getExistingCustomerCodes as jest.Mock).mockImplementation(
+      async (codes: string[]) => codes
+    )
     mockGetCounterPartCustomers.mockResolvedValue([])
     mockFindCounterPartCustomer.mockReturnValue(undefined)
     mockGetRoundOffInformation.mockResolvedValue({

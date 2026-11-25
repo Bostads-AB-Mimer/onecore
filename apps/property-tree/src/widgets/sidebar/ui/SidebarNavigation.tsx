@@ -243,14 +243,17 @@ function SidebarNavigationContent() {
           icon={Settings}
           label="Administrera Komponenter"
         />
-        <SidebarNavLink to={routes.guides} icon={BookOpen} label="Guider" />
-        {/* Temporarily hidden from the nav while the feature is finalized.
-            The route still works, so the page is reachable via /forvaltningsomraden. */}
-        {/* <SidebarNavLink
+        <SidebarNavLink
+          to={routes.guides}
+          icon={BookOpen}
+          label="Guider"
+          matchPrefix
+        />
+        <SidebarNavLink
           to={routes.propertyAreas}
           icon={LayoutGrid}
           label="Förvaltningsområden"
-        /> */}
+        />
       </SidebarContent>
     </Sidebar>
   )

@@ -51,7 +51,7 @@ sequenceDiagram
     alt LOCAL_OUTPUT is set
         Core ->> Core: Write File to Local Disk
     else
-        Core ->> SFTP: Upload "Hemforsakring_LF_YYYY-MM-DD.xlsx"
+        Core ->> SFTP: Upload "NyMimer_Hemforsakring.xlsx"<br/>(overwrites previous day's file)
         SFTP -->> Core: Uploaded
     end
 

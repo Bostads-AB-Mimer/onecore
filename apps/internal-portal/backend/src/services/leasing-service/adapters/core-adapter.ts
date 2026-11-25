@@ -710,13 +710,21 @@ async function getLeasesByContactCode(contactCode: string) {
   return { ok: true, data: response.data.content }
 }
 
+type CreatedNonScoredLease = {
+  leaseId?: string
+  creditCheckType?: string
+  // Missing when core's answer has no valid VAT decision. The lease exists
+  // then anyway, so it is not treated as a failure.
+  vat?: leasing.v1.ParkingSpaceVatDecision
+}
+
 const createLeaseForNonScoredParkingSpace = async (params: {
   parkingSpaceId: string
   contactCode: string
   startDate: string
 }): Promise<
   AdapterResult<
-    unknown,
+    CreatedNonScoredLease,
     | 'internal-credit-check-failed'
     | 'external-credit-check-failed'
     | 'invalid-address'
@@ -728,17 +736,38 @@ const createLeaseForNonScoredParkingSpace = async (params: {
     | 'fetch-invoices-failed'
     | 'create-lease-failed'
     | 'rental-object-not-available'
+    | 'get-tenant-failed'
     | 'unknown'
   >
 > => {
   try {
-    const response = await getFromCore<any>({
+    const response = await getFromCore<{
+      content?: { leaseId?: string; creditCheckType?: string; vat?: unknown }
+    }>({
       method: 'post',
       url: `${coreBaseUrl}/parking-spaces/${params.parkingSpaceId}/leases`,
       data: { contactCode: params.contactCode, startDate: params.startDate },
     })
 
-    return { ok: true, data: response.data.content }
+    const content = response.data.content
+    // safeParse, not parse: the lease is already created, so a malformed VAT
+    // decision must not turn the answer into an error.
+    const vat = leasing.v1.ParkingSpaceVatDecisionSchema.safeParse(content?.vat)
+    if (!vat.success) {
+      logger.warn(
+        { parkingSpaceId: params.parkingSpaceId },
+        'core-adapter.createLeaseForNonScoredParkingSpace: no valid VAT decision in response'
+      )
+    }
+
+    return {
+      ok: true,
+      data: {
+        leaseId: content?.leaseId,
+        creditCheckType: content?.creditCheckType,
+        vat: vat.success ? vat.data : undefined,
+      },
+    }
   } catch (err) {
     if (err instanceof AxiosError && err.response?.data) {
       const statusCode = err.response.status
@@ -762,6 +791,7 @@ const createLeaseForNonScoredParkingSpace = async (params: {
         case 'fetch-invoices-failed':
         case 'create-lease-failed':
         case 'rental-object-not-available':
+        case 'get-tenant-failed':
           return { ok: false, err: errorCode, statusCode }
         case 'invalid-address':
         case 'applicant-missing-address':

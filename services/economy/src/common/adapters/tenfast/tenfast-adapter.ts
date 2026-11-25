@@ -8,10 +8,9 @@ import {
   TenfastInvoicesByTenantIdResponseSchema,
   TenfastTenant,
   TenfastInvoicesByExportedResponseSchema,
+  TenfastInvoiceRecipientsPageSchema,
   TenfastTenantSchema,
   TenfastInvoiceSchema,
-  TenfastRentalLossHyraSchema,
-  TenfastRentalLossSchema,
   TenfastRentalLoss,
   TenfastRentalLossHyra,
   TenfastRentalLossResponseSchema,
@@ -97,18 +96,15 @@ export const getTenantByContactCode = async (
   try {
     const tenantResponse = await makeTenfastRequest(
       `/v1/hyresvard/extras/hyresgaster/${encodeURIComponent(contactCode)}`,
-      { params: { hyresvard: companyId } }
+      {
+        params: { hyresvard: companyId },
+        // 404 is a contact Tenfast doesn't have (e.g. leases ended before
+        // Tenfast), not a failure, so it must reach the null branch below.
+        validateStatus: (status) => status === 200 || status === 404,
+      }
     )
 
     if (tenantResponse.status === 404) return { ok: true, data: null }
-
-    if (tenantResponse.status !== 200) {
-      return {
-        ok: false,
-        err: tenantResponse.statusText,
-        statusCode: tenantResponse.status,
-      }
-    }
 
     const parsed = TenfastTenantSchema.safeParse(tenantResponse.data)
     if (!parsed.success) {
@@ -117,9 +113,15 @@ export const getTenantByContactCode = async (
     }
 
     return { ok: true, data: parsed.data }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+  } catch (err: unknown) {
+    // Never the raw error: an AxiosError carries the request headers,
+    // including the API token.
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { contactCode, status, error: errorMessage(err) },
+      'tenfast-adapter.getTenantByContactCode'
+    )
+    return { ok: false, err: errorMessage(err) }
   }
 }
 
@@ -144,84 +146,130 @@ const getRentalObjectById = async (
   }
 }
 
-/*export const getInvoicesForTenant = async (
-  tenantId: string
-): Promise<AdapterResult<Invoice[], string>> => {
-  try {
-    const result = await makeTenfastRequest(
-      `/v1/hyresvard/hyresgaster/${tenantId}/hyror`
-    )
-    if (result.status !== 200) {
-      return { ok: false, err: result.statusText }
+// Largest page size Tenfast accepts on /v1/hyresvard/hyror.
+const TENFAST_INVOICES_PAGE_SIZE = 1000
+
+// Upper bound on the pages fetched in one walk, so a cursor chain that never
+// ends can't loop forever. Far above any real result set.
+const TENFAST_MAX_PAGES = 100
+
+export type TenfastPagesError =
+  'request-failed' | 'schema-error' | 'pagination-error'
+
+/**
+ * Fetches every page of a paginated Tenfast list endpoint.
+ *
+ * `paginate` is a cursor in Tenfast, not an on/off flag: the first page is
+ * requested without it and each following page with the previous `next`, until
+ * `next` is missing. `totalCount` is deliberately not a stop condition, since
+ * records can be created between pages.
+ *
+ * Any failed page fails the whole walk: returning the pages fetched so far
+ * would silently hide the remaining records. Network errors are thrown, so
+ * call this inside the adapter function's try/catch.
+ */
+const fetchAllTenfastPages = async <T>(
+  url: string,
+  params: Record<string, string | number | undefined>,
+  schema: z.ZodType<
+    { records: T[]; next: string | null },
+    z.ZodTypeDef,
+    unknown
+  >,
+  logContext: Record<string, string>
+): Promise<AdapterResult<T[], TenfastPagesError>> => {
+  const records: T[] = []
+  let cursor: string | undefined
+
+  for (let page = 0; page < TENFAST_MAX_PAGES; page++) {
+    const response = await makeTenfastRequest(url, {
+      params: { ...params, ...(cursor ? { paginate: cursor } : {}) },
+      // Every status resolves, so a failed page is handled here rather than
+      // depending on the process-wide axios default.
+      validateStatus: () => true,
+    })
+    if (response.status !== 200) {
+      // Status only: the body can hold tenant data.
+      logger.warn(
+        { ...logContext, url, status: response.status },
+        'tenfast-adapter.fetchAllTenfastPages: unexpected status'
+      )
+      return { ok: false, err: 'request-failed' }
     }
 
-    const parsedResponse = TenfastInvoicesByTenantIdResponseSchema.safeParse(
-      result.data
-    )
-
-    if (!parsedResponse.success) {
+    const parsed = schema.safeParse(response.data)
+    if (!parsed.success) {
       logger.error(
-        { tenantId, error: parsedResponse.error.issues },
-        'Failed to parse Tenfast invoices by tenant id response'
+        { ...logContext, url, error: parsed.error.issues },
+        'tenfast-adapter.fetchAllTenfastPages: response parse failed'
       )
       return { ok: false, err: 'schema-error' }
     }
 
-    return {
-      ok: true,
-      data: parsedResponse.data
-        .filter(isVisibleTenfastInvoice)
-        .map(transformToInvoice),
+    records.push(...parsed.data.records)
+
+    const { next } = parsed.data
+    if (!next) {
+      return { ok: true, data: records }
     }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+    // Tenfast answers a cursor it doesn't accept with the first page again. An
+    // empty page or a cursor that repeats means the walk can't progress, and
+    // continuing would return duplicated or incomplete records as success.
+    if (parsed.data.records.length === 0 || next === cursor) {
+      logger.error(
+        { ...logContext, url, page },
+        'tenfast-adapter.fetchAllTenfastPages: cursor did not advance'
+      )
+      return { ok: false, err: 'pagination-error' }
+    }
+    cursor = next
   }
-}*/
+
+  logger.error(
+    { ...logContext, url, maxPages: TENFAST_MAX_PAGES },
+    'tenfast-adapter.fetchAllTenfastPages: page limit reached'
+  )
+  return { ok: false, err: 'pagination-error' }
+}
 
 export const getInvoicesForTenant = async (
   tenantId: string,
   from?: Date
-): Promise<AdapterResult<ParsedTenfastInvoice[], string>> => {
+): Promise<AdapterResult<ParsedTenfastInvoice[], TenfastPagesError>> => {
   try {
-    const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
-      params: {
+    const pagesResult = await fetchAllTenfastPages(
+      '/v1/hyresvard/hyror',
+      {
         hyresvard: companyId,
         hyresgast: tenantId,
-        paginate: 'false',
+        limit: TENFAST_INVOICES_PAGE_SIZE,
+        // No `to`: Tenfast applies from/to to the invoice period, not the
+        // invoice date. Rent is invoiced in advance, so an upper bound of
+        // today would drop next month's invoice.
         from: from ? dateToDateString(from) : undefined,
-        to: from ? dateToDateString(new Date()) : undefined,
       },
-    })
-    if (result.status !== 200) {
-      logger.warn(
-        { tenantId, status: result.status, data: result.data },
-        'Failed to fetch Tenfast invoices for tenant'
-      )
-      return { ok: false, err: result.statusText }
-    }
-
-    const parsedResponse = TenfastInvoicesByTenantIdResponseSchema.safeParse(
-      result.data
+      TenfastInvoicesByTenantIdResponseSchema,
+      { tenantId }
     )
-
-    if (!parsedResponse.success) {
-      logger.error(
-        { tenantId, error: parsedResponse.error.issues },
-        'Failed to parse Tenfast invoices by tenant id response'
-      )
-      return { ok: false, err: 'schema-error' }
+    if (!pagesResult.ok) {
+      return pagesResult
     }
 
     return {
       ok: true,
-      data: parsedResponse.data.records
+      data: pagesResult.data
         .filter(isVisibleTenfastInvoice)
         .map(transformToInvoice),
     }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+  } catch (err: unknown) {
+    // Never the raw error: an AxiosError carries the request headers,
+    // including the API token.
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { tenantId, status, error: errorMessage(err) },
+      'tenfast-adapter.getInvoicesForTenant'
+    )
+    return { ok: false, err: 'request-failed' }
   }
 }
 
@@ -302,7 +350,39 @@ export const getInvoicesByContactCode = async (
     throw invoicesResult.err
   }
 
+  await replaceRentArticleIdsWithCodes(invoicesResult.data)
   return invoicesResult.data
+}
+
+/**
+ * Tenfast invoice rows reference their article by Tenfast's internal id.
+ * Shown to users, replace it with the article code (e.g. HYRAB). Only on
+ * this read path: the accounting export looks articles up by id. A row whose
+ * article can't be fetched keeps the id; getInvoiceArticle logs the failure.
+ */
+const replaceRentArticleIdsWithCodes = async (
+  invoices: ParsedTenfastInvoice[]
+) => {
+  const rows = invoices.flatMap((parsed) => parsed.invoice.invoiceRows)
+  const articleIds = [
+    ...new Set(
+      rows.flatMap((row) => (row.rentArticle ? [row.rentArticle] : []))
+    ),
+  ]
+
+  const codeById = new Map(
+    await Promise.all(
+      articleIds.map(async (articleId) => {
+        const result = await getInvoiceArticle(articleId)
+        return [articleId, result.ok ? result.data.code : undefined] as const
+      })
+    )
+  )
+
+  for (const row of rows) {
+    const code = row.rentArticle ? codeById.get(row.rentArticle) : undefined
+    if (code) row.rentArticle = code
+  }
 }
 
 export const getRentalProperty = async (
@@ -490,7 +570,7 @@ const fetchTenfastInvoiceByOcr = async (
 
     if (result.status !== 200) {
       logger.info(
-        { ocr, status: result.status, data: result.data },
+        { ocr, status: result.status },
         'deferral: Tenfast OCR lookup returned unexpected status'
       )
       return { ok: false, err: 'unknown' }
@@ -575,29 +655,6 @@ export const getInvoiceArticle = async (
     )
     return { ok: false, err: 'request-failed' }
   }
-}
-
-let rentArticles: TenfastRentArticle[]
-
-const retrieveRentArticles = async () => {
-  const result = await makeTenfastRequest(`/v1/hyresvard/articles`)
-
-  if (result.status !== 200) {
-    logger.error(result.status)
-    throw new Error('Could not retrieve rent articles from Tenfast')
-  }
-
-  const correctArticles = result.data.filter((article: any) => article.category)
-
-  const parsedResponse = z
-    .array(TenfastRentArticleSchema)
-    .safeParse(correctArticles)
-  if (!parsedResponse.success) {
-    logger.error(parsedResponse)
-    throw new Error('Could not retrieve rent articles from Tenfast')
-  }
-
-  rentArticles = parsedResponse.data
 }
 
 /*const transformToInvoice = (tenfastInvoice: TenfastInvoice): Invoice => {
@@ -729,7 +786,6 @@ export const setGracePeriod = async (params: {
     logger.error(
       {
         status: res.status,
-        data: res.data,
         ocr: params.invoiceOcr,
         tenfastInvoiceId: result.data._id,
       },
@@ -781,12 +837,24 @@ export const recordPaymentForInvoice = async (params: {
     }
 
     logger.error(
-      { status: res.status, data: res.data },
+      { status: res.status },
       'tenfast-adapter.recordPaymentForInvoice: unexpected status'
     )
     return { ok: false, err: 'unknown' }
-  } catch (err: any) {
-    logger.error(err, 'tenfast-adapter.recordPaymentForInvoice')
+  } catch (err: unknown) {
+    // Tenfast explains a rejected transaction (e.g. 400) only in the body. The logger's
+    // serializer strips `error` to type/message/stack, so stringify it under its own key.
+    if (axios.isAxiosError(err) && err.response) {
+      logger.error(
+        {
+          status: err.response.status,
+          responseBody: JSON.stringify(err.response.data),
+        },
+        'tenfast-adapter.recordPaymentForInvoice'
+      )
+    } else {
+      logger.error({ err }, 'tenfast-adapter.recordPaymentForInvoice')
+    }
     return { ok: false, err: 'unknown' }
   }
 }
@@ -1191,6 +1259,44 @@ const enrichInvoiceRowsWithAccounting = async (
   }
 }
 
+export const getRecipientCodesOfInvoicesNotExported = async (
+  company: MimerCompany
+): Promise<AdapterResult<string[], TenfastPagesError>> => {
+  try {
+    const pagesResult = await fetchAllTenfastPages(
+      '/v1/hyresvard/hyror',
+      {
+        isManuallyExported: 'false',
+        isCancelled: 'false',
+        status: 'issued',
+        hyresvard: company.tenfastId,
+        limit: TENFAST_INVOICES_PAGE_SIZE,
+      },
+      TenfastInvoiceRecipientsPageSchema,
+      { companyId: company.xpandId }
+    )
+    if (!pagesResult.ok) {
+      return pagesResult
+    }
+
+    const codes = new Set<string>()
+    for (const record of pagesResult.data) {
+      const code = record.avtal[0]?.hyresgaster[0]?.externalId.trim()
+      if (code) {
+        codes.add(code)
+      }
+    }
+    return { ok: true, data: [...codes] }
+  } catch (err: unknown) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { companyId: company.xpandId, status, error: errorMessage(err) },
+      'tenfast-adapter.getRecipientCodesOfInvoicesNotExported'
+    )
+    return { ok: false, err: 'request-failed' }
+  }
+}
+
 export const getInvoicesNotExported = async (
   maxCount: number,
   company: MimerCompany
@@ -1209,12 +1315,10 @@ export const getInvoicesNotExported = async (
     const result = await makeTenfastRequest('/v1/hyresvard/hyror', {
       params: {
         isManuallyExported: 'false',
+        isCancelled: 'false',
         status: 'issued',
         limit: maxCount,
         hyresvard: company.tenfastId,
-        /*paginate:
-          'eyJpZCI6IjY5ZDZmNDQ0MGM4NGU2YzRjMDRmNGU5MyIsImlzTmV4dCI6dHJ1ZX0',*/
-        //ocrNumber: '552606000000733',
       },
     })
 

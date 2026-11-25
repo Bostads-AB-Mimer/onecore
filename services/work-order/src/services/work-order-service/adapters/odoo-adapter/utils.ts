@@ -81,7 +81,9 @@ export const transformWorkOrder = (odooWorkOrder: OdooWorkOrder): WorkOrder => {
     MaintenanceTeam: odooWorkOrder.maintenance_team_id
       ? odooWorkOrder.maintenance_team_id[1]
       : null,
-    RentalObjectCode: odooWorkOrder.rental_property_id[1],
+    RentalObjectCode: odooWorkOrder.rental_property_id
+      ? odooWorkOrder.rental_property_id[1]
+      : '',
     Status: odooWorkOrder.stage_id[1],
     HiddenFromMyPages: odooWorkOrder.hidden_from_my_pages || false,
     CloseRequestPending: odooWorkOrder.close_request_pending || false,

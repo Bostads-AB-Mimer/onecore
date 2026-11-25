@@ -5,11 +5,9 @@ import { z } from 'zod'
 import {
   getContacts,
   getContactByContactCode,
+  getLeaseIdsByRentalObjectCode,
 } from '../adapters/xpand/tenant-lease-adapter'
-import {
-  searchLeases,
-  getParkingSpaceTypes,
-} from '../adapters/xpand/lease-search-adapter'
+import { getParkingSpaceTypes } from '../adapters/xpand/lease-search-adapter'
 import {
   logger,
   generateRouteMetadata,
@@ -18,8 +16,11 @@ import {
 
 import * as tenfastLeaseSearchAdapter from '../adapters/tenfast/tenfast-lease-search-adapter'
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import { filterByStatus } from '../adapters/tenfast/filters'
 import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import * as tenfastHelpers from '../helpers/tenfast'
+import * as endedLeaseAdapter from '../adapters/xpand/ended-lease-adapter'
+import { mergeTenfastFirst } from '../helpers/merge-tenfast-first'
 import config from '../../../common/config'
 import { TenfastLease, toYearMonthDayString } from '../adapters/tenfast/schemas'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
@@ -46,198 +47,29 @@ function isKoaHttpError(error: unknown): error is KoaHttpErrorLike {
   )
 }
 
+const includesEnded = (statuses?: string[]) =>
+  !statuses || statuses.length === 0 || statuses.includes('ended')
+
+// A failed Xpand read must not break the page: log it and show Tenfast leases only.
+const getEndedXpandLeases = async (
+  promise:
+    | ReturnType<typeof endedLeaseAdapter.getEndedLeasesByContactCode>
+    | undefined,
+  metadata: object
+): Promise<Lease[]> => {
+  if (!promise) return []
+  const result = await promise
+  if (!result.ok) {
+    logger.error(
+      { error: result.err, metadata },
+      'Error fetching ended leases from Xpand'
+    )
+    return []
+  }
+  return result.data
+}
+
 export const routes = (router: KoaRouter) => {
-  /**
-   * @swagger
-   * /leases/search:
-   *   get:
-   *     summary: Search and filter leases
-   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges, and property hierarchy filters.
-   *     tags: [Leases]
-   *     parameters:
-   *       - in: query
-   *         name: q
-   *         schema:
-   *           type: string
-   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
-   *       - in: query
-   *         name: objectType
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Object type codes (balgh, babps, balok)
-   *       - in: query
-   *         name: status
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *             enum: [current, upcoming, aboutToEnd, ended, "0", "1", "2", "3"]
-   *         description: "Contract status filter (0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended)"
-   *       - in: query
-   *         name: startDateFrom
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Minimum start date (YYYY-MM-DD)
-   *       - in: query
-   *         name: startDateTo
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Maximum start date (YYYY-MM-DD)
-   *       - in: query
-   *         name: endDateFrom
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Minimum last debit date (YYYY-MM-DD)
-   *       - in: query
-   *         name: endDateTo
-   *         schema:
-   *           type: string
-   *           format: date
-   *         description: Maximum last debit date (YYYY-MM-DD)
-   *       - in: query
-   *         name: property
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Property/estate names
-   *       - in: query
-   *         name: buildingCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Building codes
-   *       - in: query
-   *         name: areaCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: Area codes (Område)
-   *       - in: query
-   *         name: districtNames
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: District names
-   *       - in: query
-   *         name: kvvAreaCodes
-   *         schema:
-   *           type: array
-   *           items:
-   *             type: string
-   *         description: KVV-area codes (bafen.code) — filters leases to those in the listed förvaltningsområden
-   *       - in: query
-   *         name: page
-   *         schema:
-   *           type: integer
-   *           default: 1
-   *         description: Page number
-   *       - in: query
-   *         name: limit
-   *         schema:
-   *           type: integer
-   *           default: 20
-   *           maximum: 500
-   *         description: Items per page
-   *       - in: query
-   *         name: includeEnded
-   *         schema:
-   *           type: boolean
-   *           default: false
-   *         description: Include Upphört (ended) contracts. Excluded by default for performance.
-   *       - in: query
-   *         name: sortBy
-   *         schema:
-   *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
-   *         description: Sort field
-   *       - in: query
-   *         name: sortOrder
-   *         schema:
-   *           type: string
-   *           enum: [asc, desc]
-   *           default: desc
-   *         description: Sort direction
-   *     responses:
-   *       200:
-   *         description: Successfully retrieved lease search results with pagination
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 content:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *                     properties:
-   *                       leaseId:
-   *                         type: string
-   *                       objectTypeCode:
-   *                         type: string
-   *                       leaseType:
-   *                         type: string
-   *                       contacts:
-   *                         type: array
-   *                         items:
-   *                           type: object
-   *                           properties:
-   *                             name:
-   *                               type: string
-   *                             contactCode:
-   *                               type: string
-   *                             email:
-   *                               type: string
-   *                               nullable: true
-   *                             phone:
-   *                               type: string
-   *                               nullable: true
-   *                       rentalObjectCode:
-   *                         type: string
-   *                         nullable: true
-   *                       address:
-   *                         type: string
-   *                         nullable: true
-   *                       startDate:
-   *                         type: string
-   *                         format: date
-   *                         nullable: true
-   *                       lastDebitDate:
-   *                         type: string
-   *                         format: date
-   *                         nullable: true
-   *                       status:
-   *                         type: integer
-   *                         enum: [0, 1, 2, 3]
-   *                         description: "LeaseStatus: 0=Current, 1=Upcoming, 2=AboutToEnd, 3=Ended"
-   *                 _meta:
-   *                   type: object
-   *                   properties:
-   *                     totalRecords:
-   *                       type: integer
-   *                     page:
-   *                       type: integer
-   *                     limit:
-   *                       type: integer
-   *                     count:
-   *                       type: integer
-   *                 _links:
-   *                   type: array
-   *                   items:
-   *                     type: object
-   *       400:
-   *         description: Invalid query parameters
-   *       500:
-   *         description: Internal server error
-   */
   /**
    * @swagger
    * /leases/parking-space-types:
@@ -306,6 +138,21 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: Object type codes
    *       - in: query
+   *         name: parkingSpaceType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Parking-space type codes (babpt.code), from GET /leases/parking-space-types
+   *       - in: query
+   *         name: leaseType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [Bostadskontrakt, Lokalkontrakt, Garagekontrakt, P-Platskontrakt, Övrigt]
+   *         description: "Contract type (Kontraktstyp) filter. Garagekontrakt and P-Platskontrakt are derived from the parking space's type in Xpand: a parking lease on a space with a garage type is a Garagekontrakt, any other parking lease a P-Platskontrakt. Rows carry the derived value only in a request that filters on one of those two, and in the export; elsewhere Tenfast parking leases show P-Platskontrakt. Övrigt matches every contract type not listed. Leases that ended in Xpand keep the contract type they had there. If the parking-space types cannot be read from Xpand, a request that needs them fails with 500 instead of returning unfiltered or underived rows."
+   *       - in: query
    *         name: status
    *         schema:
    *           type: array
@@ -352,11 +199,13 @@ export const routes = (router: KoaRouter) => {
    *         description: District names
    *     responses:
    *       200:
-   *         description: Successfully retrieved leases.
+   *         description: Successfully retrieved leases. With ended in status, also holds leases that ended in Xpand before the move to Tenfast.
    *       400:
    *         description: Invalid query parameters
    *       500:
    *         description: Internal server error
+   *       503:
+   *         description: A lease cache is still loading, or status includes ended and the Xpand ended leases are not loaded yet. Retry after the Retry-After header.
    */
   router.get('(.*)/leases/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
@@ -423,7 +272,7 @@ export const routes = (router: KoaRouter) => {
    * /leases/search:
    *   get:
    *     summary: Search and filter leases
-   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges.
+   *     description: Search leases with comprehensive filtering options including text search, object type, status, date ranges. When status includes ended or includeEnded is true, results also hold leases that ended in Xpand before the move to Tenfast; Tenfast wins when both hold the same lease.
    *     tags: [Leases]
    *     parameters:
    *       - in: query
@@ -449,6 +298,13 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: Object type codes (bostad, parkering, lokal, ovrigt)
    *       - in: query
+   *         name: parkingSpaceType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Parking-space type codes (babpt.code), from GET /leases/parking-space-types
+   *       - in: query
    *         name: status
    *         schema:
    *           type: array
@@ -456,6 +312,14 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *             enum: [current, active, upcoming, abouttoend, ended, pendingsignature, preliminaryterminated, notsent]
    *         description: Contract status filter
+   *       - in: query
+   *         name: leaseType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [Bostadskontrakt, Lokalkontrakt, Garagekontrakt, P-Platskontrakt, Övrigt]
+   *         description: "Contract type (Kontraktstyp) filter. Garagekontrakt and P-Platskontrakt are derived from the parking space's type in Xpand: a parking lease on a space with a garage type is a Garagekontrakt, any other parking lease a P-Platskontrakt. Rows carry the derived value only in a request that filters on one of those two, and in the export; elsewhere Tenfast parking leases show P-Platskontrakt. Övrigt matches every contract type not listed. Leases that ended in Xpand keep the contract type they had there. If the parking-space types cannot be read from Xpand, a request that needs them fails with 500 instead of returning unfiltered or underived rows."
    *       - in: query
    *         name: startDateFrom
    *         schema:
@@ -495,6 +359,33 @@ export const routes = (router: KoaRouter) => {
    *             type: string
    *         description: District names (stadsdel)
    *       - in: query
+   *         name: buildingCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Building codes
+   *       - in: query
+   *         name: areaCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Area codes (Område)
+   *       - in: query
+   *         name: kvvAreaCodes
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: KVV-area codes (bafen.code) — filters leases to those in the listed förvaltningsområden
+   *       - in: query
+   *         name: includeEnded
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include ended (Upphört) leases, including those that ended in Xpand before Tenfast.
+   *       - in: query
    *         name: page
    *         schema:
    *           type: integer
@@ -511,7 +402,7 @@ export const routes = (router: KoaRouter) => {
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode, tenantName]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -551,6 +442,8 @@ export const routes = (router: KoaRouter) => {
    *         description: Invalid query parameters
    *       500:
    *         description: Internal server error
+   *       503:
+   *         description: A lease cache is still loading, or status includes ended and the Xpand ended leases are not loaded yet. Retry after the Retry-After header. With only includeEnded=true and no Xpand ended leases loaded, the response holds Tenfast leases only.
    */
   router.get('(.*)/leases/search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
@@ -559,6 +452,8 @@ export const routes = (router: KoaRouter) => {
       'address',
       'objectType',
       'status',
+      'leaseType',
+      'parkingSpaceType',
       'property',
       'startDateFrom',
       'startDateTo',
@@ -621,28 +516,60 @@ export const routes = (router: KoaRouter) => {
    * /contacts/from-lease-search:
    *   get:
    *     summary: Get unique contacts matching lease filters
-   *     description: Returns deduplicated contacts for all leases matching the given filters. Uses same filters as /leases/search but without pagination.
+   *     description: Returns the contacts on every lease that /leases/search lists for the same filters, one per contact code and without pagination. Reads the same leases as /leases/search, so the two always agree. Phone and email are not filled in for tenants; the caller gets them from the contacts service.
    *     tags: [Leases]
    *     parameters:
    *       - in: query
    *         name: q
    *         schema:
    *           type: string
-   *         description: Free-text search (contract ID, tenant name, PNR, contact code, address)
+   *         description: Free-text search (contract ID, rental object code, address, contact code, tenant name)
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
+   *         description: Search by tenant name
+   *       - in: query
+   *         name: address
+   *         schema:
+   *           type: string
+   *         description: Search by rental object address
    *       - in: query
    *         name: objectType
    *         schema:
    *           type: array
    *           items:
    *             type: string
-   *         description: Object type codes
+   *         description: Object type codes (bostad, parkering, lokal, ovrigt)
+   *       - in: query
+   *         name: parkingSpaceType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         description: Parking-space type codes (babpt.code), from GET /leases/parking-space-types
    *       - in: query
    *         name: status
    *         schema:
    *           type: array
    *           items:
    *             type: string
+   *             enum: [current, active, upcoming, abouttoend, ended, pendingsignature, preliminaryterminated, notsent]
    *         description: Contract status filter
+   *       - in: query
+   *         name: leaseType
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *             enum: [Bostadskontrakt, Lokalkontrakt, Garagekontrakt, P-Platskontrakt, Övrigt]
+   *         description: "Contract type (Kontraktstyp) filter. Garagekontrakt and P-Platskontrakt are derived from the parking space's type in Xpand: a parking lease on a space with a garage type is a Garagekontrakt, any other parking lease a P-Platskontrakt. Rows carry the derived value only in a request that filters on one of those two, and in the export; elsewhere Tenfast parking leases show P-Platskontrakt. Övrigt matches every contract type not listed. Leases that ended in Xpand keep the contract type they had there. If the parking-space types cannot be read from Xpand, a request that needs them fails with 500 instead of returning unfiltered or underived rows."
+   *       - in: query
+   *         name: includeEnded
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Include ended (Upphört) leases, including those that ended in Xpand before Tenfast.
    *       - in: query
    *         name: startDateFrom
    *         schema:
@@ -700,12 +627,18 @@ export const routes = (router: KoaRouter) => {
    *         description: Invalid query parameters
    *       500:
    *         description: Internal server error
+   *       503:
+   *         description: A lease cache is still loading, or status includes ended and the Xpand ended leases are not loaded yet. Retry after the Retry-After header.
    */
   router.get('(.*)/contacts/from-lease-search', async (ctx) => {
     const metadata = generateRouteMetadata(ctx, [
       'q',
+      'name',
+      'address',
       'objectType',
       'status',
+      'leaseType',
+      'parkingSpaceType',
       'startDateFrom',
       'startDateTo',
       'endDateFrom',
@@ -732,41 +665,23 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      // Reuse searchLeases with paging to collect all unique contacts
-      const contactMap = new Map<string, leasing.v1.ContactInfo>()
-      let page = 1
-      const batchSize = 500
-      let totalCount: number | undefined
-
-      while (true) {
-        const paginationCtx = Object.create(ctx)
-        paginationCtx.query = {
-          ...ctx.query,
-          page: String(page),
-          limit: String(batchSize),
-        }
-
-        const result = await searchLeases(queryParams.data, paginationCtx, {
-          totalCount,
-        })
-
-        totalCount = result._meta.totalRecords
-
-        for (const lease of result.content) {
-          for (const contact of lease.contacts ?? []) {
-            if (!contactMap.has(contact.contactCode)) {
-              contactMap.set(contact.contactCode, contact)
-            }
-          }
-        }
-
-        if (page * batchSize >= totalCount) break
-        page++
-      }
+      const contacts =
+        await tenfastLeaseSearchAdapter.fetchContactsForLeaseSearch(
+          queryParams.data,
+          ctx
+        )
 
       ctx.status = 200
-      ctx.body = { content: Array.from(contactMap.values()), ...metadata }
+      ctx.body = { content: contacts, ...metadata }
     } catch (error: unknown) {
+      // Set by hand — a re-thrown error hits errorHandler(), which always
+      // forces status 500 regardless of the error's own status.
+      if (isKoaHttpError(error)) {
+        if (error.headers) ctx.set(error.headers)
+        ctx.status = error.status
+        ctx.body = { error: error.message, ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error fetching contacts by filters')
       ctx.status = 500
       ctx.body = {
@@ -782,7 +697,7 @@ export const routes = (router: KoaRouter) => {
    * /leases/by-contact-code/{contactCode}:
    *   get:
    *     summary: Get leases by contact code
-   *     description: Retrieve leases associated with a contact by contact code.
+   *     description: Retrieve leases associated with a contact by contact code. Ended leases from before the move to Tenfast are read from Xpand and included.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -843,6 +758,10 @@ export const routes = (router: KoaRouter) => {
 
     const subletLeasesPromise = queryParams.data.includeSubletLeases
       ? tenfastAdapter.getSubletLeases(ctx.params.contactCode, filters)
+      : undefined
+
+    const endedXpandPromise = includesEnded(filters?.status)
+      ? endedLeaseAdapter.getEndedLeasesByContactCode(ctx.params.contactCode)
       : undefined
 
     // TODO: NON-TENANT-CONTACTS/LEASE
@@ -915,8 +834,24 @@ export const routes = (router: KoaRouter) => {
       )
     }
 
-    const onecoreLeases = leases.map((lease) =>
-      tenfastHelpers.mapToOnecoreLease(lease)
+    // Dedupe Xpand against every Tenfast lease, not just the status-filtered ones.
+    const tenfastIds = new Set(leases.map((lease) => lease.externalId))
+    if (endedXpandPromise && filters && contact.ok && contact.data) {
+      const allTenfast = await tenfastAdapter.getLeasesByTenantId(
+        contact.data._id
+      )
+      if (allTenfast.ok) {
+        allTenfast.data.forEach((lease) => tenfastIds.add(lease.externalId))
+      }
+    }
+
+    const endedXpandLeases = (
+      await getEndedXpandLeases(endedXpandPromise, metadata)
+    ).filter((lease) => !tenfastIds.has(lease.leaseId.trim()))
+
+    const onecoreLeases = mergeTenfastFirst(
+      leases.map((lease) => tenfastHelpers.mapToOnecoreLease(lease)),
+      endedXpandLeases
     )
 
     ctx.status = 200
@@ -928,7 +863,7 @@ export const routes = (router: KoaRouter) => {
    * /leases/by-rental-object-code/{rentalObjectCode}:
    *   get:
    *     summary: Get leases by rental object code
-   *     description: Retrieve leases associated with a rental object by rental object code.
+   *     description: Retrieve leases associated with a rental object by rental object code. Ended leases from before the move to Tenfast are read from Xpand and included.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -941,10 +876,10 @@ export const routes = (router: KoaRouter) => {
    *         name: status
    *         schema:
    *           type: string
-   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended. Default is all statuses.
+   *         description: Comma-separated list of statuses to filter by. Valid values are current, upcoming, about-to-end, ended, pending-signature, preliminary-terminated, not-sent. Default is all statuses.
    *     responses:
    *       200:
-   *         description: Successfully retrieved leases.
+   *         description: Successfully retrieved leases. Empty when the rental object has no leases matching the status filter.
    *         content:
    *           application/json:
    *             schema:
@@ -955,8 +890,30 @@ export const routes = (router: KoaRouter) => {
    *                   items:
    *                     type: object
    *                     description: Lease details.
+   *       400:
+   *         description: Invalid status filter.
+   *       404:
+   *         description: The rental object does not exist in Tenfast and has no ended leases in Xpand.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: rental-object-not-found
    *       500:
    *         description: Internal server error. Failed to retrieve leases.
+   *       503:
+   *         description: The rental object lookup in Tenfast failed, so it is unknown whether the object has leases.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   example: could-not-fetch-rental-object
    */
   router.get(
     '(.*)/leases/by-rental-object-code/:rentalObjectCode',
@@ -972,46 +929,52 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      // TODO: TenFAST route is coming to get avtal by hyresobjekt
-      // EDIT: or is it?
-      const property = await tenfastAdapter.getRentalObject(
+      const statuses = queryParams.data.status
+
+      const endedXpandPromise = includesEnded(statuses)
+        ? endedLeaseAdapter.getEndedLeasesByRentalObjectCode(
+            ctx.params.rentalObjectCode
+          )
+        : undefined
+
+      const rentalObject = await tenfastAdapter.getRentalObject(
         ctx.params.rentalObjectCode
       )
 
-      // TODO: Clean this up
-      if (!property.ok && property.err === 'could-not-find-rental-object') {
+      // A failed lookup says nothing about whether the object exists, so it
+      // must not fall through to the 404 below: callers read that as "no
+      // leases" and would show a rented object as vacant. The adapter has
+      // already logged the failure.
+      if (!rentalObject.ok) {
+        // 503 when Tenfast could not be reached or answered with an error,
+        // 500 when it answered with something we could not read.
+        ctx.status =
+          rentalObject.err === 'could-not-fetch-rental-object' ? 503 : 500
+        ctx.body = { error: rentalObject.err, ...metadata }
+        return
+      }
+
+      if (rentalObject.data === null) {
+        const endedXpandLeases = await getEndedXpandLeases(
+          endedXpandPromise,
+          metadata
+        )
+
+        if (endedXpandLeases.length > 0) {
+          ctx.status = 200
+          ctx.body = makeSuccessResponseBody(endedXpandLeases, metadata)
+          return
+        }
+
         ctx.status = 404
-        ctx.body = {
-          error: 'Not found',
-          ...metadata,
-        }
+        ctx.body = { error: 'rental-object-not-found', ...metadata }
         return
       }
 
-      if (property.ok && property.data === null) {
-        ctx.status = 404
-        ctx.body = {
-          error: 'Not found',
-          ...metadata,
-        }
-        return
-      }
-
-      if (!property.ok) {
-        ctx.status = 500
-        ctx.body = {
-          error: property.err,
-          ...metadata,
-        }
-        return
-      }
-
-      if (!property.data) {
-        throw 'ffs'
-      }
-
+      // Fetched without a status filter: Xpand is deduped against every
+      // Tenfast lease, not just the ones the filter keeps.
       const getLeases = await tenfastAdapter.getLeasesByRentalPropertyId(
-        property.data._id
+        rentalObject.data._id
       )
 
       if (!getLeases.ok) {
@@ -1023,8 +986,20 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const onecoreLeases = getLeases.data.map((lease) =>
-        tenfastHelpers.mapToOnecoreLease(lease)
+      const tenfastIds = new Set(
+        getLeases.data.map((lease) => lease.externalId)
+      )
+      const endedXpandLeases = (
+        await getEndedXpandLeases(endedXpandPromise, metadata)
+      ).filter((lease) => !tenfastIds.has(lease.leaseId.trim()))
+
+      const tenfastLeases = statuses
+        ? filterByStatus(getLeases.data, statuses)
+        : getLeases.data
+
+      const onecoreLeases = mergeTenfastFirst(
+        tenfastLeases.map((lease) => tenfastHelpers.mapToOnecoreLease(lease)),
+        endedXpandLeases
       )
 
       ctx.status = 200
@@ -1068,7 +1043,7 @@ export const routes = (router: KoaRouter) => {
    * /leases/{id}:
    *   get:
    *     summary: Get detailed lease by lease ID
-   *     description: Retrieve lease details by lease ID.
+   *     description: Retrieve lease details by lease ID. Falls back to ended leases from before the move to Tenfast, read from Xpand, when Tenfast has no such lease.
    *     tags: [Leases]
    *     parameters:
    *       - in: path
@@ -1104,6 +1079,25 @@ export const routes = (router: KoaRouter) => {
 
       if (!getLease.ok) {
         if (getLease.err === 'not-found') {
+          const ended = await endedLeaseAdapter.getEndedLeaseById(
+            ctx.params.leaseId
+          )
+
+          if (ended.ok) {
+            ctx.status = 200
+            ctx.body = makeSuccessResponseBody(ended.data, metadata)
+            return
+          }
+
+          if (ended.err === 'unknown') {
+            ctx.status = 500
+            ctx.body = {
+              error: ended.err,
+              ...metadata,
+            }
+            return
+          }
+
           ctx.status = 404
           ctx.body = {
             error: 'Lease not found',
@@ -1196,7 +1190,11 @@ export const routes = (router: KoaRouter) => {
    *           then, or a next tenant has a lease on it that is signed or
    *           not yet signed. error is rental-object-not-available.
    *       500:
-   *         description: Internal server error. Failed to create lease.
+   *         description: >
+   *           Internal server error. Failed to create lease. error is
+   *           could-not-get-xpand-lease-ids when the rental object's leases in
+   *           Xpand, which the new lease number continues from, could not be
+   *           read.
    */
   router.post('(.*)/leases', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -1236,16 +1234,33 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
+      // Tenfast only got the leases that were running or to come at the
+      // migration, so the new lease's number must continue from Xpand's too.
+      // Without them it could repeat an Xpand lease's number, so no lease is
+      // created (AVTAL-612).
+      const xpandLeaseIdsResult = await getLeaseIdsByRentalObjectCode(
+        request.parkingSpaceId
+      )
+      if (!xpandLeaseIdsResult.ok) {
+        ctx.status = 500
+        ctx.body = {
+          error: 'could-not-get-xpand-lease-ids',
+          ...metadata,
+        }
+        return
+      }
+
       const createLeaseTenfastResult = await tenfastAdapter.createLease(
         contactResult.data,
         request.parkingSpaceId,
         fromDate,
-        request.includeVAT
+        request.includeVAT,
+        xpandLeaseIdsResult.data
       )
 
       if (createLeaseTenfastResult.ok) {
         logger.info(
-          { result: createLeaseTenfastResult.data },
+          { leaseId: createLeaseTenfastResult.data },
           'Lease created in tenFAST'
         )
         ctx.body = {
