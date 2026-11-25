@@ -30,6 +30,7 @@ import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
 import {
   CLAIMING_STAGES,
+  getNextLeaseId,
   getVacantFrom,
   isClaimingLease,
   LeaseStageInfo,
@@ -114,11 +115,18 @@ const fetchAllPages = async <
   return records
 }
 
+/**
+ * Creates a lease on the rental object and returns its id. The id continues
+ * from the highest number among the object's Tenfast leases (voided ones
+ * included) and `earlierLeaseIds`, the object's leases in Xpand: leases that
+ * ended before the migration exist only there (AVTAL-612).
+ */
 export const createLease = async (
   contact: Contact,
   rentalObjectCode: string,
   fromDate: Date,
-  includeVAT: boolean
+  includeVAT: boolean,
+  earlierLeaseIds: string[]
 ): Promise<
   AdapterResult<
     string,
@@ -179,8 +187,20 @@ export const createLease = async (
     }
   }
 
+  // Not atomic either, like the availability check: two leases created on the
+  // object at the same moment get the same id. Whether Tenfast refuses an id
+  // it already has, and with what error, is unknown, so a failed create is
+  // logged with the id rather than retried with the next one.
+  const newLeaseId = getNextLeaseId(rentalObjectCode, [
+    ...earlierLeaseIds,
+    ...leasesResult.data.flatMap((lease) =>
+      lease.externalId ? [lease.externalId] : []
+    ),
+  ])
+
   try {
     const createLeaseRequestData = buildLeaseRequestData(
+      newLeaseId,
       tenantResult.data,
       rentalObjectResponse.data,
       fromDate,
@@ -193,16 +213,23 @@ export const createLease = async (
       url: `${tenfastBaseUrl}/v1/hyresvard/avtal?hyresvard=${tenfastCompanyId}`,
       data: createLeaseRequestData,
     })
-    if (leaseResponse.status === 400)
-      return handleTenfastError(
-        leaseResponse.data.error,
-        'create-lease-bad-request'
+    if (leaseResponse.status !== 200 && leaseResponse.status !== 201) {
+      logger.error(
+        {
+          externalId: newLeaseId,
+          status: leaseResponse.status,
+          error: leaseResponse.data?.error,
+        },
+        'tenfast-adapter.createLease: Tenfast did not create the lease with this id'
       )
-    else if (leaseResponse.status !== 200 && leaseResponse.status !== 201)
-      return handleTenfastError(
-        { error: leaseResponse.data.error, status: leaseResponse.status },
-        'lease-could-not-be-created'
-      )
+      return {
+        ok: false,
+        err:
+          leaseResponse.status === 400
+            ? 'create-lease-bad-request'
+            : 'lease-could-not-be-created',
+      }
+    }
 
     // Only the id is needed by callers (see leases.ts route docs: response
     // is { LeaseId: string }) — no need to parse the full lease shape, which
@@ -212,14 +239,24 @@ export const createLease = async (
     if (typeof leaseId !== 'string' || !leaseId)
       return handleTenfastError(leaseResponse.data, 'could-not-parse-lease')
 
+    // The lease was created, so its id is returned whichever it is, but an id
+    // other than ours means Tenfast numbered it and it can clash with Xpand.
+    if (leaseId !== newLeaseId)
+      logger.error(
+        { sentExternalId: newLeaseId, externalId: leaseId },
+        'tenfast-adapter.createLease: Tenfast created the lease with another id than the one sent'
+      )
+
     return { ok: true, data: leaseId }
   } catch (err) {
+    // A 5xx reply, a timeout or a network error lands here. Tenfast may still
+    // have created the lease, so the id it would have is logged too.
     const responseData = isAxiosError(err) ? err.response?.data : undefined
     logger.error(
-      { err, responseData },
+      { err, responseData, externalId: newLeaseId },
       'tenfast-adapter.createLease: caught exception'
     )
-    return handleTenfastError(err, 'lease-could-not-be-created')
+    return { ok: false, err: 'lease-could-not-be-created' }
   }
 }
 
@@ -1241,6 +1278,7 @@ function handleTenfastError<E extends string>(
 }
 
 function buildLeaseRequestData(
+  externalId: string,
   tenant: TenfastTenant,
   rentalObject: TenfastRentalObject,
   fromDate: Date,
@@ -1262,6 +1300,9 @@ function buildLeaseRequestData(
     : rentalObjectRows
 
   return {
+    // `<rental object code>/NN`. Tenfast uses it as the lease number instead
+    // of numbering the lease itself (confirmed by Tenfast on AVTAL-612).
+    externalId,
     hyresgaster: [tenant?._id],
     hyresobjekt: [rentalObject._id],
     avtalsbyggare: true,

@@ -58,13 +58,12 @@ import {
   getInvoiceByOcr,
   setGracePeriod,
   getInvoicesByContactCode as getTenfastInvoicesByContactCode,
-  getInvoicesForTenant,
-  getTenantByContactCode,
   getAutogiroConsentByNationalRegistrationNumber,
   getInvoicesNotExported,
   getInvoicesByOcr,
   getRentalLosses,
   getRecipientCodesOfInvoicesNotExported,
+  ParsedTenfastInvoice,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
 import config, { isRentalLossExcludedAccount } from '@src/common/config'
 import { postChannelLookup } from './adapters/stralfors/stralfors-adapter'
@@ -337,9 +336,45 @@ const hasRentNoticePdf = (tenfastInvoice: Invoice): boolean =>
   tenfastInvoice.invoiceId !== ''
 
 /*
+ * Tenfast invoices for a shared lease billed to the other lease holder are
+ * missed by the contact-scoped Xledger lookup, so they are looked up by
+ * invoice number. Best-effort: on failure they stay Tenfast-only.
+ */
+const getXledgerInvoicesMissedForContact = async (
+  tenfastInvoices: ParsedTenfastInvoice[],
+  xledgerInvoices: ParsedXledgerInvoice[],
+  contactCode: string
+): Promise<ParsedXledgerInvoice[]> => {
+  const xledgerInvoiceIds = new Set(
+    xledgerInvoices.map((parsed) => parsed.invoice.invoiceId)
+  )
+  // Credited Tenfast invoices have no OCR (invoiceId is '') to look up.
+  const missedInvoiceIds = tenfastInvoices
+    .map((parsed) => parsed.invoice.invoiceId)
+    .filter(
+      (invoiceId) => invoiceId !== '' && !xledgerInvoiceIds.has(invoiceId)
+    )
+  if (missedInvoiceIds.length === 0) {
+    return []
+  }
+
+  try {
+    return await getXledgerInvoicesByInvoiceNumbers(missedInvoiceIds)
+  } catch {
+    logger.warn(
+      { contactCode },
+      'getInvoicesByContactCode: could not look up Tenfast invoices in Xledger by invoice number, returning them from Tenfast'
+    )
+    return []
+  }
+}
+
+/*
  * A contact's invoices from Xledger, Tenfast and Xpand.
  *
- * Xledger is the base list. Tenfast adds invoices not yet in Xledger, Xpand
+ * Xledger is the base list, including invoices on a shared lease billed to a
+ * co-holder that are looked up by invoice number. Tenfast adds invoices not
+ * yet in Xledger, Xpand
  * adds invoices that predate Xledger (the contact's own, and those billed to
  * a co-holder on a shared lease). For the period and the invoice rows,
  * Tenfast takes precedence over Xpand, and Xpand over Xledger.
@@ -354,7 +389,15 @@ export const getInvoicesByContactCode = async (
     getTenfastInvoicesByContactCode(contactCode, { from }),
     getXpandInvoicesIfAvailable(contactCode, from),
   ])
-  const xledgerInvoices = xledgerResult ?? []
+  const contactXledgerInvoices = xledgerResult ?? []
+  const xledgerInvoices = [
+    ...contactXledgerInvoices,
+    ...(await getXledgerInvoicesMissedForContact(
+      tenfastInvoices,
+      contactXledgerInvoices,
+      contactCode
+    )),
+  ]
   const isXpandAvailable = xpandResult !== undefined
   const xpandInvoices = xpandResult ?? []
 
@@ -620,68 +663,6 @@ export const getInvoiceDetails = async (
   })
 }
 
-export const getInvoiceDetailsForContactCode = async (
-  contactCode: string,
-  from?: Date
-): Promise<Invoice[]> => {
-  const tenfastTenantResult = await getTenantByContactCode(contactCode)
-  if (!tenfastTenantResult.ok || tenfastTenantResult.data === null) {
-    return []
-  }
-
-  const tenfastInvoicesResult = await getInvoicesForTenant(
-    tenfastTenantResult.data._id,
-    from
-  )
-  if (!tenfastInvoicesResult.ok) {
-    return []
-  }
-
-  return enrichInvoices(
-    tenfastInvoicesResult.data.map((parsed) =>
-      withInvoiceDeferral(parsed.invoice, {
-        tenfastDeferral: parsed.tenfastDeferral,
-      })
-    )
-  )
-}
-
-const enrichInvoices = async (invoices: Invoice[]): Promise<Invoice[]> => {
-  const allInvoiceRows = invoices.flatMap((i) => i.invoiceRows)
-  const articleIds = allInvoiceRows.reduce<string[]>((acc, ir) => {
-    if (ir.rentArticle) {
-      acc.push(ir.rentArticle)
-    }
-    return acc
-  }, [])
-
-  const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticle(id))
-  )
-  const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
-    if (ar.ok) {
-      acc.push(ar.data)
-    }
-    return acc
-  }, [])
-
-  return invoices.map((i): Invoice => {
-    return {
-      ...i,
-      invoiceRows: i.invoiceRows.map((ir) => {
-        const article = articles.find((a) => {
-          return a._id === ir.rentArticle
-        })
-
-        return {
-          ...ir,
-          invoiceRowText: article?.title ?? null,
-        }
-      }),
-    }
-  })
-}
-
 const enrichInvoiceRowsWithText = async (
   invoiceRows: InvoiceRow[]
 ): Promise<InvoiceRow[]> => {
@@ -692,8 +673,9 @@ const enrichInvoiceRowsWithText = async (
     return acc
   }, [])
 
+  // One lookup per article, even when several rows use it.
   const articleResults = await Promise.all(
-    articleIds.map((id) => getInvoiceArticle(id))
+    [...new Set(articleIds)].map((id) => getInvoiceArticle(id))
   )
   const articles = articleResults.reduce<TenfastRentArticle[]>((acc, ar) => {
     if (ar.ok) {

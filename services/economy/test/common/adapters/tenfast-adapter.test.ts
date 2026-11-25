@@ -106,7 +106,8 @@ describe('Tenfast Adapter', () => {
         config: { headers: { 'api-token': 'secret-token' } },
       })
       mockAxios.request.mockRejectedValue(requestError)
-      mockAxios.isAxiosError.mockReturnValueOnce(true)
+      // Once for the timeout check in makeTenfastRequest, once in the catch.
+      mockAxios.isAxiosError.mockReturnValueOnce(true).mockReturnValueOnce(true)
 
       // Act
       const result = await getTenantByContactCode('P999999')
@@ -1554,11 +1555,10 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
 
     await getAutogiroConsentByNationalRegistrationNumber('199001011234')
 
+    expect(mockAxios.request).toHaveBeenCalledTimes(1)
     expect(mockAxios.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        params: expect.objectContaining({
-          'filter[payerSSN]': '19900101-1234',
-        }),
+        params: { 'filter[payerSSN]': '19900101-1234', limit: 10 },
       })
     )
   })
@@ -1571,13 +1571,47 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
 
     await getAutogiroConsentByNationalRegistrationNumber('19900101-1234')
 
+    expect(mockAxios.request).toHaveBeenCalledTimes(1)
     expect(mockAxios.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        params: expect.objectContaining({
-          'filter[payerSSN]': '19900101-1234',
-        }),
+        params: { 'filter[payerSSN]': '19900101-1234', limit: 10 },
       })
     )
+  })
+
+  it('returns null when the only consent is cancelled, even without payer fields', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [{ _id: 'cancelled-1', status: 'CANCELLED' }],
+        prev: null,
+        next: null,
+        totalCount: 1,
+      },
+    })
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    expect(result).toEqual({ ok: true, data: null })
+  })
+
+  it('returns the active consent when a cancelled one comes first', async () => {
+    const consent = TenfastAutogiroConsentFactory.build()
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [{ _id: 'cancelled-1', status: 'CANCELLED' }, consent],
+        prev: null,
+        next: null,
+        totalCount: 2,
+      },
+    })
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    expect(result).toEqual({ ok: true, data: consent })
   })
 
   it('returns error on non-200 response', async () => {
@@ -1607,6 +1641,41 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
 
     assert(!result.ok)
     expect(result.err).toBe('schema-error')
+  })
+
+  it('returns schema-error on an unknown consent status', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [{ _id: 'consent-1', status: 'PENDING' }],
+        prev: null,
+        next: null,
+        totalCount: 1,
+      },
+    })
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    assert(!result.ok)
+    expect(result.err).toBe('schema-error')
+  })
+
+  it('logs a failed request without the raw error', async () => {
+    const error = Object.assign(new Error('Network Error'), {
+      isAxiosError: true,
+      config: { headers: { 'api-token': 'secret-token' } },
+    })
+    mockAxios.request.mockRejectedValueOnce(error)
+    mockAxios.isAxiosError.mockReturnValueOnce(true)
+    const logSpy = jest.spyOn(logger, 'error').mockImplementation(() => {})
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    expect(result).toEqual({ ok: false, err: 'Network Error' })
+    expect(JSON.stringify(logSpy.mock.calls)).not.toContain('secret-token')
+    logSpy.mockRestore()
   })
 })
 

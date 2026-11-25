@@ -16,7 +16,7 @@ const channels = (
   ],
   channelErrors: failedChannels.map((channel) => ({
     channel,
-    error: 'timeout',
+    error: 'lookup failed',
   })),
 })
 
@@ -105,13 +105,41 @@ describe('getInvoiceDeliveryMethod', () => {
   it('returns null when a channel with higher priority than the available one failed', () => {
     expect(
       getInvoiceDeliveryMethod({
-        invoiceChannels: channels(['Kivra'], ['eInvoiceB2C']),
+        invoiceChannels: channels(['Kivra'], ['eInvoiceB2B']),
         hasAutogiroConsent: false,
       })
     ).toBeNull()
     expect(
       getInvoiceDeliveryMethod({
         invoiceChannels: channels([], ['Kivra']),
+        hasAutogiroConsent: false,
+      })
+    ).toBeNull()
+  })
+
+  // Strålfors answers the B2C e-invoice lookup with an error for everyone not
+  // registered for e-invoice, and Tenfast bills by the remaining channels.
+  // There is no error code to tell that apart from an outage, so any B2C
+  // error is ignored.
+  it('ignores a failed B2C e-invoice lookup, whatever the error', () => {
+    expect(
+      getInvoiceDeliveryMethod({
+        invoiceChannels: channels(['Kivra'], ['eInvoiceB2C']),
+        hasAutogiroConsent: false,
+      })
+    ).toBe('Kivra')
+    expect(
+      getInvoiceDeliveryMethod({
+        invoiceChannels: channels([], ['eInvoiceB2C']),
+        hasAutogiroConsent: false,
+      })
+    ).toBe('Pappersfaktura')
+  })
+
+  it('still returns null when Kivra failed alongside the B2C e-invoice lookup', () => {
+    expect(
+      getInvoiceDeliveryMethod({
+        invoiceChannels: channels([], ['eInvoiceB2C', 'Kivra']),
         hasAutogiroConsent: false,
       })
     ).toBeNull()

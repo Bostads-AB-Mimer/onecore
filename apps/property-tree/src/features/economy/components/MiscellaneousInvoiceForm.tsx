@@ -6,8 +6,7 @@ import {
   XledgerContact,
   XledgerProject,
 } from '@onecore/types'
-import { SubmitMiscellaneousInvoiceErrorCodes } from '@onecore/types'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { CalendarIcon } from 'lucide-react'
@@ -19,7 +18,6 @@ import { TenantSearchResult } from '@/entities/tenant/hooks/useTenantSearch'
 import { useUser } from '@/entities/user'
 
 import { Lease as CoreLease } from '@/services/api/core'
-import { ApiError } from '@/services/api/core/baseApi'
 import { economyService } from '@/services/api/core/economyService'
 
 import { useToast } from '@/shared/hooks/useToast'
@@ -32,16 +30,26 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
 import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 import { Separator } from '@/shared/ui/Separator'
 
-import { getArticleById } from '@/data/articles/miscellaneousInvoiceArticles'
-
 import { useMiscellaneousInvoiceDataForLease } from '../hooks/useMiscellaneousInvoiceDataForLease'
+import { miscellaneousInvoicesQueryKey } from '../hooks/useMiscellaneousInvoices'
 import { useXledgerContacts } from '../hooks/useXledgerContacts'
 import { useXledgerProjects } from '../hooks/useXledgerProjects'
+import {
+  buildInvoiceRowsForSubmission,
+  sumEnteredInvoiceRows,
+} from '../lib/invoiceRows'
+import { isImplicitSubmitKey } from '../lib/isImplicitSubmitKey'
 import { MergeFileError, mergeFilesToPdf } from '../lib/mergeFilesToPdf'
+import { getSubmitOutcome } from '../lib/submitOutcome'
 import { AdditionalInfoSection } from './AdditionalInfoSection'
 import { ArticleSection } from './ArticleSection'
 import { LeaseContractSection } from './LeaseContractSection'
+import {
+  MiscellaneousInvoiceReceipt,
+  MiscellaneousInvoiceReceiptData,
+} from './MiscellaneousInvoiceReceipt'
 import { TenantSearchSection } from './TenantSearchSection'
+import { UnknownSubmitOutcomeAlert } from './UnknownSubmitOutcomeAlert'
 
 interface FormErrors {
   reference?: string
@@ -50,39 +58,61 @@ interface FormErrors {
   articles?: string
 }
 
+// Wait a tick before scrolling up since other page updates can interfere with the scroll
+function scrollToTop() {
+  setTimeout(() => {
+    document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
+  }, 0)
+}
+
 export function MiscellaneousInvoiceForm() {
   const userState = useUser()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
+  // Shown instead of the form after a successful send, until the user starts a new one
+  const [receipt, setReceipt] =
+    useState<MiscellaneousInvoiceReceiptData | null>(null)
+  // The last send failed in a way where the invoice may still have been created
+  const [unknownOutcome, setUnknownOutcome] =
+    useState<MiscellaneousInvoiceReceiptData | null>(null)
 
   const submitInvoiceMutation = useMutation({
-    mutationFn: async (invoice: MiscellaneousInvoicePayload) => {
+    mutationFn: async ({
+      invoice,
+    }: {
+      invoice: MiscellaneousInvoicePayload
+      receipt: MiscellaneousInvoiceReceiptData
+    }) => {
       return await economyService.submitMiscellaneousInvoice(invoice)
     },
-    onSuccess: (data, variables) => {
-      toast({
-        title: 'Underlag skickat',
-        description: `Ströfaktura-underlag för ${variables.contactCode} har skickats.`,
-      })
-      handleReset()
+    onSuccess: (_data, variables) => {
+      setReceipt(variables.receipt)
+      // A reload on the receipt must not prefill the same customer again
+      setContactCodeParam(null)
+      scrollToTop()
     },
-    onError: (error: unknown) => {
-      const customerCreationFailed =
-        error instanceof ApiError &&
-        error.message ===
-          SubmitMiscellaneousInvoiceErrorCodes.CustomerCreationFailed
+    onError: (error: unknown, variables) => {
+      const outcome = getSubmitOutcome(error)
+
+      if (outcome.kind === 'unknown') {
+        // Never suggest sending again here: the invoice may already exist
+        setUnknownOutcome(variables.receipt)
+        scrollToTop()
+        return
+      }
 
       toast({
-        title: 'Fel',
-        description: customerCreationFailed
-          ? 'Kunden kunde inte läggas upp i Xledger, så underlaget skickades inte. Kontakta ekonomiavdelningen.'
-          : 'Kunde inte skicka underlaget. Försök igen.',
+        title: 'Underlaget skickades inte',
+        description: outcome.message,
         variant: 'destructive',
       })
     },
     onSettled: () => {
       setIsSubmitting(false)
+      // Staff are sent to the list to check the result, so it must not show a cached page
+      queryClient.invalidateQueries({ queryKey: miscellaneousInvoicesQueryKey })
     },
   })
 
@@ -268,30 +298,9 @@ export function MiscellaneousInvoiceForm() {
       return
     }
 
-    const rows = invoiceRows.map((row) => {
-      // Some articles should be sent to Xledger with VAT excluded
-      if (row.article?.vatExcluded) {
-        const vat = 0.25
+    const rows = buildInvoiceRowsForSubmission(invoiceRows, administrativeCosts)
 
-        return {
-          ...row,
-          price: (parseFloat(row.price) / (1 + vat)).toString(),
-        }
-      }
-
-      return row
-    })
-    if (administrativeCosts) {
-      const article = getArticleById('329000')
-      if (article) {
-        rows.push({
-          article,
-          price: article.standardPrice.toString(),
-          amount: 1,
-        })
-      }
-    }
-
+    setUnknownOutcome(null)
     setIsSubmitting(true)
 
     // Xledger only accepts one attachment, so multiple files are merged into
@@ -331,7 +340,33 @@ export function MiscellaneousInvoiceForm() {
       attachment,
     }
 
-    submitInvoiceMutation.mutate(invoicePayload)
+    const rentalProperty = selectedLease
+      ? rentalProperties[selectedLease.rentalPropertyId]
+      : null
+
+    submitInvoiceMutation.mutate({
+      invoice: invoicePayload,
+      receipt: {
+        tenantName: invoicePayload.tenantName,
+        contactCode: invoicePayload.contactCode,
+        leaseId: invoicePayload.leaseId,
+        rentalObject: rentalProperty
+          ? `${rentalProperty.property.address}: ${rentalProperty.type}`
+          : undefined,
+        invoiceDate,
+        rowCount: rows.length,
+        total: sumEnteredInvoiceRows(invoiceRows, administrativeCosts),
+      },
+    })
+  }
+
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    // Only the send button may submit the invoice basis, never Enter in a field
+    const tagName =
+      e.target instanceof HTMLElement ? e.target.tagName : undefined
+    if (isImplicitSubmitKey(e.key, tagName)) {
+      e.preventDefault()
+    }
   }
 
   const handleReset = () => {
@@ -346,24 +381,37 @@ export function MiscellaneousInvoiceForm() {
     setAttachedFiles([])
     setErrors({})
     setContactCodeParam(null)
+    // The unknown-outcome warning is kept on purpose: clearing the form does
+    // not tell us whether the last invoice basis reached Xledger
+    setReceipt(null)
+    scrollToTop()
+  }
 
-    // Wait a tick before scrolling up since other page updates can interfere with the scroll
-    setTimeout(() => {
-      document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' })
-    }, 0)
+  if (receipt) {
+    return (
+      <MiscellaneousInvoiceReceipt
+        receipt={receipt}
+        onCreateNew={handleReset}
+      />
+    )
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown}>
       <Card className="p-4">
         Nytt ströfaktura-underlag
         <div className="space-y-6">
+          {unknownOutcome && (
+            <UnknownSubmitOutcomeAlert invoice={unknownOutcome} />
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-3">
               <Label>Datum</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
+                    type="button"
                     variant="outline"
                     className={cn(
                       'w-full justify-start text-left font-normal',

@@ -160,6 +160,23 @@ async function getMiscellaneousInvoices({
   }
 }
 
+/**
+ * Core rejected or failed a miscellaneous invoice. `code` is the error code
+ * core returned, if any.
+ */
+export class SubmitMiscellaneousInvoiceError extends ApiError {
+  constructor(
+    status: number,
+    public code: SubmitMiscellaneousInvoiceErrorCodes | undefined
+  ) {
+    super(
+      status,
+      `Failed to submit miscellaneous invoice (status ${status}${code ? `, ${code}` : ''})`
+    )
+    this.name = 'SubmitMiscellaneousInvoiceError'
+  }
+}
+
 async function submitMiscellaneousInvoice(
   invoice: MiscellaneousInvoicePayload
 ) {
@@ -196,16 +213,13 @@ async function submitMiscellaneousInvoice(
   // Branch on the raw status rather than `error` — a non-2xx response with an
   // empty body yields `error: undefined` and must not be treated as success.
   if (!response.ok) {
-    const type = (error as { type?: string } | undefined)?.type
-    if (type === SubmitMiscellaneousInvoiceErrorCodes.CustomerCreationFailed) {
-      throw new ApiError(
-        response.status,
-        SubmitMiscellaneousInvoiceErrorCodes.CustomerCreationFailed
-      )
-    }
-    throw new ApiError(
+    // `error` is untyped since the route is missing from the generated types
+    const type = (error as { type?: unknown } | undefined)?.type
+    throw new SubmitMiscellaneousInvoiceError(
       response.status,
-      `Failed to submit miscellaneous invoice (status ${response.status})`
+      Object.values(SubmitMiscellaneousInvoiceErrorCodes).find(
+        (code) => code === type
+      )
     )
   }
 

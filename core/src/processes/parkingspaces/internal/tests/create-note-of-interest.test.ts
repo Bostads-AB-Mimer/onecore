@@ -65,6 +65,12 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
   const getLeasesForContactCodeSpy = jest
     .spyOn(leasingAdapter, 'getLeasesByContactCode')
     .mockResolvedValue(mockedLeases)
+  const getTenantByContactCodeSpy = jest
+    .spyOn(leasingAdapter, 'getTenantByContactCode')
+    .mockResolvedValue({
+      ok: true,
+      data: factory.tenant.build({ isAboutToLeave: false }),
+    })
   const getInvoicesSentToDebtCollectionSpy = jest
     .spyOn(economyAdapter, 'getInvoicesSentToDebtCollection')
     .mockResolvedValue({ ok: true, data: [] })
@@ -184,6 +190,110 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
 
     expect(result.processStatus).toBe(ProcessStatus.failed)
     expect(result.httpStatus).toBe(403)
+  })
+
+  describe('tenant lookup', () => {
+    type TenantResult = Awaited<
+      ReturnType<typeof leasingAdapter.getTenantByContactCode>
+    >
+    // The adapter's type only lists its 404 outcomes, but on a leasing 500 it
+    // passes on leasing's own error type (err.response.data.type), or
+    // undefined when there is no response body. The cast reproduces what it
+    // returns at runtime.
+    const failedLookup = (err: string | undefined) =>
+      ({ ok: false, err }) as unknown as TenantResult
+
+    beforeEach(() => {
+      getContactSpy.mockResolvedValue({ ok: true, data: mockedContact })
+      getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
+        ok: true,
+        data: mockedListing,
+      })
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: mockedRentalObject,
+      })
+      getLeasesForContactCodeSpy.mockResolvedValue(mockedLeases)
+      getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
+        ok: true,
+        data: [],
+      })
+      getInvoicesSentToDebtCollectionSpy.mockClear()
+      applyForListingSpy.mockClear()
+    })
+
+    afterEach(() => {
+      getTenantByContactCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.tenant.build({ isAboutToLeave: false }),
+      })
+    })
+
+    it('refuses the application with 403 housing-contract-terminated when the only housing contract is under notice', async () => {
+      getTenantByContactCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.tenant.build({ isAboutToLeave: true }),
+      })
+
+      const result =
+        await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
+          'foo',
+          'bar',
+          'Additional'
+        )
+
+      if (result.processStatus !== ProcessStatus.failed)
+        throw new Error('expected the process to fail')
+      expect(result.httpStatus).toBe(403)
+      expect(result.error).toBe('housing-contract-terminated')
+      expect(applyForListingSpy).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['unknown', failedLookup('unknown')],
+      [
+        'a leasing failure (Tenfast unreachable)',
+        failedLookup('get-tenfast-tenant'),
+      ],
+      ['a failure without an error type', failedLookup(undefined)],
+    ])(
+      'returns 500 when the tenant lookup fails with %s',
+      async (_, tenantResult) => {
+        getTenantByContactCodeSpy.mockResolvedValue(tenantResult)
+
+        const result =
+          await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
+            'foo',
+            'bar',
+            'Additional'
+          )
+
+        if (result.processStatus !== ProcessStatus.failed)
+          throw new Error('expected the process to fail')
+        expect(result.httpStatus).toBe(500)
+        expect(result.error).toBe('internal-error')
+        expect(result.response.message).toMatch(
+          /^Tenant bar could not be retrieved/
+        )
+        expect(getInvoicesSentToDebtCollectionSpy).not.toHaveBeenCalled()
+        expect(applyForListingSpy).not.toHaveBeenCalled()
+      }
+    )
+
+    it.each(['contact-not-tenant', 'no-valid-housing-contract'] as const)(
+      'goes on to the credit check when the lookup says %s',
+      async (err) => {
+        getTenantByContactCodeSpy.mockResolvedValue({ ok: false, err })
+
+        await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
+          'foo',
+          'bar',
+          'Additional'
+        )
+
+        expect(getInvoicesSentToDebtCollectionSpy).toHaveBeenCalled()
+      }
+    )
   })
 
   it('returns an error if parking space is not internal', async () => {

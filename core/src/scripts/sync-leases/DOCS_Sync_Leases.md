@@ -19,6 +19,7 @@ Leasing-tjänsten (`GET /leases/sync`) läser `cmlog`-rader som börjar med `Hyr
 - Bara `Bostadskontrakt`, `Lokalkontrakt` och `Garagekontrakt` tas med. Andra rader, och rader som saknar kontraktsnummer, kontaktkod eller något av fälten ovan, hoppas över utan loggning.
 - Kontraktsnummer och kontaktkod läses ur radens första rad. Hyresobjektets kod är kontraktsnumret utan sista `/`-delen.
 - Ett preliminärt uppsagt kontrakt triggar ingenting — bara när `Uppsagt datum` sätts.
+- `Undertecknat` på ett avtal vars rubrik slutar på `(Makulerat)` triggar ingenting. Det händer när hyresgästen skriver under efter att avtalet makulerats. Raden loggas på info-nivå.
 
 **Makulerade avtal byter nummer i Xpand** (`…/10` → `…/10M`), medan Tenfast känner avtalet under det gamla. Det gamla numret läses ur raden `Värdet i fältet 'Kontraktsnummer' ändrat från … till …` i samma logg-post; saknas den loggas makuleringen som varning och hoppas över.
 
@@ -158,7 +159,7 @@ sequenceDiagram
     Core ->> Leasing: GET /leases/sync?since={position}
     Leasing ->> Xpand: cmlog rows starting "Hyreskontrakt "
     Xpand -->> Leasing: Rows
-    note over Leasing: Each row classified as create / terminate / void.<br/>Void uses the number from before the M suffix.<br/>Events are not collapsed.
+    note over Leasing: Each row classified as create / terminate / void.<br/>No create when the header says (Makulerat).<br/>Void uses the number from before the M suffix.<br/>Events are not collapsed.
     Leasing -->> Core: Lease events with timestamps
 
     break when the fetch fails

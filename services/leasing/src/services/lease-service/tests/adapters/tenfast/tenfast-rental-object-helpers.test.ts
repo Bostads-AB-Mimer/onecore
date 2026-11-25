@@ -1,5 +1,6 @@
 import {
   getLeasedUntil,
+  getNextLeaseId,
   getVacantFrom,
   isClaimingLease,
   mapTenfastRentalObjectToAvailabilityInfo,
@@ -523,6 +524,51 @@ describe('tenfast-rental-object-helpers', () => {
     it('counts a lease with a missing or unknown stage as claiming the object', () => {
       expect(isClaimingLease({})).toBe(true)
       expect(isClaimingLease({ stage: 'someNewStage' })).toBe(true)
+    })
+  })
+
+  describe(getNextLeaseId, () => {
+    const code = '704-703-00-0006'
+
+    it('starts at /01 on an object without earlier leases', () => {
+      expect(getNextLeaseId(code, [])).toBe(`${code}/01`)
+    })
+
+    it('continues from the highest number, padded to two digits', () => {
+      expect(
+        getNextLeaseId(code, [`${code}/01`, `${code}/04`, `${code}/02`])
+      ).toBe(`${code}/05`)
+    })
+
+    it('counts the leading digits of a number with letters after it', () => {
+      expect(getNextLeaseId(code, [`${code}/03`, `${code}/13M`])).toBe(
+        `${code}/14`
+      )
+      expect(getNextLeaseId(code, [`${code}/04T`])).toBe(`${code}/05`)
+    })
+
+    it('goes past two digits', () => {
+      expect(getNextLeaseId(code, [`${code}/99`])).toBe(`${code}/100`)
+      expect(getNextLeaseId(code, [`${code}/123`])).toBe(`${code}/124`)
+    })
+
+    it('skips ids of other rental objects and ids without a number', () => {
+      expect(
+        getNextLeaseId(code, [
+          '704-703-00-0060/09',
+          `${code}0/07`,
+          `${code}/M`,
+          `${code}/02`,
+        ])
+      ).toBe(`${code}/03`)
+    })
+
+    it('reads ids with padding left around them', () => {
+      expect(getNextLeaseId(code, [` ${code}/06  `])).toBe(`${code}/07`)
+    })
+
+    it('matches the rental object code trimmed and ignoring case', () => {
+      expect(getNextLeaseId('p123 ', ['P123/04', 'p123/05m'])).toBe('p123/06')
     })
   })
 })

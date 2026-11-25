@@ -13,6 +13,9 @@ export type { LeaseChange }
 const UNDERTECKNAT_CREATE_PATTERN =
   /Värdet i fältet 'Undertecknat' ändrat från '' till '\d{4}-\d{2}-\d{2}'/
 
+// Xpand writes the lease status in parentheses at the end of the header line.
+const MAKULERAT_HEADER_PATTERN = /\(Makulerat\)\s*$/
+
 const UPPSAGT_PATCH_PATTERN =
   /Värdet i fältet 'Uppsagt datum' ändrat från '' till '\d{4}-\d{2}-\d{2}'/
 
@@ -46,7 +49,9 @@ export const cmlogLeaseChanges = (db: Knex, since: Date | null) =>
  * the /XX suffix from the leaseId.
  *
  * Classifies action as:
- * - 'create'    — Undertecknat field set from empty to a date
+ * - 'create'    — Undertecknat field set from empty to a date, unless the
+ *                 header status is "(Makulerat)"; such a row gives no create
+ *                 and falls through to the terminate and void checks.
  * - 'terminate' — Uppsagt datum field set from empty to a date
  * - 'void'      — Makulerat datum field set from empty to a date; the emitted
  *                 leaseId is overridden with the pre-M original parsed from the
@@ -80,8 +85,17 @@ export const parseLeaseChanges = (
     if (!contactCodeMatch) continue
     const contactCode = contactCodeMatch[1]
 
+    const isUndertecknat = UNDERTECKNAT_CREATE_PATTERN.test(row.logmemo)
+    const isVoidedHeader = MAKULERAT_HEADER_PATTERN.test(firstLine)
+    if (isUndertecknat && isVoidedHeader) {
+      logger.info(
+        { leaseId, logmemo: row.logmemo },
+        'parseLeaseChanges: Undertecknat on a voided lease, skipping create'
+      )
+    }
+
     let action: 'create' | 'terminate' | 'void'
-    if (UNDERTECKNAT_CREATE_PATTERN.test(row.logmemo)) action = 'create'
+    if (isUndertecknat && !isVoidedHeader) action = 'create'
     else if (UPPSAGT_PATCH_PATTERN.test(row.logmemo)) action = 'terminate'
     else if (MAKULERAT_PATCH_PATTERN.test(row.logmemo)) action = 'void'
     else continue

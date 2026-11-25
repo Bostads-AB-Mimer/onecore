@@ -526,6 +526,109 @@ describe(getInvoicesByContactCode, () => {
       inAllSources,
       inTenfastAndXpand,
     ])
-    expect(getXledgerInvoicesByNumber).not.toHaveBeenCalled()
+    // Only the Tenfast-only invoice is looked up, not as a household invoice.
+    expect(getXledgerInvoicesByNumber).toHaveBeenCalledTimes(1)
+    expect(getXledgerInvoicesByNumber).toHaveBeenCalledWith([inTenfastAndXpand])
+  })
+
+  // A Tenfast invoice on a shared lease billed to the co-holder is missed by
+  // the contact-scoped Xledger lookup, like a household invoice from Xpand.
+  describe('Tenfast invoice not found in Xledger for the contact', () => {
+    const invoiceId = '552612002599326K'
+    const tenfastRows = factory.invoiceRow.buildList(1, {
+      invoiceNumber: invoiceId,
+    })
+    const tenfastInvoice = factory.invoice.build({
+      invoiceId,
+      source: 'next',
+      leaseIds: ['807-006-01-0201/01'],
+      fromDate: new Date('2026-12-01T00:00:00.000Z'),
+      toDate: new Date('2026-12-31T00:00:00.000Z'),
+      invoiceRows: tenfastRows,
+      credit: null,
+    })
+
+    it('is merged like an own Xledger invoice once found by invoice number', async () => {
+      // Arrange
+      getTenfastInvoices.mockResolvedValueOnce([parsed(tenfastInvoice)])
+      getXledgerInvoicesByNumber.mockResolvedValueOnce([
+        parsed(
+          xledgerInvoice({
+            invoiceId,
+            reference: coHolderContactCode,
+            remainingAmount: -15407,
+            credit: { originalInvoiceId: '552612002599326' },
+            leaseIds: [],
+            fromDate: new Date('2026-11-18T00:00:00.000Z'),
+            toDate: new Date('2026-11-18T00:00:00.000Z'),
+          })
+        ),
+      ])
+
+      // Act
+      const result = await getInvoicesByContactCode(contactCode)
+
+      // Assert
+      expect(getXledgerInvoicesByNumber).toHaveBeenCalledWith([invoiceId])
+      expect(result).toHaveLength(1)
+      expect(result[0]).toEqual(
+        expect.objectContaining({
+          invoiceId,
+          // Xledger owns credit and payment data...
+          reference: coHolderContactCode,
+          remainingAmount: -15407,
+          credit: { originalInvoiceId: '552612002599326' },
+          // ...as for own Xledger invoices, leaseIds is not taken from Tenfast...
+          leaseIds: [],
+          // ...but the period and rows are.
+          fromDate: tenfastInvoice.fromDate,
+          toDate: tenfastInvoice.toDate,
+          invoiceRows: tenfastRows,
+          hasRentNoticePdf: true,
+        })
+      )
+    })
+
+    it('is returned from Tenfast when it is not yet in Xledger', async () => {
+      // Arrange
+      getTenfastInvoices.mockResolvedValueOnce([parsed(tenfastInvoice)])
+
+      // Act
+      const result = await getInvoicesByContactCode(contactCode)
+
+      // Assert
+      expect(result).toEqual([{ ...tenfastInvoice, hasRentNoticePdf: true }])
+    })
+
+    it('is returned from Tenfast when the Xledger lookup fails', async () => {
+      // Arrange
+      getTenfastInvoices.mockResolvedValueOnce([parsed(tenfastInvoice)])
+      getXledgerInvoicesByNumber.mockRejectedValueOnce(
+        new Error('xledger unavailable')
+      )
+
+      // Act
+      const result = await getInvoicesByContactCode(contactCode)
+
+      // Assert
+      expect(result).toEqual([{ ...tenfastInvoice, hasRentNoticePdf: true }])
+      expect(logger.warn).toHaveBeenCalledWith(
+        { contactCode },
+        expect.stringContaining('could not look up Tenfast invoices')
+      )
+    })
+
+    it('is not looked up when it has no OCR number', async () => {
+      // Arrange
+      getTenfastInvoices.mockResolvedValueOnce([
+        parsed(factory.invoice.build({ invoiceId: '', source: 'next' })),
+      ])
+
+      // Act
+      await getInvoicesByContactCode(contactCode)
+
+      // Assert
+      expect(getXledgerInvoicesByNumber).not.toHaveBeenCalled()
+    })
   })
 })

@@ -290,9 +290,8 @@ export const CreateApplicantForListing = (props: Props) => {
                         {tenantQuery.isLoading && <ContactInfoLoading />}
                         {renderTenantQueryError(tenantQuery.error)}
                         {tenantQuery.data &&
-                          tenantQuery.data.validationResult == 'ok' &&
                           tenantQuery.data.tenant.isAboutToLeave && (
-                            <ValidLeaseMissingError />
+                            <HousingContractUnderNoticeError />
                           )}
                         <Box>
                           <Divider />
@@ -396,6 +395,9 @@ export const CreateApplicantForListing = (props: Props) => {
                   <LoadingButton
                     disabled={
                       tenantQuery.data.validationResult === 'no-contract' ||
+                      // Core refuses the application: the only housing
+                      // contract is under notice and none is upcoming.
+                      tenantQuery.data.tenant.isAboutToLeave ||
                       !tenantHasValidContractForTheDiscrict(
                         tenantQuery.data.tenant,
                         props.listing
@@ -501,6 +503,13 @@ const ValidLeaseMissingError = () => (
   <Typography color="error">
     Kunden saknar giltigt bostadskontrakt. Det går endast att söka bilplats med
     gällande och kommande bostadskontrakt
+  </Typography>
+)
+
+const HousingContractUnderNoticeError = () => (
+  <Typography color="error">
+    Kunden har sagt upp sitt bostadskontrakt och har inget kommande. Kunden kan
+    inte söka poängsatt bilplats.
   </Typography>
 )
 

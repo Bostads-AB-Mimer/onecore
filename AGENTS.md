@@ -86,6 +86,7 @@ Always use `pnpm` — never `npm` or `yarn`.
 - This repository is **public**. Commit messages, PR descriptions and review comments must not describe an unfixed vulnerability in a way that shows how to exploit it (which endpoint, which bypass, which key). Describe the fix, not the attack, and keep details in Linear until it is fixed and deployed.
 - Build security lists (redacted headers or fields, allowed origins, roles) from the code, not from memory: grep for what is actually sent, logged or checked, and combine explicit names with a pattern that catches variants.
 - For a security fix, check that it is complete, not only that the reported case is fixed.
+- Environment behaviour keys off its own setting (e.g. `CONTACT_DETAILS__MODE`), never off `NODE_ENV === 'production'` in a non-production environment: core treats production as real mail to real people.
 
 ### Types
 
