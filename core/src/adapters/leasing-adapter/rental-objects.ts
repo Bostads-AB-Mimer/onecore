@@ -12,14 +12,32 @@ const tenantsLeasesServiceUrl = config.tenantsLeasesService.url
 
 const getParkingSpaceByCode = async (
   rentalObjectCode: string
-): Promise<AdapterResult<RentalObject, 'not-found' | 'unknown'>> => {
+): Promise<
+  AdapterResult<RentalObject, 'not-found' | 'unavailable' | 'unknown'>
+> => {
   try {
     const response = await axios.get(
-      `${tenantsLeasesServiceUrl}/parking-spaces/by-code/${rentalObjectCode}`
+      `${tenantsLeasesServiceUrl}/parking-spaces/by-code/${rentalObjectCode}`,
+      { validateStatus: () => true }
     )
     if (response.status === 404) {
       logger.error({ rentalObjectCode }, 'Parking space not found for code:')
       return { ok: false, err: 'not-found' }
+    }
+    // Leasing couldn't fetch the rent and vacancy date for the parking space
+    if (response.status === 503) {
+      logger.error(
+        { rentalObjectCode, error: response.data?.error },
+        'leasing-adapter.getParkingSpaceByCode: availability unavailable'
+      )
+      return { ok: false, err: 'unavailable' }
+    }
+    if (response.status !== 200) {
+      logger.error(
+        { rentalObjectCode, status: response.status },
+        'leasing-adapter.getParkingSpaceByCode: unexpected status'
+      )
+      return { ok: false, err: 'unknown' }
     }
     return { ok: true, data: response.data.content }
   } catch (error) {

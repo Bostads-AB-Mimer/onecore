@@ -155,6 +155,10 @@ export const routes = (router: KoaRouter) => {
    *                         type: string
    *                       braArea:
    *                         type: number
+   *       '404':
+   *         description: The parking space was not found (error not-found).
+   *       '503':
+   *         description: The rent and vacancy date could not be fetched (error unavailable).
    *       '500':
    *         description: Internal server error. Failed to fetch rental object.
    *         content:
@@ -164,7 +168,7 @@ export const routes = (router: KoaRouter) => {
    *               properties:
    *                 error:
    *                   type: string
-   *                   description: The error message.
+   *                   enum: [not-found, unavailable, unknown]
    *     security:
    *       - bearerAuth: []
    */
@@ -174,8 +178,9 @@ export const routes = (router: KoaRouter) => {
     const result = await leasingAdapter.getParkingSpaceByCode(rentalObjectCode)
 
     if (!result.ok) {
-      ctx.status = 500
-      ctx.body = { error: 'Unknown error', ...metadata }
+      const statusByError = { 'not-found': 404, unavailable: 503, unknown: 500 }
+      ctx.status = statusByError[result.err]
+      ctx.body = { error: result.err, ...metadata }
       return
     }
 

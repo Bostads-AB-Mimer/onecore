@@ -170,6 +170,16 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/RentalObject'
+   *       '503':
+   *         description: The availability (rent, vacant from) could not be fetched from Tenfast (error availability-unavailable). A parking space Tenfast doesn't have is returned with 200 and without availabilityInfo. An answer from Tenfast that can't be parsed gives 500.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   enum: [availability-unavailable]
    *       '500':
    *         description: Internal server error. Failed to fetch parking space.
    *         content:
@@ -218,13 +228,34 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      logger.error(
-        { err: availabilityResult.err, rentalObjectCode: rentalObjectCode },
-        `Could not get rent from Tenfast`
-      )
+      // A parking space Tenfast doesn't have is returned without availability.
+      if (availabilityResult.err === 'rental-object-not-found') {
+        logger.warn(
+          { rentalObjectCode },
+          'Parking space not found in Tenfast, returned without availability'
+        )
+        ctx.status = 200
+        ctx.body = { content: result.data, ...metadata }
+        return
+      }
 
-      ctx.status = 200
-      ctx.body = { content: result.data, ...metadata }
+      // Any other error means the lookup failed. Without availability the
+      // caller would show or send the parking space without rent and vacancy
+      // date, so this is an error, not a partial success.
+      logger.error(
+        { err: availabilityResult.err, rentalObjectCode },
+        'Could not get availability from Tenfast'
+      )
+      if (availabilityResult.err === 'could-not-parse-rental-object') {
+        ctx.status = 500
+        ctx.body = {
+          error: 'An error occurred while fetching parking spaces.',
+          ...metadata,
+        }
+        return
+      }
+      ctx.status = 503
+      ctx.body = { error: 'availability-unavailable', ...metadata }
       return
     }
 
@@ -479,6 +510,16 @@ export const routes = (router: KoaRouter) => {
    *                 error:
    *                   type: string
    *                   enum: [invalid-rent-at]
+   *       '503':
+   *         description: The availability could not be fetched from Tenfast (error availability-unavailable). An answer from Tenfast that can't be parsed gives 500.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 error:
+   *                   type: string
+   *                   enum: [availability-unavailable]
    *       '500':
    *         description: Internal server error. Failed to fetch rental object availability.
    *         content:
@@ -569,7 +610,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      if (availabilityResult.err == 'could-not-find-rental-object') {
+      if (availabilityResult.err === 'rental-object-not-found') {
         ctx.status = 404
         ctx.body = {
           error: `Availability not found for rental object code: ${rentalObjectCode}`,
@@ -578,11 +619,20 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      ctx.status = 500
-      ctx.body = {
-        error: 'An error occurred while fetching rental object availability.',
-        ...metadata,
+      logger.error(
+        { err: availabilityResult.err, rentalObjectCode },
+        'Could not get availability from Tenfast'
+      )
+      if (availabilityResult.err === 'could-not-parse-rental-object') {
+        ctx.status = 500
+        ctx.body = {
+          error: 'An error occurred while fetching rental object availability.',
+          ...metadata,
+        }
+        return
       }
+      ctx.status = 503
+      ctx.body = { error: 'availability-unavailable', ...metadata }
     }
   )
 

@@ -523,9 +523,8 @@ export const routes = (router: KoaRouter) => {
     )
 
     if (!parkingSpacesResult.ok) {
-      parkingSpacesResult.err === 'not-found'
-        ? (ctx.status = 404)
-        : (ctx.status = 500)
+      const statusByError = { 'not-found': 404, unavailable: 503, unknown: 500 }
+      ctx.status = statusByError[parkingSpacesResult.err]
       ctx.body = {
         error: 'Error getting parking spaces from leasing',
         ...metadata,

@@ -2599,7 +2599,7 @@ describe(tenfastAdapter.getAvailabilityForRentalObject, () => {
 
     // Assert
     assert(!result.ok)
-    expect(result.err).toBe('could-not-find-rental-object')
+    expect(result.err).toBe('rental-object-not-found')
   })
 
   it('is vacant the day after a terminated lease ends, not today', async () => {
