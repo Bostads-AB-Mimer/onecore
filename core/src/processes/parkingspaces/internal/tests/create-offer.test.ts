@@ -51,6 +51,44 @@ describe('createOfferForInternalParkingSpace', () => {
     })
   })
 
+  it('fails with service-unavailable when the parking space rent cannot be fetched', async () => {
+    jest
+      .spyOn(leasingAdapter, 'getListingByListingId')
+      .mockResolvedValue(
+        factory.listing.build({ status: ListingStatus.Expired })
+      )
+    jest
+      .spyOn(leasingAdapter, 'getParkingSpaceByCode')
+      .mockResolvedValue({ ok: false, err: 'unavailable' })
+
+    const result = await createOfferForInternalParkingSpace(123)
+
+    expect(result).toMatchObject({
+      processStatus: ProcessStatus.failed,
+      error: CreateOfferErrorCodes.ServiceUnavailable,
+      httpStatus: 503,
+    })
+  })
+
+  it('fails with no-listing when the parking space is not found', async () => {
+    jest
+      .spyOn(leasingAdapter, 'getListingByListingId')
+      .mockResolvedValue(
+        factory.listing.build({ status: ListingStatus.Expired })
+      )
+    jest
+      .spyOn(leasingAdapter, 'getParkingSpaceByCode')
+      .mockResolvedValue({ ok: false, err: 'not-found' })
+
+    const result = await createOfferForInternalParkingSpace(123)
+
+    expect(result).toMatchObject({
+      processStatus: ProcessStatus.failed,
+      error: CreateOfferErrorCodes.NoListing,
+      httpStatus: 500,
+    })
+  })
+
   it('fails if listing is not expired', async () => {
     const listing = factory.listing.build({ status: ListingStatus.Active })
     jest

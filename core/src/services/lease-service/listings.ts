@@ -412,6 +412,8 @@ export const routes = (router: KoaRouter) => {
    *         description: No eligible applicant found for the listing.
    *       '500':
    *         description: Internal server error. Failed to create the offer.
+   *       '503':
+   *         description: The parking space's rent and vacancy date could not be fetched (error service-unavailable). Trying again later may work.
    *     security:
    *       - bearerAuth: []
    */

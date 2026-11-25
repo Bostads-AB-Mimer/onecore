@@ -58,6 +58,17 @@ export const createLeaseForExternalParkingSpace = async (
     // Fetch rental object separately (listing doesn't include full rental object data)
     const parkingSpaceResult = await getParkingSpaceByCode(parkingSpaceId)
 
+    if (!parkingSpaceResult.ok && parkingSpaceResult.err === 'unavailable') {
+      return {
+        processStatus: ProcessStatus.failed,
+        // A service the process depends on is temporarily down; trying again later may work.
+        error: 'service-unavailable',
+        httpStatus: 503,
+        response: {
+          message: `The rent and vacancy date of rental object ${parkingSpaceId} could not be fetched.`,
+        },
+      }
+    }
     if (!parkingSpaceResult.ok || !parkingSpaceResult.data) {
       return {
         processStatus: ProcessStatus.failed,

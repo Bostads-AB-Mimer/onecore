@@ -4,7 +4,12 @@ import * as economyAdapter from '../../../../adapters/economy-adapter'
 import * as communicationAdapter from '../../../../adapters/communication-adapter'
 import { ProcessStatus } from '../../../../common/types'
 import * as parkingProcesses from '../index'
-import { ApplicantStatus, ListingStatus, WaitingListType } from '@onecore/types'
+import {
+  ApplicantStatus,
+  CreateNoteOfInterestErrorCodes,
+  ListingStatus,
+  WaitingListType,
+} from '@onecore/types'
 import * as factory from '../../../../../test/factories'
 import * as processUtils from '../../utils'
 import { mockedUnpaidInvoice } from '../../external/tests/index.mocks'
@@ -167,6 +172,30 @@ describe('createNoteOfInterestForInternalParkingSpace', () => {
 
     expect(result.processStatus).toBe(ProcessStatus.failed)
     expect(result.httpStatus).toBe(404)
+  })
+
+  it('returns service-unavailable if the parking space rent cannot be fetched', async () => {
+    getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
+      ok: true,
+      data: mockedListing,
+    })
+    getParkingSpaceByCodeSpy.mockResolvedValue({
+      ok: false,
+      err: 'unavailable',
+    })
+
+    const result =
+      await parkingProcesses.createNoteOfInterestForInternalParkingSpace(
+        'foo',
+        'bar',
+        'Additional'
+      )
+
+    expect(result).toMatchObject({
+      processStatus: ProcessStatus.failed,
+      error: CreateNoteOfInterestErrorCodes.ServiceUnavailable,
+      httpStatus: 503,
+    })
   })
 
   it('returns an forbidden if the applicant is not a tenant', async () => {

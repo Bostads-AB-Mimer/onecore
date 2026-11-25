@@ -26,6 +26,14 @@ export function mapCreateOfferErrors(
         errorHeading: 'Inget erbjudande skapades',
         errorMessage: 'Ingen berättigad sökande hittades för annonsen.',
       }
+    case CreateOfferErrorCodes.ServiceUnavailable:
+      return {
+        status: e.response.status,
+        errorCode: CreateOfferErrorCodes.ServiceUnavailable,
+        errorHeading: 'Inget erbjudande skapades',
+        errorMessage:
+          'Bilplatsens hyra och ledigt från-datum gick inte att hämta just nu. Försök igen om en stund.',
+      }
     default: {
       return defaultError
     }

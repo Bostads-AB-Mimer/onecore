@@ -1311,6 +1311,8 @@ export const routes = (router: KoaRouter) => {
    *           so no lease was created. error is rental-object-not-available.
    *       '500':
    *         description: Internal server error. Failed to accept the offer.
+   *       '503':
+   *         description: The parking space's rent and vacancy date could not be fetched (error service-unavailable). Trying again later may work.
    *     security:
    *       - bearerAuth: []
    */
@@ -2329,7 +2331,7 @@ export const routes = (router: KoaRouter) => {
    *                     message:
    *                       type: string
    *       '503':
-   *         description: The internal credit check could not be done because invoices are temporarily unavailable. error is fetch-invoices-failed. Trying again later may work.
+   *         description: The internal credit check could not be done because invoices are temporarily unavailable (error fetch-invoices-failed), or the parking space's rent and vacancy date could not be fetched (error service-unavailable). Trying again later may work.
    *     security:
    *       - bearerAuth: []
    */
@@ -2443,7 +2445,7 @@ export const routes = (router: KoaRouter) => {
    *                   type: string
    *                   example: A technical error has occured.
    *       '503':
-   *         description: The internal credit check could not be done because invoices are temporarily unavailable (errorCode service-unavailable). Trying again later may work.
+   *         description: The internal credit check could not be done because invoices are temporarily unavailable, or the parking space's rent and vacancy date could not be fetched (errorCode service-unavailable). Trying again later may work.
    *     security:
    *       - bearerAuth: []
    */

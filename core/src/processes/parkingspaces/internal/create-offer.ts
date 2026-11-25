@@ -62,6 +62,14 @@ export const createOfferForInternalParkingSpace = async (
     )
 
     if (!parkingSpacesResult.ok) {
+      if (parkingSpacesResult.err === 'unavailable') {
+        return endFailingProcess(
+          log,
+          CreateOfferErrorCodes.ServiceUnavailable,
+          503,
+          `Rent and vacancy date for listing with id ${listingId} could not be fetched`
+        )
+      }
       return endFailingProcess(
         log,
         CreateOfferErrorCodes.NoListing,

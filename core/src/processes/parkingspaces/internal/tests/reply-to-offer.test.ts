@@ -216,6 +216,26 @@ describe('replyToOffer', () => {
       })
     })
 
+    it('returns service-unavailable if the parking space rent cannot be fetched', async () => {
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: factory.detailedOffer.build(),
+      })
+      getListingByListingIdSpy.mockResolvedValueOnce(factory.listing.build())
+      getParkingSpaceByCodeSpy.mockResolvedValueOnce({
+        ok: false,
+        err: 'unavailable',
+      })
+
+      const result = await replyProcesses.acceptOffer(123)
+
+      expect(result).toMatchObject({
+        processStatus: ProcessStatus.failed,
+        error: ReplyToOfferErrorCodes.ServiceUnavailable,
+        httpStatus: 503,
+      })
+    })
+
     it('returns success if reset waiting lists fails', async () => {
       const offer = factory.detailedOffer.build()
       getOfferByIdSpy.mockResolvedValueOnce({

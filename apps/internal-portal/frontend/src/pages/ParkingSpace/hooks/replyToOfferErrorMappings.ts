@@ -62,6 +62,14 @@ export function mapReplyOfferErrors(
         errorMessage:
           'Bilplatsen är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt på den (utkast, skickat för påskrift eller signerat), kanske för samma sökande. Inget nytt kontrakt skapades.',
       }
+    case ReplyToOfferErrorCodes.ServiceUnavailable:
+      return {
+        status: e.response.status,
+        errorCode: ReplyToOfferErrorCodes.ServiceUnavailable,
+        errorHeading: 'Ej godkänd',
+        errorMessage:
+          'Bilplatsens hyra och ledigt från-datum gick inte att hämta just nu. Inget kontrakt skapades. Försök igen om en stund.',
+      }
     default: {
       return defaultError
     }

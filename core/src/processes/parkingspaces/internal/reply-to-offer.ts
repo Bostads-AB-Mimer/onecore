@@ -88,6 +88,14 @@ export const acceptOffer = async (
     )
 
     if (!parkingSpacesResult.ok) {
+      if (parkingSpacesResult.err === 'unavailable') {
+        return endFailingProcess(
+          log,
+          ReplyToOfferErrorCodes.ServiceUnavailable,
+          503,
+          `Rent and vacancy date for listing with id ${listingWithoutRentalObject.id} could not be fetched`
+        )
+      }
       return endFailingProcess(
         log,
         ReplyToOfferErrorCodes.NoListing,

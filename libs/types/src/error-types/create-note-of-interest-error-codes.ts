@@ -9,7 +9,8 @@ enum CreateNoteOfInterestErrorCodes {
   NotEligibleToRent = 'not-eligible-to-rent',
   InternalCreditCheckFailed = 'internal-credit-check-failed',
   InternalError = 'internal-error',
-  // A service the process depends on is temporarily down; trying again later may work.
+  // A service the process depends on is temporarily down, e.g. the parking
+  // space's rent or the applicant's invoices; trying again later may work.
   ServiceUnavailable = 'service-unavailable',
   Unknown = 'unknown',
 }

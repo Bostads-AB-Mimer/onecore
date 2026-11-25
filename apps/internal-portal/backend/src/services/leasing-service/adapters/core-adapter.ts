@@ -316,6 +316,17 @@ const createOffer = async (params: {
         statusCode: 404,
       }
     }
+    if (
+      axiosError.response?.status === HttpStatusCode.ServiceUnavailable &&
+      axiosError.response.data?.error ===
+        CreateOfferErrorCodes.ServiceUnavailable
+    ) {
+      return {
+        ok: false,
+        err: CreateOfferErrorCodes.ServiceUnavailable,
+        statusCode: 503,
+      }
+    }
     return { ok: false, err: 'unknown', statusCode: 500 }
   }
 }

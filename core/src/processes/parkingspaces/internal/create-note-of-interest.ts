@@ -76,6 +76,14 @@ export const createNoteOfInterestForInternalParkingSpace = async (
 
     const parkingSpaceResult = await getParkingSpaceByCode(parkingSpaceId)
 
+    if (!parkingSpaceResult.ok && parkingSpaceResult.err === 'unavailable') {
+      return endFailingProcess(
+        log,
+        CreateNoteOfInterestErrorCodes.ServiceUnavailable,
+        503,
+        `The rent and vacancy date of rental object ${parkingSpaceId} could not be fetched.`
+      )
+    }
     if (!parkingSpaceResult.ok || !parkingSpaceResult.data) {
       return endFailingProcess(
         log,

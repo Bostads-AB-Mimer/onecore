@@ -9,6 +9,8 @@ enum CreateOfferErrorCodes {
   UpdateSentAtFailure = 'update-sent-at-failure',
   CreateOfferFailure = 'create-offer-failure',
   SendEmailFailure = 'send-email-failure',
+  // A service the process depends on is temporarily down; trying again later may work.
+  ServiceUnavailable = 'service-unavailable',
   Unknown = 'unknown',
 }
 

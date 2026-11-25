@@ -179,6 +179,24 @@ describe('parkingspaces', () => {
       expect(result.httpStatus).toBe(404)
     })
 
+    it('returns service-unavailable if the parking space rent cannot be fetched', async () => {
+      jest
+        .spyOn(leasingAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValueOnce({ ok: false, err: 'unavailable' })
+
+      const result = await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      expect(result).toMatchObject({
+        processStatus: ProcessStatus.failed,
+        error: 'service-unavailable',
+        httpStatus: 503,
+      })
+    })
+
     it('returns an error if parking space is not external', async () => {
       getActiveListingByRentalObjectCodeSpy.mockResolvedValue({
         ok: true,
