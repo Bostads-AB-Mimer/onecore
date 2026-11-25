@@ -29,3 +29,24 @@ export const getUTCDateWithoutTime = (date: Date): Date => {
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
   )
 }
+
+// Formatting is pinned to Europe/Stockholm — the server may run in UTC, and
+// a timestamp around local midnight would otherwise render as the previous
+// calendar day.
+export const SWEDISH_TIME_ZONE = 'Europe/Stockholm'
+
+/**
+ * Formats a date string to Swedish locale format (YYYY-MM-DD)
+ */
+export function formatSwedishDate(
+  date: string | Date | undefined | null
+): string {
+  if (!date) return ''
+  try {
+    return new Date(date).toLocaleDateString('sv-SE', {
+      timeZone: SWEDISH_TIME_ZONE,
+    })
+  } catch {
+    return ''
+  }
+}

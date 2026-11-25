@@ -183,7 +183,7 @@ export function InspectionConductDialog({
           </DialogHeader>
           <ul className="mt-4 space-y-2">
             {componentWriteBackErrors?.map((err) => (
-              <li key={err.componentId} className="text-sm">
+              <li key={`${err.componentId}:${err.message}`} className="text-sm">
                 <strong>{err.componentLabel}:</strong> {err.message}
               </li>
             ))}
