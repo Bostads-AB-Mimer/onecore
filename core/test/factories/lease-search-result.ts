@@ -1,10 +1,8 @@
 import { Factory } from 'fishery'
 import { LeaseStatus, LeaseType, leasing } from '@onecore/types'
 
-type LeaseSearchResult = leasing.v1.LeaseSearchResult
-
-export const LeaseSearchResultFactory = Factory.define<LeaseSearchResult>(
-  ({ sequence }) => ({
+export const LeaseSearchResultFactory =
+  Factory.define<leasing.v1.LeaseSearchResult>(({ sequence }) => ({
     leaseId: `705-001-01-${String(sequence).padStart(4, '0')}/1`,
     objectTypeCode: 'Bostad',
     leaseType: LeaseType.HousingContract,
@@ -26,5 +24,4 @@ export const LeaseSearchResultFactory = Factory.define<LeaseSearchResult>(
     signedAt: null,
     status: LeaseStatus.Current,
     rentalObjectCode: `705-001-01-${String(sequence).padStart(4, '0')}`,
-  })
-)
+  }))
