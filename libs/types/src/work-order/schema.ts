@@ -12,6 +12,10 @@ export const CreateInspectionWorkOrderGroupSchema = z.object({
   maintenanceTeamId: z.number(),
   maintenanceTeamName: z.string(),
   descriptionHtml: z.string(),
+  // OneCore component instance ids of the group's damaged components. Odoo
+  // turns them into component rows on the request (add-only on re-submit).
+  // Optional for clients that predate the field.
+  componentIds: z.array(z.string()).optional(),
 })
 
 // Frontend → core: the inspector groups damaged components by resursgrupp. Core
