@@ -6,6 +6,7 @@ export type {
   UseSimpleDialogStateReturn,
 } from './useDialogState'
 export { useDialogState, useSimpleDialogState } from './useDialogState'
+export { useLeavePageGuard } from './useLeavePageGuard'
 export { useIsMobile, useIsSmallMobile } from './useMobile'
 export { useScrollToSelected } from './useScrollToSelected'
 export { useSingleEmail } from './useSingleEmail'
