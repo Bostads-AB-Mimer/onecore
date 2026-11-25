@@ -70,6 +70,23 @@ rule. They also set
 `protectedIdentityDetails` (`shown`, `withheld`, or `unavailable` when this service could not be
 reached — the details then stay hidden) so the UI does not mistake a failed lookup for the rule.
 
+### Contact details per environment
+
+`CONTACT_DETAILS__MODE` decides what email addresses and phone numbers this service and leasing
+return. Both read it on every request.
+
+| Value         | Email                                    | Phone                                                                                                       |
+| ------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `real`        | from Xpand                               | from Xpand                                                                                                  |
+| `placeholder` | `redacted+<contactCode>@example.invalid` | `070-174 06 NN`, a number PTS keeps for fiction, picked from the contact code; the phone comment is dropped |
+| `redacted`    | `redacted`                               | `redacted`                                                                                                  |
+
+Placeholders replace values that exist; a contact with no email or phone in Xpand gets none.
+Unset or empty falls back to `real` when `NODE_ENV` is `production`, else `redacted`. An unknown
+value gives `redacted`. Protected identities keep the handling above in every mode. Leasing's
+legacy contact model gives a protected identity `redacted` email and phone in `placeholder` and
+`redacted` mode, and no email in `real` mode.
+
 ### Build
 
 This module builds as both **cjs** and **esm**, serving as a pilot within the platform for moving away

@@ -1176,7 +1176,9 @@ describe('leases routes', () => {
           city: 'Västerås',
         },
       })
-    const validLease = () =>
+    const validLease = (
+      overrides: Partial<leasing.v1.LeaseSearchResult> = {}
+    ) =>
       buildLeaseSearchResult({
         leaseId: '705-001-01-0101/1',
         contacts: [
@@ -1188,6 +1190,7 @@ describe('leases routes', () => {
           },
         ],
         startDate: new Date('2024-01-01'),
+        ...overrides,
       })
 
     it('returns 200 with empty array when no leases found', async () => {
@@ -1225,7 +1228,7 @@ describe('leases routes', () => {
       expect(res.body.error).toBe('Lease service is warming up')
     })
 
-    it('calls searchLeases with objectType bostad and status Current', async () => {
+    it('calls searchLeases with objectType bostad and the statuses a tenant may still live in', async () => {
       const searchSpy = jest
         .spyOn(tenantLeaseAdapter, 'searchLeases')
         .mockResolvedValue(buildPaginatedResponse([]))
@@ -1235,9 +1238,305 @@ describe('leases routes', () => {
       expect(searchSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           objectType: 'bostad',
-          status: 'Current',
+          status: ['Current', 'AboutToEnd', 'PreliminaryTerminated'],
         })
       )
+    })
+
+    it('sets contract_end_date for a lease under notice', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'searchLeases').mockResolvedValue(
+        buildPaginatedResponse([
+          {
+            ...validLease(),
+            // JSON from leasing carries the date as an ISO string.
+            endDate: '2027-01-31T00:00:00.000Z' as unknown as Date,
+          },
+        ])
+      )
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValue({ ok: true, data: validContact() })
+      jest
+        .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+        .mockResolvedValue({ status: 200, data: validRentalProperty() })
+
+      const res = await request(app.callback()).get('/leases/for-csc')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(res.body.content[0].contract_end_date).toBe(
+        '2027-01-31T00:00:00.000Z'
+      )
+    })
+
+    it('returns the lease when the rental object has no building info', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'searchLeases')
+        .mockResolvedValue(buildPaginatedResponse([validLease()]))
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+        .mockResolvedValue({ ok: true, data: validContact() })
+      const { building: _, ...withoutBuilding } = validRentalProperty()
+      jest
+        .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+        .mockResolvedValue({ status: 200, data: withoutBuilding })
+
+      const res = await request(app.callback()).get('/leases/for-csc')
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toHaveLength(1)
+      expect(
+        res.body.content[0].object_real_estate_year_construction
+      ).toBeUndefined()
+      expect(res.body.content[0].real_estate_type).toBe('')
+    })
+
+    describe('leases under notice', () => {
+      // Lease dates from leasing are Swedish midnight in UTC, e.g.
+      // 2026-11-29T23:00Z is 30 November.
+      const now = new Date('2026-11-24T10:00:00Z')
+
+      const leaseUnderNotice = (
+        overrides: Partial<leasing.v1.LeaseSearchResult> = {}
+      ) =>
+        validLease({
+          leaseId: '705-001-01-0101/1',
+          status: LeaseStatus.AboutToEnd,
+          startDate: new Date('2019-12-31T23:00:00Z'),
+          endDate: new Date('2026-11-29T23:00:00Z'),
+          ...overrides,
+        })
+
+      const newerLease = (
+        overrides: Partial<leasing.v1.LeaseSearchResult> = {}
+      ) =>
+        validLease({
+          leaseId: '406-028-02-0201/1',
+          rentalObjectCode: '406-028-02-0201',
+          status: LeaseStatus.Current,
+          startDate: new Date('2026-10-31T23:00:00Z'),
+          ...overrides,
+        })
+
+      const mockLookups = () => {
+        jest
+          .spyOn(tenantLeaseAdapter, 'getContactByContactCode')
+          .mockResolvedValue({ ok: true, data: validContact() })
+        jest
+          .spyOn(propertyManagementAdapter, 'getRentalPropertyInfoFromXpand')
+          .mockResolvedValue({ status: 200, data: validRentalProperty() })
+      }
+
+      beforeEach(() => {
+        jest.useFakeTimers({
+          advanceTimers: false,
+          doNotFake: ['setTimeout', 'setInterval', 'setImmediate', 'nextTick'],
+        })
+        jest.setSystemTime(now)
+      })
+
+      afterEach(() => jest.useRealTimers())
+
+      it('leaves out a lease whose end date has passed', async () => {
+        // Arrange
+        jest
+          .spyOn(tenantLeaseAdapter, 'searchLeases')
+          .mockResolvedValue(
+            buildPaginatedResponse([
+              leaseUnderNotice({ endDate: new Date('2026-11-22T23:00:00Z') }),
+            ])
+          )
+        mockLookups()
+
+        // Act
+        const res = await request(app.callback()).get('/leases/for-csc')
+
+        // Assert
+        expect(res.status).toBe(200)
+        expect(res.body.content).toEqual([])
+      })
+
+      it('keeps a lease whose end date is today', async () => {
+        // Arrange
+        const searchSpy = jest
+          .spyOn(tenantLeaseAdapter, 'searchLeases')
+          .mockResolvedValueOnce(
+            buildPaginatedResponse([
+              // 24 November in Sweden, still 23 November in UTC
+              leaseUnderNotice({ endDate: new Date('2026-11-23T23:00:00Z') }),
+            ])
+          )
+          .mockResolvedValueOnce(buildPaginatedResponse([]))
+        mockLookups()
+
+        // Act
+        const res = await request(app.callback()).get('/leases/for-csc')
+
+        // Assert
+        expect(res.body.content).toHaveLength(1)
+        expect(searchSpy).toHaveBeenCalledTimes(2)
+      })
+
+      it('leaves out a lease under notice when the tenant has moved into a newer lease', async () => {
+        // Arrange
+        const searchSpy = jest
+          .spyOn(tenantLeaseAdapter, 'searchLeases')
+          .mockResolvedValueOnce(buildPaginatedResponse([leaseUnderNotice()]))
+          .mockResolvedValueOnce(
+            buildPaginatedResponse([leaseUnderNotice(), newerLease()])
+          )
+        mockLookups()
+
+        // Act
+        const res = await request(app.callback()).get('/leases/for-csc')
+
+        // Assert
+        expect(res.status).toBe(200)
+        expect(res.body.content).toEqual([])
+        expect(searchSpy).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            q: 'P158770',
+            objectType: 'bostad',
+            status: ['Current', 'AboutToEnd', 'PreliminaryTerminated'],
+          })
+        )
+      })
+
+      it('treats a notice waiting for signing as a lease under notice', async () => {
+        // Arrange
+        jest
+          .spyOn(tenantLeaseAdapter, 'searchLeases')
+          .mockResolvedValueOnce(
+            buildPaginatedResponse([
+              leaseUnderNotice({ status: LeaseStatus.PreliminaryTerminated }),
+            ])
+          )
+          .mockResolvedValueOnce(buildPaginatedResponse([newerLease()]))
+        mockLookups()
+
+        // Act
+        const res = await request(app.callback()).get('/leases/for-csc')
+
+        // Assert
+        expect(res.body.content).toEqual([])
+      })
+
+      it('keeps a lease under notice when the newer lease has not started yet', async () => {
+        // Arrange
+        jest
+          .spyOn(tenantLeaseAdapter, 'searchLeases')
+          .mockResolvedValueOnce(buildPaginatedResponse([leaseUnderNotice()]))
+          .mockResolvedValueOnce(
+            buildPaginatedResponse([
+              // 25 November in Sweden, already 24 November in UTC
+              newerLease({ startDate: new Date('2026-11-24T23:00:00Z') }),
+            ])
+          )
+        mockLookups()
+
+        // Act
+        const res = await request(app.callback()).get('/leases/for-csc')
+
+        // Assert
+        expect(res.body.content).toHaveLength(1)
+        expect(res.body.content[0].division_1038).toBe('705-001-01-0101/1')
+      })
+
+      it('keeps a lease under notice when the newer lease belongs to another tenant', async () => {
+        // Arrange
+        // The free-text search also matches contact codes that contain this one.
+        jest
+          .spyOn(tenantLeaseAdapter, 'searchLeases')
+          .mockResolvedValueOnce(buildPaginatedResponse([leaseUnderNotice()]))
+          .mockResolvedValueOnce(
+            buildPaginatedResponse([
+              newerLease({
+                contacts: [
+                  {
+                    contactCode: 'P1587701',
+                    name: 'Annan Person',
+                    email: null,
+                    phone: null,
+                  },
+                ],
+              }),
+            ])
+          )
+        mockLookups()
+
+        // Act
+        const res = await request(app.callback()).get('/leases/for-csc')
+
+        // Assert
+        expect(res.body.content).toHaveLength(1)
+      })
+
+      it('keeps a lease under notice when the tenant only sublets the newer lease', async () => {
+        // Arrange
+        jest
+          .spyOn(tenantLeaseAdapter, 'searchLeases')
+          .mockResolvedValueOnce(buildPaginatedResponse([leaseUnderNotice()]))
+          .mockResolvedValueOnce(
+            buildPaginatedResponse([
+              newerLease({
+                contacts: [
+                  {
+                    contactCode: 'P200001',
+                    name: 'Förstahand Person',
+                    email: null,
+                    phone: null,
+                    contactType: 'tenant',
+                  },
+                  {
+                    contactCode: 'P158770',
+                    name: 'Test Testsson',
+                    email: null,
+                    phone: null,
+                    contactType: 'subletTenant',
+                  },
+                ],
+              }),
+            ])
+          )
+        mockLookups()
+
+        // Act
+        const res = await request(app.callback()).get('/leases/for-csc')
+
+        // Assert
+        expect(res.body.content).toHaveLength(1)
+      })
+
+      it("keeps a lease under notice when the tenant's other leases cannot be looked up", async () => {
+        // Arrange
+        jest
+          .spyOn(tenantLeaseAdapter, 'searchLeases')
+          .mockResolvedValueOnce(buildPaginatedResponse([leaseUnderNotice()]))
+          .mockRejectedValueOnce(new Error('leasing unavailable'))
+        mockLookups()
+
+        // Act
+        const res = await request(app.callback()).get('/leases/for-csc')
+
+        // Assert
+        expect(res.status).toBe(200)
+        expect(res.body.content).toHaveLength(1)
+      })
+
+      it("does not look up the tenant's other leases for a current lease", async () => {
+        // Arrange
+        const searchSpy = jest
+          .spyOn(tenantLeaseAdapter, 'searchLeases')
+          .mockResolvedValue(buildPaginatedResponse([newerLease()]))
+        mockLookups()
+
+        // Act
+        const res = await request(app.callback()).get('/leases/for-csc')
+
+        // Assert
+        expect(res.body.content).toHaveLength(1)
+        expect(searchSpy).toHaveBeenCalledTimes(1)
+      })
     })
 
     it('enforces max limit of 500 even if higher value is passed as query param', async () => {
@@ -1274,7 +1573,10 @@ describe('leases routes', () => {
       )
 
       expect(searchSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ objectType: 'bostad', status: 'Current' })
+        expect.objectContaining({
+          objectType: 'bostad',
+          status: ['Current', 'AboutToEnd', 'PreliminaryTerminated'],
+        })
       )
     })
 

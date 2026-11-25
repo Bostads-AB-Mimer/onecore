@@ -2432,6 +2432,8 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: Contact code is missing. It needs to be passed in the body (contactCode)
+   *       '403':
+   *         description: The applicant may not rent a scored parking space. errorCode applicant-not-tenant when they have no current or upcoming lease, or housing-contract-terminated when they have given notice on their only housing contract and have no upcoming one.
    *       '500':
    *         description: Internal server error
    *         content:

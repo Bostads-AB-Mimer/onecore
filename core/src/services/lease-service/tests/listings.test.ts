@@ -274,6 +274,57 @@ describe('GET /listings', () => {
     expect(res.body.content).toHaveLength(1)
   })
 
+  it('shows only NON_SCORED listings to a tenant who has given notice on their only housing contract', async () => {
+    const listings = [
+      factory.listing.build({
+        id: 1337,
+        rentalObjectCode: '12345',
+        rentalRule: 'SCORED',
+      }),
+      factory.listing.build({
+        id: 1339,
+        rentalObjectCode: '32345',
+        rentalRule: 'NON_SCORED',
+      }),
+    ]
+    const parkingSpaces = [
+      factory.vacantParkingSpace.build({
+        rentalObjectCode: '12345',
+        residentialAreaCode: 'AREA123',
+      }),
+      factory.vacantParkingSpace.build({
+        rentalObjectCode: '32345',
+        residentialAreaCode: 'AREA123',
+      }),
+    ]
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getListings')
+      .mockResolvedValueOnce({ ok: true, data: listings })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getParkingSpaces')
+      .mockResolvedValueOnce({ ok: true, data: parkingSpaces })
+
+    jest
+      .spyOn(tenantLeaseAdapter, 'getTenantByContactCode')
+      .mockResolvedValueOnce({
+        ok: true,
+        data: factory.tenant.build({
+          currentHousingContract: { residentialArea: { code: 'AREA123' } },
+          upcomingHousingContract: undefined,
+          isAboutToLeave: true,
+        }),
+      })
+
+    const res = await request(app.callback()).get(
+      '/listings?validToRentForContactCode=abc123'
+    )
+
+    expect(res.status).toBe(200)
+    expect(res.body.content).toEqual([expect.objectContaining({ id: 1339 })])
+  })
+
   it('responds with 500 on error', async () => {
     const getListingsSpy = jest
       .spyOn(tenantLeaseAdapter, 'getListings')

@@ -174,10 +174,10 @@ async function fetchTenant(params: {
     data: {
       ...contact.data,
       address: contact.data.address,
-      isAboutToLeave:
-        !upcomingHousingContract &&
-        !!currentHousingContract &&
-        priorityListService.isLeaseAboutToEnd(currentHousingContract),
+      isAboutToLeave: priorityListService.isTenantAboutToLeave(
+        currentHousingContract,
+        upcomingHousingContract
+      ),
       currentHousingContract,
       upcomingHousingContract,
       parkingSpaceContracts,

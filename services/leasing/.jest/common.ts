@@ -19,5 +19,8 @@ jest.mock('@onecore/utilities', () => {
     parsePaginationParams: utilities.parsePaginationParams,
     determineVacantFrom: utilities.determineVacantFrom,
     redactHeaders: jest.fn((headers) => headers ?? {}),
+    contactDetailsMode: utilities.contactDetailsMode,
+    placeholderEmailAddress: utilities.placeholderEmailAddress,
+    placeholderPhoneNumber: utilities.placeholderPhoneNumber,
   }
 })

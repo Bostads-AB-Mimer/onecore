@@ -1,22 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import * as baseApi from './baseApi'
-import { economyService } from './economyService'
+import {
+  economyService,
+  SubmitMiscellaneousInvoiceError,
+} from './economyService'
 
-// The real baseApi reads the app environment at import, so it is replaced.
-vi.mock('./baseApi', () => ({
-  GET: vi.fn(),
-  POST: vi.fn(),
-  PUT: vi.fn(),
-  ApiError: class ApiError extends Error {
-    constructor(
-      public status: number,
-      message: string
-    ) {
-      super(message)
-    }
-  },
-}))
+vi.mock('./baseApi')
 
 const respond = (status: number, rest: Record<string, unknown> = {}) =>
   ({ response: new Response(null, { status }), ...rest }) as never
@@ -105,28 +95,36 @@ describe('economyService.submitMiscellaneousInvoice', () => {
 
   afterEach(() => vi.resetAllMocks())
 
-  it('rejects with ApiError 502 and the code when the customer cannot be created', async () => {
+  it('rejects with the status and code when the customer cannot be created', async () => {
     vi.mocked(baseApi.POST).mockResolvedValue(
       respond(502, { error: { type: 'customer-creation-failed' } })
     )
 
-    await expect(
-      economyService.submitMiscellaneousInvoice(invoice)
-    ).rejects.toMatchObject({
+    const result = economyService.submitMiscellaneousInvoice(invoice)
+
+    await expect(result).rejects.toBeInstanceOf(SubmitMiscellaneousInvoiceError)
+    await expect(result).rejects.toMatchObject({
       status: 502,
-      message: 'customer-creation-failed',
+      code: 'customer-creation-failed',
     })
   })
 
-  it('rejects with a generic ApiError when a failed response has no body', async () => {
+  it('rejects without a code when a failed response has no body', async () => {
     vi.mocked(baseApi.POST).mockResolvedValue(respond(500))
 
     await expect(
       economyService.submitMiscellaneousInvoice(invoice)
-    ).rejects.toMatchObject({
-      status: 500,
-      message: 'Failed to submit miscellaneous invoice (status 500)',
-    })
+    ).rejects.toMatchObject({ status: 500, code: undefined })
+  })
+
+  it('rejects without a code when core returns an unrecognised type', async () => {
+    vi.mocked(baseApi.POST).mockResolvedValue(
+      respond(400, { error: { type: 'something-else' } })
+    )
+
+    await expect(
+      economyService.submitMiscellaneousInvoice(invoice)
+    ).rejects.toMatchObject({ status: 400, code: undefined })
   })
 
   it('returns the data on success', async () => {

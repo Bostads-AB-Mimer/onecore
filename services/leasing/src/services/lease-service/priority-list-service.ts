@@ -60,6 +60,22 @@ const assignPriorityToApplicantBasedOnRentalRules = (
   }
 
   if (
+    isTenantAboutToLeave(
+      applicant.currentHousingContract,
+      applicant.upcomingHousingContract
+    )
+  ) {
+    logger.info(
+      { contactCode: applicant.contactCode, listingId: listing.id },
+      'priority null - Applicant has given notice on their only housing contract and has no upcoming housing contract'
+    )
+    return {
+      ...applicant,
+      priority: null,
+    }
+  }
+
+  if (
     listing.rentalObject.residentialAreaCode &&
     isListingInAreaWithSpecificRentalRules(
       listing.rentalObject.residentialAreaCode
@@ -237,9 +253,13 @@ const parseLeasesForHousingContracts = (
     isCurrentLease(l, currentDate)
   )
 
+  // With several current housing leases, the tenant lives in the one that is
+  // not ending. If all of them are ending (e.g. two leases under notice), they
+  // still live in the one that ends last until it ends.
   const activeLease =
     activeLeases.length > 1
-      ? activeLeases.find((l) => !isLeaseAboutToEnd(l))
+      ? (activeLeases.find((l) => !isLeaseAboutToEnd(l)) ??
+        leaseEndingLast(activeLeases))
       : activeLeases[0]
 
   const upcomingLease = housingContracts.find((l) =>
@@ -257,12 +277,27 @@ const isCurrentLease = (lease: Lease, currentDate: Date) => {
   return hasLeaseStarted && compatibleLastDebitDate
 }
 
-const isUpcomingLease = (lease: Lease, currentDate: Date) => {
-  const lastDebitDateNotSet =
-    lease.lastDebitDate === null || lease.lastDebitDate === undefined
-  const isLeaseUpcoming = lease.leaseStartDate > currentDate
+// A lease that starts in the future, with or without an end date: a
+// fixed-term lease to come (e.g. a student apartment) counts too. Leases that
+// have ended are filtered out before this (isLeaseActiveOrUpcoming).
+const isUpcomingLease = (lease: Lease, currentDate: Date) =>
+  lease.leaseStartDate > currentDate
 
-  return lastDebitDateNotSet && isLeaseUpcoming
+// Only called with leases that all have an end date (isLeaseAboutToEnd). On
+// the same end date, a lease without a notice wins over one under notice, so
+// the result doesn't depend on the order Tenfast returns them in.
+const leaseEndingLast = (leases: Lease[]): Lease | undefined => {
+  const endTime = (lease: Lease) =>
+    lease.lastDebitDate ? new Date(lease.lastDebitDate).getTime() : Infinity
+  const endsLater = (lease: Lease, last: Lease) =>
+    endTime(lease) > endTime(last) ||
+    (endTime(lease) === endTime(last) &&
+      last.status === LeaseStatus.AboutToEnd &&
+      lease.status !== LeaseStatus.AboutToEnd)
+  return leases.reduce<Lease | undefined>(
+    (last, lease) => (!last || endsLater(lease, last) ? lease : last),
+    undefined
+  )
 }
 
 const isLeaseAboutToEnd = (lease: Lease) => {
@@ -273,6 +308,25 @@ const isLeaseAboutToEnd = (lease: Lease) => {
 
   return !!lastDebitDate && currentDate <= lastDebitDate
 }
+
+// The tenant is moving out: they have a signed, scheduled notice on their
+// current housing contract (status AboutToEnd, Tenfast stage
+// terminationScheduled) and no signed upcoming housing contract. They still
+// count as a tenant until the lease ends (VAT on the parking spaces they
+// already have), but they may not rent a new internal (scored) parking space.
+// Only the status counts, not the end date: a notice still waiting for the
+// tenant's signature (PreliminaryTerminated) and a fixed-term lease without
+// notice have an end date but don't block, nor does a withdrawn notice whose
+// end date Tenfast left behind on an active lease.
+// Likewise only a signed upcoming lease (status Upcoming) lifts the block: a
+// draft (NotSent) or a lease waiting for signature (PendingSignature) can be
+// left behind in Tenfast and never start.
+const isTenantAboutToLeave = (
+  currentHousingContract: Lease | undefined,
+  upcomingHousingContract: Lease | undefined
+): boolean =>
+  upcomingHousingContract?.status !== LeaseStatus.Upcoming &&
+  currentHousingContract?.status === LeaseStatus.AboutToEnd
 
 const parseLeasesForParkingSpaces = (
   leases: Array<Lease & { propertyType?: string }>
@@ -288,4 +342,5 @@ export {
   parseLeasesForParkingSpaces,
   isLeaseActiveOrUpcoming,
   isLeaseAboutToEnd,
+  isTenantAboutToLeave,
 }

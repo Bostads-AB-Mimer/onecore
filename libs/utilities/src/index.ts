@@ -21,6 +21,7 @@ export {
   redactedMessage,
 } from './logging/error-fields'
 export * from './concurrency'
+export * from './contact-details'
 
 export {
   logger,
