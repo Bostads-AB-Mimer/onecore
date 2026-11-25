@@ -41,6 +41,18 @@ export const formatISODate = (isoDateString: string | null | undefined) => {
   return date.toLocaleDateString('sv-SE')
 }
 
+// Date + time (sv-SE, minute resolution). The shared timestamp formatter for
+// dispatch/communication rows and scheduled-send confirmations — see
+// formatScheduleTimestamp in shared/lib/schedule, which re-exports this.
+export const formatTimestamp = (iso: string): string =>
+  new Date(iso).toLocaleString('sv-SE', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
 type NameableUser = {
   username: string
   firstName?: string

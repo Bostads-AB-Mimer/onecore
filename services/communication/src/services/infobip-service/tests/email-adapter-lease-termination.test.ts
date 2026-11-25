@@ -30,6 +30,19 @@ const email = {
   leaseId: '307-002-11-0201/11',
   endDate: new Date('2026-10-31'),
   rentalType: 'Bilplats' as const,
+  lastName: 'Andersson',
+  preferredMoveOutDate: '2026-10-15',
+  rentalObjectAddress: 'Bilvägen 3',
+  tenants: [
+    {
+      contactCode: 'P123456',
+      fullName: 'Anna Andersson',
+      birthDate: '1985-03-14',
+      street: 'Storgatan 1',
+      zipCode: '722 11',
+      city: 'Västerås',
+    },
+  ],
 }
 
 describe('sendLeaseTerminationConfirmation', () => {
@@ -67,9 +80,23 @@ describe('sendLeaseTerminationConfirmation', () => {
     )
     expect(placeholders).toEqual({
       firstName: 'Anna',
+      lastName: 'Andersson',
       leaseId: '307-002-11-0201/11',
       endDate: '2026-10-31',
+      preferredMoveOutDate: '2026-10-15',
+      rentalObjectAddress: 'Bilvägen 3',
       type: 'Bilplats',
+      tenant1Name: 'Anna Andersson',
+      tenant1BirthDate: '1985-03-14',
+      tenant1Address: 'Storgatan 1',
+      tenant1PostalCode: '722 11',
+      tenant1City: 'Västerås',
+      // A single-holder lease still fills the second slot, as empty strings.
+      tenant2Name: '',
+      tenant2BirthDate: '',
+      tenant2Address: '',
+      tenant2PostalCode: '',
+      tenant2City: '',
     })
   })
 

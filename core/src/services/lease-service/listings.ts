@@ -141,13 +141,18 @@ export const routes = (router: KoaRouter) => {
         )
 
         const leaseAreaCodes = new Set<string>()
+        // A tenant who has given notice on their only housing contract (no
+        // upcoming one) may not rent a scored parking space, so they only see
+        // NON_SCORED listings.
         if (tenantResult.ok) {
-          const current =
-            tenantResult.data.currentHousingContract?.residentialArea?.code
-          const upcoming =
-            tenantResult.data.upcomingHousingContract?.residentialArea?.code
-          if (current) leaseAreaCodes.add(current)
-          if (upcoming) leaseAreaCodes.add(upcoming)
+          if (!tenantResult.data.isAboutToLeave) {
+            const current =
+              tenantResult.data.currentHousingContract?.residentialArea?.code
+            const upcoming =
+              tenantResult.data.upcomingHousingContract?.residentialArea?.code
+            if (current) leaseAreaCodes.add(current)
+            if (upcoming) leaseAreaCodes.add(upcoming)
+          }
         } else if (
           tenantResult.err !== 'contact-not-tenant' &&
           tenantResult.err !== 'no-valid-housing-contract'

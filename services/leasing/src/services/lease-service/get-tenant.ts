@@ -8,7 +8,7 @@ import * as tenfastAdapter from './adapters/tenfast/tenfast-adapter'
 import * as priorityListService from './priority-list-service'
 import { mapToOnecoreLease } from './helpers/tenfast'
 
-type GetTenantError =
+export type GetTenantError =
   | 'get-contact'
   | 'contact-not-found'
   | 'contact-not-tenant'
@@ -27,16 +27,22 @@ type NonEmptyArray<T> = [T, ...T[]]
 const NOT_TENANT_ERRORS: GetTenantError[] = [
   'contact-not-found',
   'contact-not-tenant',
+  // An Xpand lease holder (ended leases count too) who has no tenant in
+  // Tenfast, e.g. a former tenant from before the Tenfast import.
+  'tenfast-tenant-not-found',
   'contact-leases-not-found',
   'no-valid-housing-contract',
 ]
+
+export const isNotTenantError = (err: GetTenantError) =>
+  NOT_TENANT_ERRORS.includes(err)
 
 export async function getTenant(params: {
   contactCode: string
 }): Promise<AdapterResult<Tenant, GetTenantError>> {
   const result = await fetchTenant(params)
   if (!result.ok) {
-    if (NOT_TENANT_ERRORS.includes(result.err)) {
+    if (isNotTenantError(result.err)) {
       logger.info(
         { errorCode: result.err },
         `No tenant found for contact code: ${params.contactCode}`
@@ -168,10 +174,10 @@ async function fetchTenant(params: {
     data: {
       ...contact.data,
       address: contact.data.address,
-      isAboutToLeave:
-        !upcomingHousingContract &&
-        !!currentHousingContract &&
-        priorityListService.isLeaseAboutToEnd(currentHousingContract),
+      isAboutToLeave: priorityListService.isTenantAboutToLeave(
+        currentHousingContract,
+        upcomingHousingContract
+      ),
       currentHousingContract,
       upcomingHousingContract,
       parkingSpaceContracts,

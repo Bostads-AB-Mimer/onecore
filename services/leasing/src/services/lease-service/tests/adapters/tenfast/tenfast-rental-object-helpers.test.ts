@@ -1,9 +1,13 @@
 import {
-  getCurrentTenancyEndDate,
   getLatestStartedLease,
   getLatestTenancyCutoff,
+  getLeasedUntil,
+  getNextLeaseId,
+  getVacantFrom,
+  isClaimingLease,
   mapTenfastRentalObjectToAvailabilityInfo,
 } from '../../../adapters/tenfast/tenfast-rental-object-helpers'
+import { TenfastLease } from '../../../adapters/tenfast/schemas'
 import * as factory from '../../factories'
 
 describe('tenfast-rental-object-helpers', () => {
@@ -18,11 +22,32 @@ describe('tenfast-rental-object-helpers', () => {
     jest.useRealTimers()
   })
 
-  const noNotice = () => ({
-    ...factory.tenfastLease.build().cancellation,
-    requested: false,
-    cancelled: false,
+  const notice = (requested: boolean, withdrawn = false) => ({
+    cancelled: withdrawn,
+    requested,
+    doneAutomatically: false,
+    receivedCancellationAt: null,
+    notifiedAt: null,
+    handledAt: null,
+    handledBy: null,
+    preferredMoveOutDate: null,
+    cancelledByType: null,
   })
+  // Leases as Tenfast has them: endDate is set when notice is given.
+  const untilFurtherNotice = (stage = 'active') =>
+    factory.tenfastLease.build({
+      stage,
+      startDate: new Date('2025-01-01'),
+      endDate: null,
+      cancellation: notice(false),
+    })
+  const terminated = (endDate: string, stage = 'terminationScheduled') =>
+    factory.tenfastLease.build({
+      stage,
+      startDate: new Date('2025-01-01'),
+      endDate: new Date(endDate),
+      cancellation: notice(true),
+    })
 
   describe('getLatestStartedLease', () => {
     it('ignores leases that have not begun', () => {
@@ -83,7 +108,7 @@ describe('tenfast-rental-object-helpers', () => {
         startDate: new Date('2025-08-15'),
         endDate: new Date('2026-06-30'),
         stage: 'active',
-        cancellation: noNotice(),
+        cancellation: notice(false),
       })
       expect(getLatestTenancyCutoff([older, fixedTerm])).toEqual(
         new Date('2025-08-15')
@@ -91,103 +116,252 @@ describe('tenfast-rental-object-helpers', () => {
     })
   })
 
-  describe('getCurrentTenancyEndDate', () => {
-    it('is null without a started lease or without an end date', () => {
-      const openEnded = factory.tenfastLease.build({
-        startDate: new Date('2026-01-01'),
-        endDate: null,
-      })
-      expect(getCurrentTenancyEndDate([])).toBeNull()
-      expect(getCurrentTenancyEndDate([openEnded])).toBeNull()
+  describe('getLeasedUntil', () => {
+    it('is null without leases', () => {
+      expect(getLeasedUntil([])).toBeNull()
     })
 
-    it('uses the end date of a fixed-term lease that has no notice', () => {
+    it('is null when no lease is running or to come', () => {
+      expect(getLeasedUntil([terminated('2026-03-01', 'archived')])).toBeNull()
+    })
+
+    it('is the end date of a terminated lease without a successor', () => {
+      expect(getLeasedUntil([terminated('2026-06-30')])).toEqual(
+        new Date('2026-06-30')
+      )
+    })
+
+    it('is indefinite for a lease until further notice', () => {
+      expect(getLeasedUntil([untilFurtherNotice()])).toBe('indefinite')
+    })
+
+    it('is indefinite for a terminated lease with a signed successor', () => {
+      // 922-705-00-0003 on Tenfast test: ends 2026-10-31, successor from 2026-11-01
+      expect(
+        getLeasedUntil([
+          terminated('2026-10-31'),
+          untilFurtherNotice('upcoming'),
+        ])
+      ).toBe('indefinite')
+    })
+
+    it('is the end date of a fixed-term lease without notice', () => {
       const fixedTerm = factory.tenfastLease.build({
-        startDate: new Date('2025-08-15'),
-        endDate: new Date('2026-06-30'),
-        stage: 'active',
-        cancellation: noNotice(),
+        endDate: new Date('2026-08-31'),
+        cancellation: notice(false),
       })
-      expect(getCurrentTenancyEndDate([fixedTerm])).toEqual(
-        new Date('2026-06-30')
+      expect(getLeasedUntil([fixedTerm])).toEqual(new Date('2026-08-31'))
+    })
+
+    it('is the latest end when every lease in force has one', () => {
+      expect(
+        getLeasedUntil([
+          terminated('2026-10-31'),
+          terminated('2026-12-31', 'upcoming'),
+        ])
+      ).toEqual(new Date('2026-12-31'))
+    })
+
+    it('is indefinite when a notice was withdrawn, even if an end date is left', () => {
+      const withdrawn = factory.tenfastLease.build({
+        endDate: new Date('2026-06-30'),
+        cancellation: notice(true, true),
+      })
+      expect(getLeasedUntil([withdrawn])).toBe('indefinite')
+    })
+
+    it('ignores ended leases', () => {
+      expect(
+        getLeasedUntil([
+          untilFurtherNotice('archived'),
+          terminated('2026-06-30'),
+        ])
+      ).toEqual(new Date('2026-06-30'))
+    })
+
+    it('counts a termination awaiting signature as in force', () => {
+      expect(
+        getLeasedUntil([terminated('2026-06-30', 'preTermination')])
+      ).toEqual(new Date('2026-06-30'))
+      expect(getLeasedUntil([untilFurtherNotice('preTermination')])).toBe(
+        'indefinite'
+      )
+      expect(
+        getLeasedUntil([untilFurtherNotice('terminationSigningInProgress')])
+      ).toBe('indefinite')
+    })
+
+    it('ignores leases that never held the object', () => {
+      for (const stage of [
+        'voided',
+        'rejected',
+        'draft',
+        'signingInProgress',
+      ]) {
+        expect(getLeasedUntil([untilFurtherNotice(stage)])).toBeNull()
+      }
+    })
+
+    it('is indefinite for a lease with a missing or unknown stage', () => {
+      // Better not vacant than vacant on a lease we can't read.
+      const { stage: _, ...noStage } = terminated('2026-06-30')
+      expect(getLeasedUntil([noStage as TenfastLease])).toBe('indefinite')
+      expect(getLeasedUntil([terminated('2026-06-30', 'somethingNew')])).toBe(
+        'indefinite'
       )
     })
 
-    it('uses the end date set by a notice', () => {
-      const givenNotice = factory.tenfastLease.build({
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2026-06-30'),
-        stage: 'terminationScheduled',
-      })
-      expect(getCurrentTenancyEndDate([givenNotice])).toEqual(
-        new Date('2026-06-30')
-      )
-    })
-
-    it('reads the current tenancy, not an upcoming one', () => {
-      const current = factory.tenfastLease.build({
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2026-06-30'),
-        stage: 'terminationScheduled',
-      })
-      const upcoming = factory.tenfastLease.build({
-        startDate: new Date('2026-07-01'),
-        endDate: null,
-        stage: 'upcoming',
-      })
-      expect(getCurrentTenancyEndDate([current, upcoming])).toEqual(
+    it('copes with a lease without cancellation', () => {
+      // Leases on a rental object are parsed partially, so this can happen.
+      const { cancellation: _, ...lease } = terminated('2026-06-30')
+      expect(getLeasedUntil([lease as TenfastLease])).toEqual(
         new Date('2026-06-30')
       )
     })
   })
 
-  describe('mapTenfastRentalObjectToAvailabilityInfo', () => {
-    it('sets vacantFrom to today when there are no active leases', () => {
-      const rentalObject = factory.tenfastRentalObject.build({ avtal: [] })
-      const result = mapTenfastRentalObjectToAvailabilityInfo(
-        false,
-        rentalObject
-      )
-      expect(result.vacantFrom).toEqual(TODAY)
+  describe(getVacantFrom, () => {
+    it('is vacant today without leases', () => {
+      expect(getVacantFrom([])).toEqual(TODAY)
     })
 
-    it('sets vacantFrom to today when the last tenancy already ended', () => {
+    it('is vacant the day after the last lease ends', () => {
+      expect(getVacantFrom([terminated('2026-06-30')])).toEqual(
+        new Date('2026-07-01T00:00:00.000Z')
+      )
+    })
+
+    it('is vacant today, not in the past, when a lease in force has passed its end date', () => {
+      expect(getVacantFrom([terminated('2026-03-15')])).toEqual(TODAY)
+    })
+
+    it('is vacant today when a lease in force ended yesterday', () => {
+      expect(getVacantFrom([terminated('2026-03-30')])).toEqual(TODAY)
+    })
+
+    it('is vacant tomorrow when a lease ends today', () => {
+      expect(getVacantFrom([terminated('2026-03-31')])).toEqual(
+        new Date('2026-04-01T00:00:00.000Z')
+      )
+    })
+
+    it.each(['upcoming', 'draft', 'signingInProgress'])(
+      'is not vacant when a next tenant has a %s lease, even after the running lease ends',
+      (stage) => {
+        expect(
+          getVacantFrom([terminated('2026-06-30'), { stage, endDate: null }])
+        ).toBeUndefined()
+      }
+    )
+
+    it('is vacant the day after a terminated successor ends', () => {
+      // 307-705-00-0033 on production: /12 ends 2026-12-31, /13 is signed to
+      // start after it and already given notice to 2027-01-31 (AVTAL-517)
+      expect(
+        getVacantFrom([
+          terminated('2026-12-31'),
+          terminated('2027-01-31', 'upcoming'),
+        ])
+      ).toEqual(new Date('2027-02-01T00:00:00.000Z'))
+    })
+
+    it('is vacant the day after a single upcoming lease with an end date', () => {
+      // 307-904-00-0019 on production: no lease running, only one to come
+      expect(getVacantFrom([terminated('2026-12-31', 'upcoming')])).toEqual(
+        new Date('2027-01-01T00:00:00.000Z')
+      )
+    })
+
+    it('is vacant the day after the latest end, never between two leases', () => {
+      // The successor starts a month after the running lease ends: that
+      // month is not offered.
+      expect(
+        getVacantFrom([
+          terminated('2026-06-30'),
+          factory.tenfastLease.build({
+            stage: 'upcoming',
+            startDate: new Date('2026-08-01'),
+            endDate: new Date('2026-09-30'),
+            cancellation: notice(true),
+          }),
+        ])
+      ).toEqual(new Date('2026-10-01T00:00:00.000Z'))
+    })
+
+    it('is not vacant when the notice on an upcoming lease was withdrawn', () => {
+      const withdrawn = factory.tenfastLease.build({
+        stage: 'upcoming',
+        endDate: new Date('2026-09-30'),
+        cancellation: notice(true, true),
+      })
+      expect(
+        getVacantFrom([terminated('2026-06-30'), withdrawn])
+      ).toBeUndefined()
+    })
+
+    it('is not vacant on a draft, even after a terminated successor', () => {
+      expect(
+        getVacantFrom([
+          terminated('2026-06-30'),
+          terminated('2026-09-30', 'upcoming'),
+          { stage: 'draft', endDate: null },
+        ])
+      ).toBeUndefined()
+    })
+
+    it('ignores leases that never hold the object', () => {
+      expect(
+        getVacantFrom([
+          { stage: 'voided', endDate: null },
+          { stage: 'rejected', endDate: null },
+        ])
+      ).toEqual(TODAY)
+    })
+
+    it('is not vacant on a lease without a stage', () => {
+      expect(getVacantFrom([{ endDate: null }])).toBeUndefined()
+    })
+  })
+
+  describe('mapTenfastRentalObjectToAvailabilityInfo', () => {
+    const vacantFrom = (avtal: ReturnType<typeof terminated>[]) =>
+      mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        factory.tenfastRentalObject.build({ avtal })
+      ).vacantFrom
+
+    it('is vacant today without leases', () => {
+      expect(vacantFrom([])).toEqual(TODAY)
+    })
+
+    it('sets listingHistorySince to the start of the latest started lease', () => {
       const ended = factory.tenfastLease.build({
         startDate: new Date('2025-01-01'),
         endDate: new Date('2026-02-28'),
         stage: 'archived',
       })
-      const rentalObject = factory.tenfastRentalObject.build({ avtal: [ended] })
       const result = mapTenfastRentalObjectToAvailabilityInfo(
         false,
-        rentalObject
+        factory.tenfastRentalObject.build({ avtal: [ended] })
       )
       expect(result.vacantFrom).toEqual(TODAY)
       expect(result.listingHistorySince).toEqual(new Date('2025-01-01'))
     })
 
-    it('sets vacantFrom to the day after the current tenancy ends', () => {
-      const lease = factory.tenfastLease.build({
-        startDate: new Date('2026-01-01'),
-        endDate: new Date('2026-06-30'),
-        cancellation: {
-          cancelled: false,
-          requested: true,
-          doneAutomatically: false,
-          receivedCancellationAt: null,
-          notifiedAt: null,
-          handledAt: null,
-          handledBy: null,
-          preferredMoveOutDate: null,
-          cancelledByType: null,
-        },
-      })
-      const rentalObject = factory.tenfastRentalObject.build({ avtal: [lease] })
-      const result = mapTenfastRentalObjectToAvailabilityInfo(
-        false,
-        rentalObject
+    it('is vacant the day after the last lease ends', () => {
+      expect(vacantFrom([terminated('2026-06-30')])).toEqual(
+        new Date('2026-07-01T00:00:00.000Z')
       )
-      expect(result.vacantFrom).toEqual(new Date('2026-07-01T00:00:00.000Z'))
+    })
+
+    it('is not vacant while leased until further notice', () => {
+      expect(vacantFrom([untilFurtherNotice()])).toBeUndefined()
+    })
+
+    it('is not vacant when a signed successor takes over', () => {
+      expect(
+        vacantFrom([terminated('2026-10-31'), untilFurtherNotice('upcoming')])
+      ).toBeUndefined()
     })
 
     it('maps rentalObjectCode from externalId', () => {
@@ -230,6 +404,33 @@ describe('tenfast-rental-object-helpers', () => {
       )
       expect(result.rent.amount).toBe(1250)
       expect(result.rent.vat).toBe(250)
+    })
+
+    it('gives the total as the rent of today', () => {
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        factory.tenfastRentalObject.build()
+      )
+      expect(result.rent.asOf).toEqual(TODAY)
+    })
+
+    it('marks rows Tenfast leaves out of the rent total', () => {
+      const rentalObject = factory.tenfastRentalObject.build({
+        hyror: [
+          factory.tenfastInvoiceRow.build({ includeInContract: true }),
+          factory.tenfastInvoiceRow.build({ includeInContract: false }),
+          factory.tenfastInvoiceRow.build(),
+        ],
+      })
+      const result = mapTenfastRentalObjectToAvailabilityInfo(
+        false,
+        rentalObject
+      )
+      expect(result.rent.rows.map((row) => row.includedInRent)).toEqual([
+        true,
+        false,
+        true,
+      ])
     })
   })
 
@@ -338,6 +539,119 @@ describe('tenfast-rental-object-helpers', () => {
         id: 'Bilplats',
         name: 'Bilplats',
       })
+    })
+  })
+
+  describe(isClaimingLease, () => {
+    it.each(['upcoming', 'draft', 'signingInProgress'])(
+      'counts a %s lease as claiming the object',
+      (stage) => {
+        expect(isClaimingLease({ stage })).toBe(true)
+      }
+    )
+
+    it.each([
+      'active',
+      'terminationScheduled',
+      'preTermination',
+      'terminationSigningInProgress',
+      'archived',
+      'terminated',
+      'voided',
+      'rejected',
+    ])('does not count a %s lease as claiming the object', (stage) => {
+      expect(isClaimingLease({ stage })).toBe(false)
+    })
+
+    it('does not count an upcoming lease given notice as claiming the object', () => {
+      expect(isClaimingLease(terminated('2026-09-30', 'upcoming'))).toBe(false)
+    })
+
+    it('counts an upcoming fixed-term lease as claiming the object', () => {
+      // An end date without notice.
+      expect(
+        isClaimingLease({
+          stage: 'upcoming',
+          endDate: new Date('2026-09-30'),
+          cancellation: { requested: false, cancelled: false },
+        })
+      ).toBe(true)
+    })
+
+    it('counts an upcoming lease with an end date as claiming the object when its cancellation is missing', () => {
+      // Without it a withdrawn notice can't be told from one that stands.
+      expect(
+        isClaimingLease({ stage: 'upcoming', endDate: new Date('2026-09-30') })
+      ).toBe(true)
+    })
+
+    it('counts an upcoming lease as claiming the object when its notice was withdrawn', () => {
+      expect(
+        isClaimingLease({
+          stage: 'upcoming',
+          endDate: new Date('2026-09-30'),
+          cancellation: { requested: true, cancelled: true },
+        })
+      ).toBe(true)
+    })
+
+    it.each(['draft', 'signingInProgress'])(
+      'counts a %s lease as claiming the object even with an end date',
+      (stage) => {
+        expect(
+          isClaimingLease({ stage, endDate: new Date('2026-09-30') })
+        ).toBe(true)
+      }
+    )
+
+    it('counts a lease with a missing or unknown stage as claiming the object', () => {
+      expect(isClaimingLease({})).toBe(true)
+      expect(isClaimingLease({ stage: 'someNewStage' })).toBe(true)
+    })
+  })
+
+  describe(getNextLeaseId, () => {
+    const code = '704-703-00-0006'
+
+    it('starts at /01 on an object without earlier leases', () => {
+      expect(getNextLeaseId(code, [])).toBe(`${code}/01`)
+    })
+
+    it('continues from the highest number, padded to two digits', () => {
+      expect(
+        getNextLeaseId(code, [`${code}/01`, `${code}/04`, `${code}/02`])
+      ).toBe(`${code}/05`)
+    })
+
+    it('counts the leading digits of a number with letters after it', () => {
+      expect(getNextLeaseId(code, [`${code}/03`, `${code}/13M`])).toBe(
+        `${code}/14`
+      )
+      expect(getNextLeaseId(code, [`${code}/04T`])).toBe(`${code}/05`)
+    })
+
+    it('goes past two digits', () => {
+      expect(getNextLeaseId(code, [`${code}/99`])).toBe(`${code}/100`)
+      expect(getNextLeaseId(code, [`${code}/123`])).toBe(`${code}/124`)
+    })
+
+    it('skips ids of other rental objects and ids without a number', () => {
+      expect(
+        getNextLeaseId(code, [
+          '704-703-00-0060/09',
+          `${code}0/07`,
+          `${code}/M`,
+          `${code}/02`,
+        ])
+      ).toBe(`${code}/03`)
+    })
+
+    it('reads ids with padding left around them', () => {
+      expect(getNextLeaseId(code, [` ${code}/06  `])).toBe(`${code}/07`)
+    })
+
+    it('matches the rental object code trimmed and ignoring case', () => {
+      expect(getNextLeaseId('p123 ', ['P123/04', 'p123/05m'])).toBe('p123/06')
     })
   })
 })

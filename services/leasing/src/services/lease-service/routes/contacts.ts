@@ -14,6 +14,7 @@ import {
 } from '../adapters/xpand/tenant-lease-adapter'
 
 import { syncTenant } from '../adapters/tenfast/tenfast-adapter'
+import { boundTenfastCalls } from '../adapters/tenfast/tenfast-api'
 import {
   addApplicantToToWaitingList,
   removeApplicantFromWaitingList,
@@ -447,7 +448,8 @@ export const routes = (router: KoaRouter) => {
    *         description: >
    *           No tenant found for this contact code. The response body `type`
    *           distinguishes the cause: `contact-not-found`, `contact-not-tenant`,
-   *           `contact-leases-not-found` or `no-valid-housing-contract`.
+   *           `tenfast-tenant-not-found`, `contact-leases-not-found` or
+   *           `no-valid-housing-contract`.
    *       500:
    *         description: Internal server error. Failed to retrieve Tenant information.
    */
@@ -498,6 +500,18 @@ export const routes = (router: KoaRouter) => {
           title: 'Contact has no leases',
           status: 404,
           detail: 'No leases found for contact.',
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      if (result.err === 'tenfast-tenant-not-found') {
+        ctx.status = 404
+        ctx.body = {
+          type: result.err,
+          title: 'Contact has no tenant in Tenfast',
+          status: 404,
+          detail: 'No tenant found in Tenfast for contact.',
           ...metadata,
         } satisfies RouteErrorResponse
         return
@@ -1180,28 +1194,32 @@ export const routes = (router: KoaRouter) => {
    *       500:
    *         description: Failed to sync contact to tenFAST
    */
-  router.post('(.*)/contacts/:contactCode/sync', async (ctx) => {
-    const metadata = generateRouteMetadata(ctx)
-    const { contactCode } = ctx.params
+  router.post(
+    '(.*)/contacts/:contactCode/sync',
+    boundTenfastCalls,
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { contactCode } = ctx.params
 
-    const result = await syncTenant(contactCode)
+      const result = await syncTenant(contactCode)
 
-    if (!result.ok) {
-      ctx.status = 500
+      if (!result.ok) {
+        ctx.status = 500
+        ctx.body = {
+          type: 'tenfast-error',
+          title: `Could not sync tenant to tenFAST: ${result.err}`,
+          status: 500,
+          ...metadata,
+        } satisfies RouteErrorResponse
+        return
+      }
+
+      ctx.status = 200
       ctx.body = {
-        type: 'tenfast-error',
-        title: `Could not sync tenant to tenFAST: ${result.err}`,
-        status: 500,
+        content: result.data,
+        skipped: result.data === null,
         ...metadata,
-      } satisfies RouteErrorResponse
-      return
+      }
     }
-
-    ctx.status = 200
-    ctx.body = {
-      content: result.data,
-      skipped: result.data === null,
-      ...metadata,
-    }
-  })
+  )
 }

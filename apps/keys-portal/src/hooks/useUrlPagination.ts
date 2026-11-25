@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { PaginationMeta } from '@/services/types'
 
-export function useUrlPagination() {
+export function useUrlPagination(defaultLimit = 60) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [customLimit, setCustomLimit] = useState<string>('')
   const [isFocused, setIsFocused] = useState(false)
@@ -12,23 +12,27 @@ export function useUrlPagination() {
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
     totalRecords: 0,
     page: 1,
-    limit: 60,
+    limit: defaultLimit,
     count: 0,
   })
 
   // Read pagination params from URL
   const currentPage = Number(searchParams.get('page')) || 1
-  const currentLimit = Number(searchParams.get('limit')) || 60
+  const currentLimit = Number(searchParams.get('limit')) || defaultLimit
 
   // Derived values
   const totalPages = Math.ceil(paginationMeta.totalRecords / currentLimit)
 
   // Helper to update URL params
   const updateUrlParams = useCallback(
-    (updates: Record<string, string | null>) => {
+    (updates: Record<string, string | string[] | null>) => {
       const newParams = new URLSearchParams(searchParams)
       Object.entries(updates).forEach(([key, value]) => {
-        if (value) {
+        if (Array.isArray(value)) {
+          // Repeated key (?status=A&status=B); an empty array clears it
+          newParams.delete(key)
+          value.forEach((v) => newParams.append(key, v))
+        } else if (value) {
           newParams.set(key, value)
         } else {
           newParams.delete(key)

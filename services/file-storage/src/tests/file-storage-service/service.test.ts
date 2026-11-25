@@ -3,15 +3,15 @@ import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { Readable } from 'stream'
-import * as minioAdapter from '../../adapters/minio-adapter'
+import * as s3Adapter from '../../adapters/s3-adapter'
 import { routes } from '../../services/file-storage-service'
 
-// Mock the minio adapter
-jest.mock('../../adapters/minio-adapter')
+// Mock the S3 adapter
+jest.mock('../../adapters/s3-adapter')
 
 describe('file-storage-service routes', () => {
   let app: Koa
-  const mockedMinioAdapter = minioAdapter as jest.Mocked<typeof minioAdapter>
+  const mockedS3Adapter = s3Adapter as jest.Mocked<typeof s3Adapter>
 
   beforeEach(() => {
     app = new Koa()
@@ -42,7 +42,7 @@ describe('file-storage-service routes', () => {
           lastModified: new Date(),
         },
       ]
-      mockedMinioAdapter.listFiles.mockResolvedValue(mockFiles)
+      mockedS3Adapter.listFiles.mockResolvedValue(mockFiles)
 
       const response = await request(app.callback()).get('/files')
 
@@ -52,7 +52,7 @@ describe('file-storage-service routes', () => {
       expect(response.body.files[0].size).toBe(100)
       expect(response.body.files[1].name).toBe('file2.txt')
       expect(response.body.files[1].size).toBe(200)
-      expect(mockedMinioAdapter.listFiles).toHaveBeenCalledWith('')
+      expect(mockedS3Adapter.listFiles).toHaveBeenCalledWith('')
     })
 
     it('should list files with prefix when provided', async () => {
@@ -65,7 +65,7 @@ describe('file-storage-service routes', () => {
           lastModified: new Date(),
         },
       ]
-      mockedMinioAdapter.listFiles.mockResolvedValue(mockFiles)
+      mockedS3Adapter.listFiles.mockResolvedValue(mockFiles)
 
       const response = await request(app.callback()).get(
         `/files?prefix=${prefix}`
@@ -75,11 +75,11 @@ describe('file-storage-service routes', () => {
       expect(response.body.files).toHaveLength(1)
       expect(response.body.files[0].name).toBe('documents/file1.txt')
       expect(response.body.files[0].size).toBe(100)
-      expect(mockedMinioAdapter.listFiles).toHaveBeenCalledWith(prefix)
+      expect(mockedS3Adapter.listFiles).toHaveBeenCalledWith(prefix)
     })
 
     it('should return 500 if listing fails', async () => {
-      mockedMinioAdapter.listFiles.mockRejectedValue(
+      mockedS3Adapter.listFiles.mockRejectedValue(
         new Error('Failed to list files')
       )
 
@@ -96,7 +96,7 @@ describe('file-storage-service routes', () => {
       const fileData = Buffer.from('test content').toString('base64')
       const contentType = 'text/plain'
 
-      mockedMinioAdapter.uploadFile.mockResolvedValue(fileName)
+      mockedS3Adapter.uploadFile.mockResolvedValue(fileName)
 
       const response = await request(app.callback())
         .post('/files/upload')
@@ -107,7 +107,7 @@ describe('file-storage-service routes', () => {
         fileName,
         message: 'File uploaded successfully',
       })
-      expect(mockedMinioAdapter.uploadFile).toHaveBeenCalledWith(
+      expect(mockedS3Adapter.uploadFile).toHaveBeenCalledWith(
         fileName,
         Buffer.from(fileData, 'base64'),
         contentType
@@ -148,9 +148,7 @@ describe('file-storage-service routes', () => {
     })
 
     it('should return 500 if upload fails', async () => {
-      mockedMinioAdapter.uploadFile.mockRejectedValue(
-        new Error('Upload failed')
-      )
+      mockedS3Adapter.uploadFile.mockRejectedValue(new Error('Upload failed'))
 
       const response = await request(app.callback())
         .post('/files/upload')
@@ -172,8 +170,8 @@ describe('file-storage-service routes', () => {
       mockStream.push('file content')
       mockStream.push(null)
 
-      mockedMinioAdapter.fileExists.mockResolvedValue(true)
-      mockedMinioAdapter.getFile.mockResolvedValue(mockStream)
+      mockedS3Adapter.fileExists.mockResolvedValue(true)
+      mockedS3Adapter.getFile.mockResolvedValue(mockStream)
 
       const response = await request(app.callback()).get(`/files/${fileName}`)
 
@@ -185,7 +183,7 @@ describe('file-storage-service routes', () => {
     })
 
     it('should return 404 if file does not exist', async () => {
-      mockedMinioAdapter.fileExists.mockResolvedValue(false)
+      mockedS3Adapter.fileExists.mockResolvedValue(false)
 
       const response = await request(app.callback()).get(
         '/files/nonexistent.txt'
@@ -193,12 +191,12 @@ describe('file-storage-service routes', () => {
 
       expect(response.status).toBe(404)
       expect(response.body.error).toBe('File not found')
-      expect(mockedMinioAdapter.getFile).not.toHaveBeenCalled()
+      expect(mockedS3Adapter.getFile).not.toHaveBeenCalled()
     })
 
     it('should return 500 if download fails', async () => {
-      mockedMinioAdapter.fileExists.mockResolvedValue(true)
-      mockedMinioAdapter.getFile.mockRejectedValue(new Error('Download failed'))
+      mockedS3Adapter.fileExists.mockResolvedValue(true)
+      mockedS3Adapter.getFile.mockRejectedValue(new Error('Download failed'))
 
       const response = await request(app.callback()).get('/files/test.txt')
 
@@ -210,10 +208,10 @@ describe('file-storage-service routes', () => {
   describe('GET /files/:fileName/url', () => {
     it('should generate presigned URL with default expiry', async () => {
       const fileName = 'test-file.txt'
-      const mockUrl = 'https://minio.example.com/presigned-url'
+      const mockUrl = 'https://s3.example.com/presigned-url'
 
-      mockedMinioAdapter.fileExists.mockResolvedValue(true)
-      mockedMinioAdapter.getFileUrl.mockResolvedValue(mockUrl)
+      mockedS3Adapter.fileExists.mockResolvedValue(true)
+      mockedS3Adapter.getFileUrl.mockResolvedValue(mockUrl)
 
       const response = await request(app.callback()).get(
         `/files/${fileName}/url`
@@ -224,16 +222,16 @@ describe('file-storage-service routes', () => {
         url: mockUrl,
         expiresIn: 3600,
       })
-      expect(mockedMinioAdapter.getFileUrl).toHaveBeenCalledWith(fileName, 3600)
+      expect(mockedS3Adapter.getFileUrl).toHaveBeenCalledWith(fileName, 3600)
     })
 
     it('should generate presigned URL with custom expiry', async () => {
       const fileName = 'test-file.txt'
       const expirySeconds = 7200
-      const mockUrl = 'https://minio.example.com/presigned-url'
+      const mockUrl = 'https://s3.example.com/presigned-url'
 
-      mockedMinioAdapter.fileExists.mockResolvedValue(true)
-      mockedMinioAdapter.getFileUrl.mockResolvedValue(mockUrl)
+      mockedS3Adapter.fileExists.mockResolvedValue(true)
+      mockedS3Adapter.getFileUrl.mockResolvedValue(mockUrl)
 
       const response = await request(app.callback()).get(
         `/files/${fileName}/url?expirySeconds=${expirySeconds}`
@@ -244,14 +242,14 @@ describe('file-storage-service routes', () => {
         url: mockUrl,
         expiresIn: expirySeconds,
       })
-      expect(mockedMinioAdapter.getFileUrl).toHaveBeenCalledWith(
+      expect(mockedS3Adapter.getFileUrl).toHaveBeenCalledWith(
         fileName,
         expirySeconds
       )
     })
 
     it('should return 404 if file does not exist', async () => {
-      mockedMinioAdapter.fileExists.mockResolvedValue(false)
+      mockedS3Adapter.fileExists.mockResolvedValue(false)
 
       const response = await request(app.callback()).get(
         '/files/nonexistent.txt/url'
@@ -259,12 +257,12 @@ describe('file-storage-service routes', () => {
 
       expect(response.status).toBe(404)
       expect(response.body.error).toBe('File not found')
-      expect(mockedMinioAdapter.getFileUrl).not.toHaveBeenCalled()
+      expect(mockedS3Adapter.getFileUrl).not.toHaveBeenCalled()
     })
 
     it('should return 500 if URL generation fails', async () => {
-      mockedMinioAdapter.fileExists.mockResolvedValue(true)
-      mockedMinioAdapter.getFileUrl.mockRejectedValue(
+      mockedS3Adapter.fileExists.mockResolvedValue(true)
+      mockedS3Adapter.getFileUrl.mockRejectedValue(
         new Error('URL generation failed')
       )
 
@@ -279,14 +277,15 @@ describe('file-storage-service routes', () => {
     it('should return file metadata', async () => {
       const fileName = 'test-file.txt'
       const mockMetadata = {
+        name: fileName,
         size: 1024,
         etag: 'abc123',
         lastModified: new Date('2024-01-01'),
         metaData: {},
       }
 
-      mockedMinioAdapter.fileExists.mockResolvedValue(true)
-      mockedMinioAdapter.getFileMetadata.mockResolvedValue(mockMetadata)
+      mockedS3Adapter.fileExists.mockResolvedValue(true)
+      mockedS3Adapter.getFileMetadata.mockResolvedValue(mockMetadata)
 
       const response = await request(app.callback()).get(
         `/files/${fileName}/metadata`
@@ -298,7 +297,7 @@ describe('file-storage-service routes', () => {
     })
 
     it('should return 404 if file does not exist', async () => {
-      mockedMinioAdapter.fileExists.mockResolvedValue(false)
+      mockedS3Adapter.fileExists.mockResolvedValue(false)
 
       const response = await request(app.callback()).get(
         '/files/nonexistent.txt/metadata'
@@ -306,12 +305,12 @@ describe('file-storage-service routes', () => {
 
       expect(response.status).toBe(404)
       expect(response.body.error).toBe('File not found')
-      expect(mockedMinioAdapter.getFileMetadata).not.toHaveBeenCalled()
+      expect(mockedS3Adapter.getFileMetadata).not.toHaveBeenCalled()
     })
 
     it('should return 500 if metadata retrieval fails', async () => {
-      mockedMinioAdapter.fileExists.mockResolvedValue(true)
-      mockedMinioAdapter.getFileMetadata.mockRejectedValue(
+      mockedS3Adapter.fileExists.mockResolvedValue(true)
+      mockedS3Adapter.getFileMetadata.mockRejectedValue(
         new Error('Metadata retrieval failed')
       )
 
@@ -328,8 +327,8 @@ describe('file-storage-service routes', () => {
     it('should delete a file successfully', async () => {
       const fileName = 'test-file.txt'
 
-      mockedMinioAdapter.fileExists.mockResolvedValue(true)
-      mockedMinioAdapter.deleteFile.mockResolvedValue(undefined)
+      mockedS3Adapter.fileExists.mockResolvedValue(true)
+      mockedS3Adapter.deleteFile.mockResolvedValue(undefined)
 
       const response = await request(app.callback()).delete(
         `/files/${fileName}`
@@ -337,11 +336,11 @@ describe('file-storage-service routes', () => {
 
       expect(response.status).toBe(200)
       expect(response.body).toEqual({ message: 'File deleted successfully' })
-      expect(mockedMinioAdapter.deleteFile).toHaveBeenCalledWith(fileName)
+      expect(mockedS3Adapter.deleteFile).toHaveBeenCalledWith(fileName)
     })
 
     it('should return 404 if file does not exist', async () => {
-      mockedMinioAdapter.fileExists.mockResolvedValue(false)
+      mockedS3Adapter.fileExists.mockResolvedValue(false)
 
       const response = await request(app.callback()).delete(
         '/files/nonexistent.txt'
@@ -349,14 +348,12 @@ describe('file-storage-service routes', () => {
 
       expect(response.status).toBe(404)
       expect(response.body.error).toBe('File not found')
-      expect(mockedMinioAdapter.deleteFile).not.toHaveBeenCalled()
+      expect(mockedS3Adapter.deleteFile).not.toHaveBeenCalled()
     })
 
     it('should return 500 if deletion fails', async () => {
-      mockedMinioAdapter.fileExists.mockResolvedValue(true)
-      mockedMinioAdapter.deleteFile.mockRejectedValue(
-        new Error('Deletion failed')
-      )
+      mockedS3Adapter.fileExists.mockResolvedValue(true)
+      mockedS3Adapter.deleteFile.mockRejectedValue(new Error('Deletion failed'))
 
       const response = await request(app.callback()).delete('/files/test.txt')
 
@@ -368,7 +365,7 @@ describe('file-storage-service routes', () => {
   describe('GET /files/:fileName/exists', () => {
     it('should return true if file exists', async () => {
       const fileName = 'test-file.txt'
-      mockedMinioAdapter.fileExists.mockResolvedValue(true)
+      mockedS3Adapter.fileExists.mockResolvedValue(true)
 
       const response = await request(app.callback()).get(
         `/files/${fileName}/exists`
@@ -376,12 +373,12 @@ describe('file-storage-service routes', () => {
 
       expect(response.status).toBe(200)
       expect(response.body).toEqual({ exists: true })
-      expect(mockedMinioAdapter.fileExists).toHaveBeenCalledWith(fileName)
+      expect(mockedS3Adapter.fileExists).toHaveBeenCalledWith(fileName)
     })
 
     it('should return false if file does not exist', async () => {
       const fileName = 'nonexistent.txt'
-      mockedMinioAdapter.fileExists.mockResolvedValue(false)
+      mockedS3Adapter.fileExists.mockResolvedValue(false)
 
       const response = await request(app.callback()).get(
         `/files/${fileName}/exists`
@@ -392,7 +389,7 @@ describe('file-storage-service routes', () => {
     })
 
     it('should return 500 if existence check fails', async () => {
-      mockedMinioAdapter.fileExists.mockRejectedValue(new Error('Check failed'))
+      mockedS3Adapter.fileExists.mockRejectedValue(new Error('Check failed'))
 
       const response = await request(app.callback()).get(
         '/files/test.txt/exists'

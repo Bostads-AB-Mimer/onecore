@@ -94,10 +94,10 @@ export function WorkOrdersTable({ orders }: WorkOrdersTableProps) {
             render: (order: WorkOrder) => getStatusBadge(order.status),
           },
           {
-            key: 'type',
-            label: 'Typ',
+            key: 'maintenanceTeam',
+            label: 'Resursgrupp',
             render: (order: WorkOrder) =>
-              order._tag === 'internal' ? 'Odoo' : 'Xpand',
+              (order._tag === 'internal' && order.maintenanceTeam) || '-',
             hideOnMobile: true,
           },
           {

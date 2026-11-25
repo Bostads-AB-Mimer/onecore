@@ -48,7 +48,6 @@ axios.interceptors.request.use((request) => {
 
   const requestFields = {
     url: request.url,
-    headers: request.headers,
     method: request.method,
     correlationId: request.headers['x-correlation-id'],
   }
@@ -70,7 +69,6 @@ axios.interceptors.response.use((response) => {
 
   const responseFields = {
     status: response.status,
-    headers: response.headers,
     url: response.config.url,
     correlationId,
   }

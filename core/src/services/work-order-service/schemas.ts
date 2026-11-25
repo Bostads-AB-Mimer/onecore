@@ -23,7 +23,10 @@ export const CoreWorkOrderSchema = z.object({
   dueDate: z.union([z.null(), z.coerce.date()]),
   rentalObjectCode: z.string(),
   status: z.string(),
+  maintenanceTeam: z.string().nullable().optional(),
   hiddenFromMyPages: z.boolean().optional(),
+  // True while the tenant's request to close the case awaits a decision in Odoo.
+  closeRequestPending: z.boolean(),
   workOrderRows: z.array(
     z.object({
       description: z.string().nullable(),
@@ -82,6 +85,7 @@ export {
   MaintenanceTeamSchema,
   CreateInspectionWorkOrdersRequestSchema,
   CreateInspectionWorkOrdersResponseSchema,
+  CloseWorkOrderRequestSchema,
 } from '@onecore/types'
 
 export const GetWorkOrdersFromXpandQuerySchema = z.object({

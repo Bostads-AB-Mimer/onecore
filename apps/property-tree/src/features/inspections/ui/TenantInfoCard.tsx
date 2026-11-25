@@ -10,6 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
 import type { TenantInfoCardData } from '../types'
 
+const TERMINATION_LABELS: Record<
+  NonNullable<TenantInfoCardData['termination']>,
+  string
+> = {
+  confirmed: 'Uppsagt',
+  preliminary: 'Prel. uppsagt',
+}
+
 interface TenantInfoCardProps {
   tenant: TenantInfoCardData
   address?: string
@@ -71,7 +79,7 @@ export function TenantInfoCard({
           </div>
         </div>
 
-        {(locationLabel || tenant.isAboutToLeave) && (
+        {(locationLabel || tenant.termination) && (
           <div className="flex items-center justify-between">
             {locationLabel && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -79,12 +87,12 @@ export function TenantInfoCard({
                 <span>{locationLabel}</span>
               </div>
             )}
-            {tenant.isAboutToLeave && (
+            {tenant.termination && (
               <Badge
                 variant="outline"
                 className="bg-orange-50 text-orange-700 border-orange-200"
               >
-                Uppsagt
+                {TERMINATION_LABELS[tenant.termination]}
               </Badge>
             )}
           </div>

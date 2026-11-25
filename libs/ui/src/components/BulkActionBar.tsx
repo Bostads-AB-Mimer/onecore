@@ -13,6 +13,8 @@ export interface BulkAction {
 
 export interface BulkActionBarProps {
   selectedCount: number
+  /** Some of the selected rows are on other pages than the one shown */
+  includesOtherPages?: boolean
   onClear: () => void
   actions: readonly BulkAction[]
   isLoading?: boolean // disables every action, e.g. while recipients load
@@ -22,6 +24,7 @@ export interface BulkActionBarProps {
 /** Fixed bar at the bottom of the viewport; hidden while nothing is selected. */
 export function BulkActionBar({
   selectedCount,
+  includesOtherPages,
   onClear,
   actions,
   isLoading,
@@ -42,6 +45,12 @@ export function BulkActionBar({
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium">
             {selectedCount.toLocaleString('sv-SE')} valda
+            {includesOtherPages && (
+              <span className="font-normal text-muted-foreground">
+                {' '}
+                (även på andra sidor)
+              </span>
+            )}
           </span>
           <button
             type="button"

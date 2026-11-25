@@ -21,6 +21,7 @@ import {
   FacilityDetailsSchema,
   ResidenceSummarySchema,
   RentalBlockSchema,
+  RentalIdsWithBlockResponseSchema,
 } from '../schemas'
 import { LeaseStatus } from '@onecore/types'
 
@@ -404,6 +405,53 @@ describe('@onecore/property-service', () => {
 
       expect(res.status).toBe(404)
       expect(getResidenceDetailsSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /property/residences/by-rental-id/:rentalId/media', () => {
+    const path = '/property/residences/by-rental-id/705-025-01-0103/media'
+
+    it('returns 200 and the media', async () => {
+      const media = {
+        images: ['https://pub.mimer.nu/bofaktablad/a_1.jpg'],
+        imageLevel: 'shared' as const,
+        energyDeclarationUrl: null,
+      }
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceMedia')
+        .mockResolvedValueOnce({ ok: true, data: media })
+
+      const res = await request(app.callback()).get(path)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(media)
+    })
+
+    it('returns 200 with empty content when nothing is published', async () => {
+      const media = { images: [], imageLevel: null, energyDeclarationUrl: null }
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceMedia')
+        .mockResolvedValueOnce({ ok: true, data: media })
+
+      const res = await request(app.callback()).get(path)
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(media)
+    })
+
+    it.each([
+      ['invalid-rental-id', 400],
+      ['media-unavailable', 503],
+      ['unknown', 500],
+    ] as const)('maps %s to status %i', async (err, status) => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getResidenceMedia')
+        .mockResolvedValueOnce({ ok: false, err })
+
+      const res = await request(app.callback()).get(path)
+
+      expect(res.status).toBe(status)
+      expect(res.body.reason).toBe(err)
     })
   })
 
@@ -841,6 +889,70 @@ describe('@onecore/property-service', () => {
       expect(getRentalBlocksSpy).toHaveBeenCalledWith('1234', {
         active: undefined,
       })
+    })
+  })
+  describe('GET /residences/rental-blocks/rental-ids', () => {
+    it('returns 200 and the parsed query, coercing a single blockReason to an array', async () => {
+      const getRentalIdsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRentalIdsWithBlock')
+        .mockResolvedValueOnce({ ok: true, data: ['705-022-04-0201'] })
+
+      const res = await request(app.callback()).get(
+        '/residences/rental-blocks/rental-ids?blockReason=SKADEDJUR&active=true'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual(['705-022-04-0201'])
+      expect(getRentalIdsSpy).toHaveBeenCalledWith({
+        blockReason: ['SKADEDJUR'],
+        active: true,
+      })
+      expect(() =>
+        RentalIdsWithBlockResponseSchema.parse({ content: res.body.content })
+      ).not.toThrow()
+    })
+
+    it('returns 200 and keeps repeated blockReason params as a list', async () => {
+      const getRentalIdsSpy = jest
+        .spyOn(propertyBaseAdapter, 'getRentalIdsWithBlock')
+        .mockResolvedValueOnce({ ok: true, data: [] })
+
+      const res = await request(app.callback()).get(
+        '/residences/rental-blocks/rental-ids?blockReason=SKADEDJUR&blockReason=OMBYGGNAD'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([])
+      expect(getRentalIdsSpy).toHaveBeenCalledWith({
+        blockReason: ['SKADEDJUR', 'OMBYGGNAD'],
+        active: undefined,
+      })
+    })
+
+    it('returns 400 for an unparseable active filter', async () => {
+      const getRentalIdsSpy = jest.spyOn(
+        propertyBaseAdapter,
+        'getRentalIdsWithBlock'
+      )
+
+      const res = await request(app.callback()).get(
+        '/residences/rental-blocks/rental-ids?active=maybe'
+      )
+
+      expect(res.status).toBe(400)
+      expect(getRentalIdsSpy).not.toHaveBeenCalled()
+    })
+
+    it('returns 500 if an error occurs', async () => {
+      jest
+        .spyOn(propertyBaseAdapter, 'getRentalIdsWithBlock')
+        .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/residences/rental-blocks/rental-ids?blockReason=SKADEDJUR'
+      )
+
+      expect(res.status).toBe(500)
     })
   })
 })

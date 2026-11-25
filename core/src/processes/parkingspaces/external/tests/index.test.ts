@@ -4,6 +4,7 @@ import {
   Listing,
   ListingStatus,
   Invoice,
+  ReplyToOfferErrorCodes,
   Tenant,
 } from '@onecore/types'
 import * as leasingAdapter from '../../../../adapters/leasing-adapter'
@@ -43,7 +44,9 @@ describe('parkingspaces', () => {
       any
     >
     let getInvoicesSentToDebtCollectionSpy: jest.SpyInstance<
-      Promise<AdapterResult<Invoice[], 'not-found' | 'unknown'>>,
+      Promise<
+        AdapterResult<Invoice[], economyAdapter.GetInvoicesByContactCodeError>
+      >,
       [contactCode: string, from?: Date],
       any
     >
@@ -100,7 +103,7 @@ describe('parkingspaces', () => {
         .spyOn(leasingAdapter, 'getContactByContactCode')
         .mockResolvedValue({ ok: true, data: mockedApplicantWithoutLeases })
       getLeasesForContactCodeSpy = jest
-        .spyOn(leasingAdapter, 'getLeasesForContactCode')
+        .spyOn(leasingAdapter, 'getLeasesByContactCode')
         .mockResolvedValue([])
       getCreditInformationSpy = jest
         .spyOn(leasingAdapter, 'getCreditInformation')
@@ -328,7 +331,16 @@ describe('parkingspaces', () => {
 
       expect(getLeasesForContactCodeSpy).toHaveBeenCalledWith(
         mockedApplicantWithoutLeases.contactCode,
-        expect.objectContaining({ includeUpcomingLeases: true })
+        {
+          status: [
+            'current',
+            'upcoming',
+            'about-to-end',
+            'preliminary-terminated',
+            'pending-signature',
+            'not-sent',
+          ],
+        }
       )
     })
 
@@ -371,6 +383,37 @@ describe('parkingspaces', () => {
       expect(result.httpStatus).toBe(400)
     })
 
+    it.each([
+      ['unavailable' as const, 503],
+      ['unknown' as const, 500],
+    ])(
+      'fails with fetch-invoices-failed and %s gives %i when invoices cannot be fetched',
+      async (err, httpStatus) => {
+        getContactSpy.mockResolvedValue({
+          ok: true,
+          data: mockedApplicantWithLeases,
+        })
+        getLeasesForContactCodeSpy.mockResolvedValue([mockedLease])
+        getInvoicesSentToDebtCollectionSpy.mockResolvedValue({
+          ok: false,
+          err,
+          statusCode: httpStatus,
+        })
+
+        const result =
+          await parkingProcesses.createLeaseForExternalParkingSpace(
+            'foo',
+            'bar',
+            '2034-04-21'
+          )
+
+        if (result.processStatus !== ProcessStatus.failed)
+          throw new Error('expected the process to fail')
+        expect(result.error).toBe('fetch-invoices-failed')
+        expect(result.httpStatus).toBe(httpStatus)
+      }
+    )
+
     it('creates a contract if external credit check succeeds', async () => {
       createContractSpy.mockReset()
 
@@ -387,6 +430,66 @@ describe('parkingspaces', () => {
         '001',
         true
       )
+    })
+
+    it('starts the lease when the parking space is free if no start date is given', async () => {
+      jest
+        .spyOn(leasingAdapter, 'getParkingSpaceByCode')
+        .mockResolvedValueOnce({
+          ok: true,
+          data: {
+            rentalObjectCode: '705-808-00-0006',
+            address: 'Testgatan 1',
+            availabilityInfo: {
+              rent: { amount: 500, vat: 0.25, rows: [] },
+              rentalObjectCode: '705-808-00-0006',
+              rentalTenureType: { id: 'Bilplats', name: 'Bilplats' },
+              vacantFrom: new Date('2099-12-01T00:00:00.000Z'),
+            },
+            objectTypeCaption: 'Bilplats',
+            objectTypeCode: 'BP',
+            residentialAreaCaption: 'Test',
+            residentialAreaCode: 'TST',
+          },
+        })
+      createContractSpy.mockClear()
+
+      await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        undefined
+      )
+
+      expect(createContractSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        '2099-12-01T00:00:00.000Z',
+        '001',
+        expect.any(Boolean)
+      )
+    })
+
+    it('returns 409 rental-object-not-available without updating the listing when the parking space is not available', async () => {
+      createContractSpy.mockResolvedValueOnce({
+        ok: false,
+        err: ReplyToOfferErrorCodes.RentalObjectNotAvailable,
+      })
+      updateListingStatusSpy.mockReset()
+
+      const result = await parkingProcesses.createLeaseForExternalParkingSpace(
+        'foo',
+        'bar',
+        '2034-04-21'
+      )
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          processStatus: ProcessStatus.failed,
+          httpStatus: 409,
+          error: 'rental-object-not-available',
+        })
+      )
+      expect(updateListingStatusSpy).not.toHaveBeenCalled()
     })
 
     it('should update listing status if create lease succeeds', async () => {
@@ -488,6 +591,97 @@ describe('parkingspaces', () => {
         expect.any(String),
         '001',
         true
+      )
+    })
+
+    describe('VAT decision', () => {
+      const createLease = () =>
+        parkingProcesses.createLeaseForExternalParkingSpace(
+          'foo',
+          'bar',
+          '2034-04-21'
+        )
+
+      it('creates the lease without VAT and says why when the tenant has a housing contract in the area', async () => {
+        getTenantByContactCodeSpy.mockResolvedValue({
+          ok: true,
+          data: mockedTenantWithHousingContractInSameArea,
+        })
+
+        const result = await createLease()
+
+        expect(createContractSpy).toHaveBeenLastCalledWith(
+          expect.any(String),
+          expect.any(String),
+          expect.any(String),
+          '001',
+          false
+        )
+        expect(result.response).toEqual(
+          expect.objectContaining({
+            vat: { includeVAT: false, reason: 'housing-contract-in-area' },
+          })
+        )
+      })
+
+      it.each([
+        [
+          'the tenant has housing only in another area',
+          {
+            ok: true as const,
+            data: mockedTenantWithHousingContractInDifferentArea,
+          },
+          'no-housing-contract-in-area',
+        ],
+        [
+          'the tenant has no valid housing contract',
+          { ok: false as const, err: 'no-valid-housing-contract' as const },
+          'no-housing-contract-in-area',
+        ],
+        [
+          'the contact is not a tenant',
+          { ok: false as const, err: 'contact-not-tenant' as const },
+          'not-a-tenant',
+        ],
+      ])(
+        'creates the lease with VAT and says why when %s',
+        async (_, tenantResult, reason) => {
+          getTenantByContactCodeSpy.mockResolvedValue(tenantResult)
+
+          const result = await createLease()
+
+          expect(createContractSpy).toHaveBeenLastCalledWith(
+            expect.any(String),
+            expect.any(String),
+            expect.any(String),
+            '001',
+            true
+          )
+          expect(result.response).toEqual(
+            expect.objectContaining({ vat: { includeVAT: true, reason } })
+          )
+        }
+      )
+
+      it.each(['unknown', 'contact-not-found'] as const)(
+        'creates no lease and returns get-tenant-failed when the tenant lookup fails with %s',
+        async (err) => {
+          createContractSpy.mockClear()
+          updateListingStatusSpy.mockClear()
+          getTenantByContactCodeSpy.mockResolvedValue({ ok: false, err })
+
+          const result = await createLease()
+
+          expect(result).toEqual(
+            expect.objectContaining({
+              processStatus: ProcessStatus.failed,
+              error: 'get-tenant-failed',
+              httpStatus: 500,
+            })
+          )
+          expect(createContractSpy).not.toHaveBeenCalled()
+          expect(updateListingStatusSpy).not.toHaveBeenCalled()
+        }
       )
     })
 

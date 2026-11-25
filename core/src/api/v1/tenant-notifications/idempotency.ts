@@ -1,14 +1,26 @@
 import { createHash } from 'node:crypto'
 
-import { LeaseTerminationConfirmationEmail } from '@onecore/types'
+import type { LeaseTerminationNotification } from './send-notification'
 
 export type IdempotencyClaimOutcome =
   'claimed' | 'duplicate' | 'conflict' | 'in-flight'
 
+/** Who got the confirmation, kept so a replayed request gets the same answer. */
+export type DeliverySummary = {
+  sentCount: number
+  skippedContactCodes: string[]
+}
+
 export type IdempotencyStore = {
   /** Synchronous reservation — must run before any await on the send path. */
   claim: (key: string, payloadHash: string) => IdempotencyClaimOutcome
-  markSucceeded: (key: string, payloadHash: string) => void
+  markSucceeded: (
+    key: string,
+    payloadHash: string,
+    summary?: DeliverySummary
+  ) => void
+  /** The summary stored with a succeeded key, if any. */
+  getSummary: (key: string, payloadHash: string) => DeliverySummary | undefined
   /** Drops an in-flight reservation so the caller can retry after send failure. */
   release: (key: string, payloadHash: string) => void
   clear: () => void
@@ -16,7 +28,7 @@ export type IdempotencyStore = {
 
 /** Stable hash of the integration payload (excludes server-added attribution). */
 export const hashNotificationPayload = (
-  notification: LeaseTerminationConfirmationEmail
+  notification: LeaseTerminationNotification
 ): string => {
   const { triggeredByUser: _triggeredByUser, ...dedupeFields } = notification
   const canonical = JSON.stringify(
@@ -34,6 +46,7 @@ type IdempotencyRecord = {
   payloadHash: string
   state: 'in-flight' | 'succeeded'
   expiresAt: number
+  summary?: DeliverySummary
 }
 
 /** In-process store with TTL. Swap for shared storage when Core runs multi-instance. */
@@ -73,7 +86,7 @@ export const createInMemoryIdempotencyStore = (
 
       return 'in-flight'
     },
-    markSucceeded(key, payloadHash) {
+    markSucceeded(key, payloadHash, summary) {
       const existing = records.get(key)
       if (
         !existing ||
@@ -87,7 +100,15 @@ export const createInMemoryIdempotencyStore = (
         payloadHash,
         state: 'succeeded',
         expiresAt: Date.now() + ttlMs,
+        summary,
       })
+    },
+    getSummary(key, payloadHash) {
+      const existing = records.get(key)
+      return existing?.payloadHash === payloadHash &&
+        existing.state === 'succeeded'
+        ? existing.summary
+        : undefined
     },
     release(key, payloadHash) {
       const existing = records.get(key)

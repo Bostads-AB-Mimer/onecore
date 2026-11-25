@@ -11,6 +11,9 @@ describe(filterByStatus, () => {
     const preliminaryTerminatedLease = factory.tenfastLease.build({
       stage: 'preTermination',
     })
+    const awaitingNoticeSigningLease = factory.tenfastLease.build({
+      stage: 'terminationSigningInProgress',
+    })
     const archivedLease = factory.tenfastLease.build({ stage: 'archived' })
     const terminatedLease = factory.tenfastLease.build({ stage: 'terminated' })
     const pendingSignatureLease = factory.tenfastLease.build({
@@ -23,6 +26,7 @@ describe(filterByStatus, () => {
       upcomingLease,
       aboutToEndLease,
       preliminaryTerminatedLease,
+      awaitingNoticeSigningLease,
       archivedLease,
       terminatedLease,
       pendingSignatureLease,
@@ -34,6 +38,7 @@ describe(filterByStatus, () => {
     expect(filterByStatus(leases, ['about-to-end'])).toEqual([aboutToEndLease])
     expect(filterByStatus(leases, ['preliminary-terminated'])).toEqual([
       preliminaryTerminatedLease,
+      awaitingNoticeSigningLease,
     ])
     expect(filterByStatus(leases, ['ended'])).toEqual([
       archivedLease,

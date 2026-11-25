@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 
+import { ApiError } from '@/services/api/core/baseApi'
 import {
   type LeaseSearchQueryParams,
   type LeaseSearchResult,
@@ -24,6 +25,9 @@ export function useLeaseSearch(
     queryKey: ['leaseSearch', params, page, limit],
     queryFn: () => leaseSearchService.search(params, page, limit),
     placeholderData: keepPreviousData,
+    retry: (failureCount, error) =>
+      error instanceof ApiError && error.status === 503 && failureCount < 3,
+    retryDelay: () => 30_000,
   })
 
   // Prefetch next page for instant navigation
@@ -32,7 +36,9 @@ export function useLeaseSearch(
     params.districtNames?.length ||
     params.buildingManager?.length ||
     params.buildingCodes?.length ||
-    params.areaCodes?.length
+    params.areaCodes?.length ||
+    params.parkingSpaceType?.length ||
+    params.leaseType?.length
   )
 
   useEffect(() => {
@@ -66,6 +72,8 @@ export function useLeaseSearch(
     isLoading: leaseSearchQuery.isLoading,
     isFetching: leaseSearchQuery.isFetching,
     error: leaseSearchQuery.error,
+    failureCount: leaseSearchQuery.failureCount,
+    failureReason: leaseSearchQuery.failureReason,
     exportToExcel,
   }
 }

@@ -26,6 +26,7 @@ export const WorkOrderFactory = Factory.define<CoreWorkOrder>(
     rentalObjectCode: 'RentalObjectCode',
     status: 'Status',
     dueDate: null,
+    closeRequestPending: false,
     workOrderRows: [
       {
         description: 'Description',

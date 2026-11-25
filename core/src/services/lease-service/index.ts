@@ -12,7 +12,11 @@ import {
   leasing,
   schemas as typesSchemas,
 } from '@onecore/types'
-import { logger, generateRouteMetadata } from '@onecore/utilities'
+import {
+  logger,
+  generateRouteMetadata,
+  makeSuccessResponseBody,
+} from '@onecore/utilities'
 import { z } from 'zod'
 
 import * as leasingAdapter from '../../adapters/leasing-adapter'
@@ -41,6 +45,14 @@ import { routes as vacantApartmentsRoutes } from './vacant-apartments'
 import { registerSchema } from '../../utils/openapi'
 import { Contact, Lease, RentalObjectRentInfo } from './schemas/lease'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
+import {
+  resolvePersonnummerInQuery,
+  toMessageRecipients,
+} from '../../adapters/contacts-adapter/lease-query'
+import {
+  tenantAwareContactLookup,
+  withProtectedIdentityDetails,
+} from '../../processes/contacts'
 
 /**
  * @swagger
@@ -79,8 +91,6 @@ export const routes = (router: KoaRouter) => {
   areaTextContentRoutes(router)
   keysExportRoutes(router)
   vacantApartmentsRoutes(router)
-
-  leasesRoutes(router)
 
   /**
    * @swagger
@@ -130,6 +140,10 @@ export const routes = (router: KoaRouter) => {
     }
   })
 
+  // Must be registered before leasesRoutes: /leases/:id would otherwise
+  // swallow /leases/parking-space-types.
+  leasesRoutes(router)
+
   /**
    * @swagger
    * /contacts/from-lease-search:
@@ -137,7 +151,7 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get contacts matching lease search filters
    *     tags:
    *       - Lease service
-   *     description: Retrieves contact information for tenants matching the given lease search filters.
+   *     description: Returns the contacts on every lease that /leases/search lists for the same filters, one per contact. Phone and e-mail come from the contacts service only. They are empty for a contact with protected identity and for a contact the contacts service has no record of.
    *     parameters:
    *       - in: query
    *         name: q
@@ -246,7 +260,7 @@ export const routes = (router: KoaRouter) => {
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode, tenantName]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -266,8 +280,14 @@ export const routes = (router: KoaRouter) => {
    *                   type: array
    *                   items:
    *                     $ref: '#/components/schemas/ContactInfo'
+   *       '400':
+   *         description: Invalid query parameters
    *       '500':
    *         description: Internal server error
+   *       '502':
+   *         description: Phone and e-mail could not be read from the contacts service (error contacts-lookup-failed). No contacts are returned.
+   *       '503':
+   *         description: The lease service is still loading its leases. Retry shortly.
    *     security:
    *       - bearerAuth: []
    */
@@ -286,9 +306,20 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await leasingAdapter.getContactsByFilters(resolved.query)
+    const contactsQuery = await resolvePersonnummerInQuery(resolved.query)
+    const result = await leasingAdapter.getContactsByFilters(contactsQuery)
 
     if (!result.ok) {
+      if (result.err === 'invalid-request') {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid query parameters', ...metadata }
+        return
+      }
+      if (result.err === 'service-unavailable') {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       ctx.status = 500
       ctx.body = {
         error: 'Unknown error occurred fetching contacts',
@@ -297,8 +328,18 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
+    const recipients = await toMessageRecipients(
+      result.data,
+      'contacts/from-lease-search'
+    )
+    if (!recipients.ok) {
+      ctx.status = 502
+      ctx.body = { error: recipients.err, ...metadata }
+      return
+    }
+
     ctx.status = 200
-    ctx.body = result.data
+    ctx.body = makeSuccessResponseBody(recipients.data, metadata)
   })
 
   /**
@@ -338,6 +379,12 @@ export const routes = (router: KoaRouter) => {
    *                 type: string
    *                 format: date-time
    *                 description: The desired move-out date
+   *               reason:
+   *                 type: string
+   *                 minLength: 1
+   *                 maxLength: 60
+   *                 default: Uppsägning av hyresgäst
+   *                 description: The reason for the termination
    *     responses:
    *       '200':
    *         description: Preliminary termination initiated successfully
@@ -361,8 +408,8 @@ export const routes = (router: KoaRouter) => {
     async (ctx) => {
       const metadata = generateRouteMetadata(ctx)
 
-      const { contactCode, lastDebitDate, desiredMoveDate } = ctx.request
-        .body as leasingAdapter.PreliminaryTerminateLeaseRequestParams
+      const { contactCode, lastDebitDate, desiredMoveDate, reason } = ctx
+        .request.body as leasingAdapter.PreliminaryTerminateLeaseRequestParams
 
       try {
         const result = await leasingAdapter.preliminaryTerminateLease(
@@ -371,6 +418,7 @@ export const routes = (router: KoaRouter) => {
             contactCode,
             lastDebitDate,
             desiredMoveDate,
+            reason,
           }
         )
 
@@ -1097,7 +1145,10 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: res.data,
+      content: await withProtectedIdentityDetails(
+        tenantAwareContactLookup,
+        res.data
+      ),
       ...metadata,
     }
   })
@@ -1193,7 +1244,10 @@ export const routes = (router: KoaRouter) => {
 
     ctx.status = 200
     ctx.body = {
-      content: res.data,
+      content: await withProtectedIdentityDetails(
+        tenantAwareContactLookup,
+        res.data
+      ),
       ...metadata,
     }
   })
@@ -1253,6 +1307,10 @@ export const routes = (router: KoaRouter) => {
    *     responses:
    *       '202':
    *         description: Offer accepted successful.
+   *       '409':
+   *         description: >
+   *           The rental object is not available from the lease start date,
+   *           so no lease was created. error is rental-object-not-available.
    *       '500':
    *         description: Internal server error. Failed to accept the offer.
    *     security:
@@ -2204,12 +2262,38 @@ export const routes = (router: KoaRouter) => {
    *               format: date-time
    *               description: Start date of the lease.
    *     responses:
-   *       '201':
+   *       '200':
    *         description: Lease successfully created
    *         content:
    *           application/json:
    *             schema:
    *               type: object
+   *               properties:
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     leaseId:
+   *                       type: string
+   *                     message:
+   *                       type: string
+   *                     creditCheckType:
+   *                       type: string
+   *                       enum: [extern, intern]
+   *                     vat:
+   *                       type: object
+   *                       description: >
+   *                         Whether the lease got VAT, and why. No VAT when the
+   *                         tenant has a current or upcoming housing contract
+   *                         in the parking space's residential area.
+   *                       properties:
+   *                         includeVAT:
+   *                           type: boolean
+   *                         reason:
+   *                           type: string
+   *                           enum:
+   *                             - housing-contract-in-area
+   *                             - no-housing-contract-in-area
+   *                             - not-a-tenant
    *       '400':
    *         description: Bad request
    *         content:
@@ -2220,16 +2304,34 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: Parking space id is missing. It needs to be passed in the url.
+   *       '409':
+   *         description: >
+   *           The rental object is not available from the start date, so no
+   *           lease was created. error is rental-object-not-available.
    *       '500':
-   *         description: Internal server error
+   *         description: >
+   *           Internal server error. error is get-tenant-failed when the
+   *           applicant's housing contracts could not be fetched to decide VAT;
+   *           no lease was created then.
    *         content:
    *           application/json:
    *             schema:
    *               type: object
    *               properties:
-   *                 message:
+   *                 error:
    *                   type: string
-   *                   example: A technical error has occured.
+   *                   enum:
+   *                     - get-tenant-failed
+   *                     - fetch-invoices-failed
+   *                     - create-lease-failed
+   *                     - internal-error
+   *                 content:
+   *                   type: object
+   *                   properties:
+   *                     message:
+   *                       type: string
+   *       '503':
+   *         description: The internal credit check could not be done because invoices are temporarily unavailable. error is fetch-invoices-failed. Trying again later may work.
    *     security:
    *       - bearerAuth: []
    */
@@ -2330,6 +2432,8 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: Contact code is missing. It needs to be passed in the body (contactCode)
+   *       '403':
+   *         description: The applicant may not rent a scored parking space. errorCode applicant-not-tenant when they have no current or upcoming lease, or housing-contract-terminated when they have given notice on their only housing contract and have no upcoming one.
    *       '500':
    *         description: Internal server error
    *         content:
@@ -2340,6 +2444,8 @@ export const routes = (router: KoaRouter) => {
    *                 message:
    *                   type: string
    *                   example: A technical error has occured.
+   *       '503':
+   *         description: The internal credit check could not be done because invoices are temporarily unavailable (errorCode service-unavailable). Trying again later may work.
    *     security:
    *       - bearerAuth: []
    */

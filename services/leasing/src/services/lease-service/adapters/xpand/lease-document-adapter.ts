@@ -6,6 +6,7 @@ import {
   pickTerminationDocument,
 } from '../../helpers/lease-document-classification'
 import { xpandDb } from './xpandDb'
+import { AdapterResult } from '../types'
 
 // Tenfast/xpand document type code for signed contracts ("DO_SLUTF").
 const SIGNED_CONTRACT_KEYDOTYP = '_4HQ0MIK0R8SLEU'
@@ -13,10 +14,13 @@ const SIGNED_CONTRACT_KEYDOTYP = '_4HQ0MIK0R8SLEU'
 // See sync-lease-documents (AVTAL-112 / PR #743).
 const LEASE_CONTEXT_TYPE = 4
 
-type LeaseDocument = {
+export type LeaseDocument = {
   filename: string
   content: Buffer
 }
+
+/** `data: null` means Xpand holds no such document; `ok: false` means the lookup failed. */
+export type LeaseDocumentLookup = AdapterResult<LeaseDocument | null, 'unknown'>
 
 const decodeFildata = (raw: unknown): Buffer | null => {
   if (raw == null) return null
@@ -115,7 +119,7 @@ const getSignedContractPdfByKeydotyp = async (
  */
 export const getSignedContractPdf = async (
   leaseId: string
-): Promise<LeaseDocument | null> => {
+): Promise<LeaseDocumentLookup> => {
   try {
     const documents = await fetchLeaseDocumentMeta(leaseId)
     if (documents.length) {
@@ -136,19 +140,22 @@ export const getSignedContractPdf = async (
       if (picked) {
         const content = contentByKeydorev.get(picked.keydorev)
         if (content) {
-          return { filename: documentUploadFilename(picked), content }
+          return {
+            ok: true,
+            data: { filename: documentUploadFilename(picked), content },
+          }
         }
       }
     }
 
     const fallback = await getSignedContractPdfByKeydotyp(leaseId)
-    if (fallback) return fallback
+    if (fallback) return { ok: true, data: fallback }
 
     logger.warn({ leaseId }, 'getSignedContractPdf: no contract document found')
-    return null
+    return { ok: true, data: null }
   } catch (err) {
     logger.error({ err, leaseId }, 'getSignedContractPdf failed')
-    return null
+    return { ok: false, err: 'unknown' }
   }
 }
 
@@ -161,7 +168,7 @@ export const getSignedContractPdf = async (
  */
 export const getTerminationDocumentPdf = async (
   leaseId: string
-): Promise<LeaseDocument | null> => {
+): Promise<LeaseDocumentLookup> => {
   try {
     const documents = await fetchLeaseDocumentMeta(leaseId)
     const picked = pickTerminationDocument(documents)
@@ -170,7 +177,7 @@ export const getTerminationDocumentPdf = async (
         { leaseId },
         'getTerminationDocumentPdf: no uppsägning document found'
       )
-      return null
+      return { ok: true, data: null }
     }
 
     const content = await fetchDocumentContent(picked.keydorev)
@@ -179,12 +186,15 @@ export const getTerminationDocumentPdf = async (
         { leaseId, keydorev: picked.keydorev },
         'getTerminationDocumentPdf: document has no decodable file content'
       )
-      return null
+      return { ok: true, data: null }
     }
 
-    return { filename: documentUploadFilename(picked), content }
+    return {
+      ok: true,
+      data: { filename: documentUploadFilename(picked), content },
+    }
   } catch (err) {
     logger.error({ err, leaseId }, 'getTerminationDocumentPdf failed')
-    return null
+    return { ok: false, err: 'unknown' }
   }
 }

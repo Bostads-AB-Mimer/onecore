@@ -1,22 +1,28 @@
 import KoaRouter from '@koa/router'
+import axios from 'axios'
 import {
   generateRouteMetadata,
   logger,
   makeSuccessResponseBody,
+  createExcelExport,
+  joinField,
+  formatDateForExcel,
+  setExcelDownloadHeaders,
 } from '@onecore/utilities'
 import {
-  Contact,
-  Lease,
   leasing,
   schemas,
   LeaseStatus,
+  LeaseStatusLabel,
   CustomerScoreCardInfoSchema,
 } from '@onecore/types'
 import z from 'zod'
 
 import {
   GetLeaseOptionsSchema,
+  GetLeasesByContactCodeOptionsSchema,
   GetLeasesOptionsSchema,
+  LeaseBatchRequestBody,
   mapLease,
   Lease as LeaseSchema,
 } from './schemas/lease'
@@ -24,12 +30,29 @@ import * as leasingAdapter from '../../adapters/leasing-adapter'
 import * as propertyBaseAdapter from '../../adapters/property-base-adapter'
 import * as propertyManagementAdapter from '../../adapters/property-management-adapter'
 import { getHomeInsuranceOfferMonthlyAmount } from './helpers/lease'
+import { mapLeasesWithTenants } from './helpers/lease-tenants'
 import { resolveBuildingManagerToKvvAreaCodes } from '../../adapters/property-base-adapter/lease-query'
+import {
+  resolvePersonnummerInQuery,
+  enrichLeaseContacts,
+} from '../../adapters/contacts-adapter/lease-query'
 import { parseRequestBody } from '../../middlewares/parse-request-body'
-import { AdapterResult } from '@/adapters/types'
 import { registerSchema } from '../../utils/openapi'
+import { runWithConcurrency } from '../../utils/concurrency'
+import {
+  CSC_LEASE_STATUSES,
+  hasLeaseEnded,
+  hasMovedToNewerLease,
+} from './helpers/customer-score-card'
 
 registerSchema('CustomerScoreCardInfoSchema', CustomerScoreCardInfoSchema)
+
+// Same cap as the lease search in leasing. Each lease on a page gets a contact
+// and a rental object lookup, so a full page makes about 1000 calls.
+const CSC_MAX_PAGE_SIZE = 500
+// Leases looked up at once, so a full page doesn't send all its lookups to
+// leasing and property-management in one burst.
+const CSC_LOOKUP_CONCURRENCY = 20
 
 export const routes = (router: KoaRouter) => {
   // TODO: Move move to new microservice governingn organization. for now here just to make it available for the filter in /leases
@@ -89,10 +112,24 @@ export const routes = (router: KoaRouter) => {
    *     summary: Get all tenants with info required for Customer Score Card (CSC), including their leases and related entities
    *     tags:
    *       - Lease service
-   *     description: Returns a list of residential leases, including contact and rental object info. Filters out protected identities, deceased tenants, and certain property types/estates.
+   *     description: Returns a list of current residential leases, including contact and rental object info. A lease under notice (including a notice waiting for signing) counts as current until its end date has passed, and contract_end_date is set only for those. On an internal move only the lease the tenant has moved into is returned; a lease under notice is left out when the tenant has another housing lease that has started later. Filters out protected identities, deceased tenants, and certain property types/estates. The filtering runs after paging, so a page can hold fewer rows than `limit` while more pages remain; page until `_meta.page * _meta.limit >= _meta.totalRecords`.
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *           default: 1
+   *         description: Page number. Values below 1 count as 1.
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *           default: 500
+   *           maximum: 500
+   *         description: Leases per page, before filtering. Values above 500 count as 500, values below 1 as 1.
    *     responses:
    *       '200':
-   *         description: Successfully retrieved upcoming move-ins
+   *         description: Successfully retrieved residential leases for the CSC report
    *         content:
    *           application/json:
    *             schema:
@@ -104,10 +141,24 @@ export const routes = (router: KoaRouter) => {
    *                     $ref: '#/components/schemas/CustomerScoreCardInfoSchema'
    *                 _meta:
    *                   type: object
+   *                   properties:
+   *                     totalRecords:
+   *                       type: integer
+   *                       description: Current residential leases, before filtering
+   *                     page:
+   *                       type: integer
+   *                     limit:
+   *                       type: integer
+   *                       description: The page size used
+   *                     count:
+   *                       type: integer
+   *                       description: Rows on this page, after filtering
    *       '400':
-   *         description: Invalid query parameters
+   *         description: Invalid query parameters, e.g. a page or limit that is not a number
    *       '500':
    *         description: Internal server error
+   *       '503':
+   *         description: The lease service is warming up; try again shortly
    *     security:
    *       - bearerAuth: []
    */
@@ -115,16 +166,18 @@ export const routes = (router: KoaRouter) => {
     const metadata = generateRouteMetadata(ctx)
 
     try {
-      // Filter leases on object type 'Bostad' and current leases but allow additional filtering by query params, ie for paging
+      // Filter leases on object type 'Bostad' and current leases but allow additional filtering by query params, ie for paging.
+      // A lease under notice is still current until it ends, and it is the
+      // only kind that has an end date for contract_end_date.
       const leaseSearchParams = {
-        limit: '500',
+        limit: String(CSC_MAX_PAGE_SIZE),
         ...ctx.query,
         objectType: 'bostad',
-        status: LeaseStatus[LeaseStatus.Current],
+        status: CSC_LEASE_STATUSES.map((status) => LeaseStatus[status]),
       }
 
-      // Set limit to max 500
-      if (Number(leaseSearchParams.limit) > 500) leaseSearchParams.limit = '500'
+      if (Number(leaseSearchParams.limit) > CSC_MAX_PAGE_SIZE)
+        leaseSearchParams.limit = String(CSC_MAX_PAGE_SIZE)
 
       const leaseSearchResult =
         await leasingAdapter.searchLeases(leaseSearchParams)
@@ -136,20 +189,28 @@ export const routes = (router: KoaRouter) => {
         ctx.status = 200
         ctx.body = {
           content: [],
+          _meta: { ...leaseSearchResult._meta, count: 0 },
           ...metadata,
         }
         return
       }
 
+      const now = new Date()
+
       //Get contact and rental object info for each lease, and filter out protected identities, deceased tenants, and certain property types/estates
-      const parsedContent = await Promise.all(
-        leaseSearchResult.content.map(async (lease: Lease) => {
+      const parsedContent = await runWithConcurrency(
+        leaseSearchResult.content,
+        async (lease) => {
           const rentalObjectCode =
             lease.leaseId.split('/')[0] != ''
               ? lease.leaseId.split('/')[0]
               : lease.leaseId.substring(0, lease.leaseId.lastIndexOf('-'))
 
-          if (!lease.tenantContactIds || lease.tenantContactIds.length === 0) {
+          // The status comes from the leasing system's stage, not from the
+          // dates, so a lease whose end date has passed is left out here.
+          if (hasLeaseEnded(lease, now)) return null
+
+          if (!lease.contacts || lease.contacts.length === 0) {
             logger.error(
               'No tenant on contract Id ' +
                 lease.leaseId +
@@ -158,10 +219,13 @@ export const routes = (router: KoaRouter) => {
             return null
           }
 
+          const primaryContactCode = lease.contacts[0].contactCode //TODO: Vilken contact ska väljas när det finns flera?
+
+          if (await hasMovedToNewerLease(lease, primaryContactCode, now))
+            return null
+
           const [contactResult, rentalPropertyResult] = await Promise.all([
-            leasingAdapter.getContactByContactCode(
-              lease.tenantContactIds[0] //TODO: Vilken contact ska väljas när det finns flera?
-            ),
+            leasingAdapter.getContactByContactCode(primaryContactCode),
             propertyManagementAdapter.getRentalPropertyInfoFromXpand(
               rentalObjectCode
             ),
@@ -172,7 +236,7 @@ export const routes = (router: KoaRouter) => {
               {
                 status: contactResult.statusCode,
                 error: contactResult.err,
-                contactCode: lease.tenantContactIds[0],
+                contactCode: primaryContactCode,
               },
               'Failed to fetch contact data'
             )
@@ -181,7 +245,7 @@ export const routes = (router: KoaRouter) => {
           if (!contactResult.data) {
             logger.warn(
               {
-                contactCode: lease.tenantContactIds[0],
+                contactCode: primaryContactCode,
               },
               'No contact data found'
             )
@@ -194,7 +258,6 @@ export const routes = (router: KoaRouter) => {
             logger.error(
               {
                 status: rentalPropertyResult.status,
-                data: rentalPropertyResult.data,
                 rentalObjectCode,
               },
               'Failed to fetch rental property data'
@@ -234,10 +297,10 @@ export const routes = (router: KoaRouter) => {
           const mappedLease: z.input<typeof CustomerScoreCardInfoSchema> = {
             //lease info
             division_1038: lease.leaseId,
-            division_1037: lease.contractDate?.toString(),
-            contract_start_date: lease.leaseStartDate?.toString() ?? '',
-            contract_end_date: lease.leaseEndDate?.toString(),
-            contract_type: lease.type,
+            division_1037: lease.signedAt?.toString(),
+            contract_start_date: lease.startDate?.toString() ?? '',
+            contract_end_date: lease.endDate?.toString(),
+            contract_type: lease.leaseType,
             object_street_1: rentalObjectData.address?.street ?? '',
             object_zip: rentalObjectData.address?.postalCode ?? '',
             object_city: rentalObjectData.address?.city ?? '',
@@ -258,11 +321,11 @@ export const routes = (router: KoaRouter) => {
             division_1011: rentalObjectData.districtCode ?? '',
             object_real_estate: rentalObjectData.property.estate,
             object_real_estate_year_construction:
-              rentalObjectData.building.constructionYear ?? undefined,
+              rentalObjectData.building?.constructionYear ?? undefined,
             object_real_estate_year_reconstruction:
-              rentalObjectData.building.renovationYear ?? undefined,
+              rentalObjectData.building?.renovationYear ?? undefined,
             real_estate_type:
-              rentalObjectData.building.buildingTypeCaption ?? '',
+              rentalObjectData.building?.buildingTypeCaption ?? '',
             division_1048: rentalObjectData.district ?? '',
             division_1242: rentalObjectData.marketArea ?? '',
             division_1140: rentalObjectData.property.rentalTypeCode,
@@ -279,7 +342,8 @@ export const routes = (router: KoaRouter) => {
             )
             return null
           }
-        })
+        },
+        CSC_LOOKUP_CONCURRENCY
       )
 
       const filteredLeases = parsedContent.filter(Boolean)
@@ -295,6 +359,20 @@ export const routes = (router: KoaRouter) => {
         ...metadata,
       }
     } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        ctx.status = 400
+        ctx.body = {
+          error: 'Invalid query parameters',
+          reason: error.response.data?.details,
+          ...metadata,
+        }
+        return
+      }
       logger.error({ error, metadata }, 'Error getting leases for CSC report')
       ctx.status = 500
       ctx.body = {
@@ -430,13 +508,13 @@ export const routes = (router: KoaRouter) => {
    *         schema:
    *           type: integer
    *           default: 20
-   *           maximum: 100
+   *           maximum: 500
    *         description: Items per page
    *       - in: query
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode, tenantName]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -492,11 +570,21 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await leasingAdapter.searchLeases(resolved.query)
+      const searchQuery = await resolvePersonnummerInQuery(resolved.query)
+      const result = await leasingAdapter.searchLeases(searchQuery)
+      const enrichedContent = await enrichLeaseContacts(
+        result.content,
+        'leases/search'
+      )
 
       ctx.status = 200
-      ctx.body = result
+      ctx.body = { ...result, content: enrichedContent }
     } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error searching leases (Tenfast)')
       ctx.status = 500
       ctx.body = {
@@ -594,7 +682,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const patchedLeases = await patchLeasesWithContacts(leases)
+      const patchedLeases = await mapLeasesWithTenants(leases)
 
       if (!patchedLeases.ok) {
         ctx.status = 500
@@ -607,7 +695,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       const parsedPatchedLeases = LeaseSchema.array().safeParse(
-        patchedLeases.data.map(mapLease)
+        patchedLeases.data
       )
       if (!parsedPatchedLeases.success) {
         logger.error(
@@ -714,7 +802,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const patchedLeases = await patchLeasesWithContacts(leases)
+      const patchedLeases = await mapLeasesWithTenants(leases)
       if (!patchedLeases.ok) {
         ctx.status = 500
         ctx.body = {
@@ -725,7 +813,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       const parsedPatchedLeases = LeaseSchema.array().safeParse(
-        patchedLeases.data.map(mapLease)
+        patchedLeases.data
       )
       if (!parsedPatchedLeases.success) {
         logger.error(
@@ -771,6 +859,12 @@ export const routes = (router: KoaRouter) => {
    *           type: boolean
    *           default: false
    *         description: Whether to include contact information in the response
+   *       - in: query
+   *         name: includeSubletLeases
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: Also return leases where the contact is the current sublet tenant (andrahandshyresgäst).
    *     responses:
    *       '200':
    *         description: Successful response with leases and related entities
@@ -789,7 +883,9 @@ export const routes = (router: KoaRouter) => {
   router.get('/leases/by-contact-code/:contactCode', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     try {
-      const queryParams = GetLeasesOptionsSchema.safeParse(ctx.query)
+      const queryParams = GetLeasesByContactCodeOptionsSchema.safeParse(
+        ctx.query
+      )
 
       if (!queryParams.success) {
         ctx.status = 400
@@ -823,7 +919,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const patchedLeases = await patchLeasesWithContacts(leases)
+      const patchedLeases = await mapLeasesWithTenants(leases)
       if (!patchedLeases.ok) {
         ctx.status = 500
         ctx.body = {
@@ -834,7 +930,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       const parsedPatchedLeases = LeaseSchema.array().safeParse(
-        patchedLeases.data.map(mapLease)
+        patchedLeases.data
       )
       if (!parsedPatchedLeases.success) {
         logger.error(
@@ -857,38 +953,6 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
-
-  async function patchLeasesWithContacts(
-    leases: Lease[]
-  ): Promise<AdapterResult<Lease[], 'no-contact' | 'unknown'>> {
-    for (const lease of leases) {
-      let contacts: (Contact & { leaseContactType?: string })[] = []
-
-      for (const contactCode of lease.tenantContactIds ?? []) {
-        const contact =
-          await leasingAdapter.getContactByContactCode(contactCode)
-        if (!contact.ok || !contact.data) {
-          return { ok: false, err: 'no-contact' }
-        }
-        contacts.push(contact.data)
-      }
-
-      if (lease.subletContactId) {
-        const contact = await leasingAdapter.getContactByContactCode(
-          lease.subletContactId
-        )
-        if (!contact.ok || !contact.data) {
-          return { ok: false, err: 'no-contact' }
-        }
-        const leaseContactType: leasing.v1.LeaseContactType = 'subletTenant'
-        contacts.push({ ...contact.data, leaseContactType })
-      }
-
-      lease.tenants = contacts
-    }
-
-    return { ok: true, data: leases }
-  }
 
   /**
    * @swagger
@@ -1005,7 +1069,7 @@ export const routes = (router: KoaRouter) => {
    *         name: sortBy
    *         schema:
    *           type: string
-   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode]
+   *           enum: [leaseStartDate, lastDebitDate, leaseId, address, objectType, rentalObjectCode, tenantName]
    *         description: Sort field
    *       - in: query
    *         name: sortOrder
@@ -1039,7 +1103,8 @@ export const routes = (router: KoaRouter) => {
     }
 
     try {
-      const result = await leasingAdapter.exportLeasesToExcel(resolved.query)
+      const exportQuery = await resolvePersonnummerInQuery(resolved.query)
+      const result = await leasingAdapter.getLeasesForExport(exportQuery)
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Lease export failed')
@@ -1048,11 +1113,64 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      ctx.set('Content-Type', result.data.contentType)
-      ctx.set('Content-Disposition', result.data.contentDisposition)
+      const rawLeases = result.data
+      const enrichedLeases = await enrichLeaseContacts(
+        rawLeases,
+        'leases/export'
+      )
+
+      const buffer = await createExcelExport<leasing.v1.LeaseSearchResult>({
+        sheetName: 'Hyreskontrakt',
+        columns: [
+          { header: 'Kontraktsnummer', key: 'leaseId', width: 18 },
+          { header: 'Objektnummer', key: 'rentalObjectCode', width: 20 },
+          { header: 'Hyresgäst', key: 'tenantName', width: 30 },
+          { header: 'Kundnummer', key: 'contactCode', width: 18 },
+          { header: 'E-post', key: 'email', width: 30 },
+          { header: 'Telefon', key: 'phone', width: 15 },
+          { header: 'Objekttyp', key: 'objectType', width: 12 },
+          { header: 'Kontraktstyp', key: 'leaseType', width: 20 },
+          { header: 'Adress', key: 'address', width: 35 },
+          { header: 'Fastighet', key: 'property', width: 20 },
+          { header: 'Distrikt', key: 'district', width: 15 },
+          { header: 'Startdatum', key: 'startDate', width: 12 },
+          { header: 'Slutdatum', key: 'endDate', width: 12 },
+          { header: 'Status', key: 'status', width: 15 },
+        ],
+        data: enrichedLeases,
+        rowMapper: (lease: leasing.v1.LeaseSearchResult) => ({
+          leaseId: lease.leaseId,
+          rentalObjectCode: lease.rentalObjectCode || '',
+          tenantName: joinField(lease.contacts, (c) =>
+            c.contactType === 'subletTenant' ? `${c.name} (andrahand)` : c.name
+          ),
+          contactCode: joinField(lease.contacts, (c) =>
+            c.contactType === 'subletTenant'
+              ? `${c.contactCode} (andrahand)`
+              : c.contactCode
+          ),
+          email: joinField(lease.contacts, (c) => c.email),
+          phone: joinField(lease.contacts, (c) => c.phone),
+          objectType: lease.parkingSpaceType || lease.objectTypeCode,
+          leaseType: lease.leaseType,
+          address: lease.address || '',
+          property: lease.property || '',
+          district: lease.districtName || '',
+          startDate: formatDateForExcel(lease.startDate),
+          endDate: formatDateForExcel(lease.lastDebitDate),
+          status: LeaseStatusLabel[lease.status] ?? String(lease.status),
+        }),
+      })
+
+      setExcelDownloadHeaders(ctx, 'hyreskontrakt')
       ctx.status = 200
-      ctx.body = result.data.data
+      ctx.body = buffer
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        ctx.status = 503
+        ctx.body = { error: 'Lease service is warming up', ...metadata }
+        return
+      }
       logger.error({ error, metadata }, 'Error exporting leases to Excel')
       ctx.status = 500
       ctx.body = { error: 'Internal server error', ...metadata }
@@ -1153,7 +1271,7 @@ export const routes = (router: KoaRouter) => {
         return
       }
 
-      const patchedLease = await patchLeasesWithContacts([lease])
+      const patchedLease = await mapLeasesWithTenants([lease])
 
       if (!patchedLease.ok) {
         ctx.status = 500
@@ -1165,9 +1283,7 @@ export const routes = (router: KoaRouter) => {
       }
 
       const [leaseWithContacts] = patchedLease.data
-      const parsedLeaseWithContacts = LeaseSchema.safeParse(
-        mapLease(leaseWithContacts)
-      )
+      const parsedLeaseWithContacts = LeaseSchema.safeParse(leaseWithContacts)
       if (!parsedLeaseWithContacts.success) {
         logger.error(
           { issues: parsedLeaseWithContacts.error.issues, metadata },
@@ -1189,6 +1305,74 @@ export const routes = (router: KoaRouter) => {
       }
     }
   })
+
+  /**
+   * @swagger
+   * /leases/batch:
+   *   post:
+   *     summary: Get multiple leases by id
+   *     tags:
+   *       - Lease service
+   *     description: Retrieves leases for a batch of lease ids in a single call.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - leaseIds
+   *             properties:
+   *               leaseIds:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 minItems: 1
+   *     responses:
+   *       '200':
+   *         description: Successful response with the requested leases
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   type: array
+   *                   items:
+   *                     $ref: '#/components/schemas/Lease'
+   *       '400':
+   *         description: Invalid request body
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post(
+    '/leases/batch',
+    parseRequestBody(LeaseBatchRequestBody),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+      const { leaseIds } = ctx.request.body as z.infer<
+        typeof LeaseBatchRequestBody
+      >
+
+      try {
+        const leases = await leasingAdapter.getLeasesBatch(leaseIds)
+
+        ctx.status = 200
+        ctx.body = {
+          content: leases.map(mapLease),
+          ...metadata,
+        }
+      } catch (err) {
+        logger.error(
+          { err, metadata },
+          'Error fetching lease batch from leasing'
+        )
+        ctx.status = 500
+      }
+    }
+  )
 
   /**
    * @swagger

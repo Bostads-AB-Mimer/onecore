@@ -1,4 +1,5 @@
 import KoaRouter from '@koa/router'
+import { leasing } from '@onecore/types'
 import { generateRouteMetadata, logger } from '@onecore/utilities'
 
 import * as coreAdapter from './adapters/core-adapter'
@@ -80,12 +81,17 @@ export const routes = (router: KoaRouter) => {
 
     if (result.ok) {
       // Add comment to nonscored listing indicating credit check type and approval
-      const creditCheckType = (result.data as any)?.creditCheckType
+      const { creditCheckType, vat } = result.data
       const creditCheckDescription =
         creditCheckType === 'intern'
           ? 'Intern betalningskontroll'
           : 'Kreditkontroll'
-      const commentText = `Anmälan hanterad av ${ctx.session?.account.name}. Tilldelad till ${params.contactCode}. ${creditCheckDescription} godkänd.`
+      // The VAT decision goes into the comment so it stays on the listing
+      // after the toast in the portal is gone.
+      const vatDescription = vat
+        ? ` ${leasing.v1.ParkingSpaceVatDecisionLabel[vat.reason]}.`
+        : ''
+      const commentText = `Anmälan hanterad av ${ctx.session?.account.name}. Tilldelad till ${params.contactCode}. ${creditCheckDescription} godkänd.${vatDescription}`
 
       const addCommentResult = await coreAdapter.addComment(
         { targetType: 'listing', targetId: Number(params.listingId) },
@@ -259,7 +265,11 @@ export const routes = (router: KoaRouter) => {
       ctx.status = 200
       ctx.body = { content: response, ...metadata }
     } catch (err) {
-      console.log(err)
+      // Don't log the raw axios error: its config carries the Authorization header.
+      logger.error(
+        { listingId: ctx.params.listingId, err: (err as Error).message },
+        'Error getting listing with applicants'
+      )
       ctx.status = 500
       ctx.body = { error: 'Internal Server Error', ...metadata }
     }

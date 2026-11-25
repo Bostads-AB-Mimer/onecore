@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { Fragment, useState, useCallback } from 'react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +20,7 @@ import type { Lease } from '@/services/types'
 import { LeaseKeys } from './LeaseKeys'
 import { KeyLoansHistory } from './KeyLoansHistory'
 import { RentalObjectNotes } from './RentalObjectNotes'
+import { CustomerNumberLink } from './CustomerNumberLink'
 import { deriveDisplayStatus, pickEndDate } from '@/lib/lease-status'
 
 const getLeaseTypeIcon = (type: string) => {
@@ -123,15 +124,23 @@ export function ContractCard({ lease, rentalAddress, defaultTab = '' }: Props) {
             {lease.tenants?.length ? (
               <div className="text-muted-foreground mt-1">
                 Hyresgäst{lease.tenants.length > 1 ? 'er' : ''}:{' '}
-                {lease.tenants
-                  .map((t) => {
-                    const name = [t.firstName, t.lastName]
-                      .filter(Boolean)
-                      .join(' ')
-                    return name || t.fullName || 'Okänt namn'
-                  })
-                  .filter(Boolean)
-                  .join(' & ')}
+                {lease.tenants.map((t, idx) => {
+                  const name = [t.firstName, t.lastName]
+                    .filter(Boolean)
+                    .join(' ')
+                  return (
+                    <Fragment key={t.contactKey || idx}>
+                      {idx > 0 && ' & '}
+                      {name || t.fullName || 'Okänt namn'}
+                      {t.contactCode && (
+                        <>
+                          {' · '}
+                          <CustomerNumberLink contactCode={t.contactCode} />
+                        </>
+                      )}
+                    </Fragment>
+                  )
+                })}
               </div>
             ) : null}
           </div>

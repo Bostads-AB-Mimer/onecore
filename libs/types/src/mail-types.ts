@@ -45,6 +45,10 @@ interface WorkOrderSms extends Sms {
   // dispatch when contactCode is present. Once every Odoo caller sends it,
   // make this required and drop the "only log when present" guard.
   contactCode?: string
+  // TODO: TEMPORARILY OPTIONAL, same reason as contactCode above — Odoo deploys
+  // independently of OneCore, so older callers don't send it yet. od-<odoo id>
+  // of the errand; lets the communication log link to the Odoo errand.
+  workOrderCode?: string
 }
 
 // Sidecar meta on bulk-send requests; shapes the dispatch row, not the send itself.
@@ -69,6 +73,8 @@ interface BulkSms {
   phoneNumbers?: string[]
   recipients?: BulkSmsRecipient[]
   text: string
+  // ISO 8601 instant (with offset/Z). Schedules the send; omit for immediate.
+  sendAt?: string
   logMeta?: CommunicationLogMeta
 }
 
@@ -78,6 +84,8 @@ interface BulkEmail {
   recipients?: BulkEmailRecipient[]
   subject: string
   text: string
+  // ISO 8601 instant (with offset/Z). Schedules the send; omit for immediate.
+  sendAt?: string
   logMeta?: CommunicationLogMeta
 }
 
@@ -86,6 +94,10 @@ interface BulkSmsResult {
   invalid: string[]
   totalSent: number
   totalInvalid: number
+  // Present when the send was scheduled: the dispatch id (the handle for
+  // cancel/reschedule) and the target time as an ISO instant.
+  dispatchId?: string
+  scheduledFor?: string
 }
 
 interface BulkEmailResult {
@@ -93,6 +105,10 @@ interface BulkEmailResult {
   invalid: string[]
   totalSent: number
   totalInvalid: number
+  // Present when the send was scheduled: the dispatch id (the handle for
+  // cancel/reschedule) and the target time as an ISO instant.
+  dispatchId?: string
+  scheduledFor?: string
 }
 
 interface WorkOrderEmail extends Email {
@@ -109,6 +125,10 @@ interface WorkOrderEmail extends Email {
   // dispatch when contactCode is present. Once every Odoo caller sends it,
   // make this required and drop the "only log when present" guard.
   contactCode?: string
+  // TODO: TEMPORARILY OPTIONAL, same reason as contactCode above — Odoo deploys
+  // independently of OneCore, so older callers don't send it yet. od-<odoo id>
+  // of the errand; lets the communication log link to the Odoo errand.
+  workOrderCode?: string
 }
 
 interface InspectionProtocolEmail extends Email {

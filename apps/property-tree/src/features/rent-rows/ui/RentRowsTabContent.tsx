@@ -1,4 +1,7 @@
+import type { ReactNode } from 'react'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
+
+import { ExternalLeaseLink } from '@/entities/lease'
 
 import { Lease } from '@/services/api/core'
 
@@ -79,11 +82,13 @@ const formatDate = (iso?: string) => (iso ? iso.slice(0, 10) : undefined)
 
 const RentSourceCard = ({
   title,
+  titleAction,
   rows,
   isError,
   emptyText,
 }: {
   title: string
+  titleAction?: ReactNode
   rows: DisplayRow[] | null | undefined
   isError?: boolean
   emptyText: string
@@ -91,7 +96,10 @@ const RentSourceCard = ({
   if (isError) {
     return (
       <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-        <h3 className="font-semibold mb-2">{title}</h3>
+        <h3 className="font-semibold mb-2 flex items-center gap-1">
+          {title}
+          {titleAction}
+        </h3>
         <p className="text-sm text-destructive">
           Kunde inte hämta hyresrader från {title}.
         </p>
@@ -102,7 +110,10 @@ const RentSourceCard = ({
   if (!rows || rows.length === 0) {
     return (
       <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-        <h3 className="font-semibold mb-2">{title}</h3>
+        <h3 className="font-semibold mb-2 flex items-center gap-1">
+          {title}
+          {titleAction}
+        </h3>
         <p className="text-sm text-muted-foreground">{emptyText}</p>
       </div>
     )
@@ -113,7 +124,10 @@ const RentSourceCard = ({
 
   return (
     <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-      <h3 className="font-semibold mb-3">{title}</h3>
+      <h3 className="font-semibold mb-3 flex items-center gap-1">
+        {title}
+        {titleAction}
+      </h3>
       <div className="space-y-2">
         {sortedRows.map((row, i) => {
           const active = isActiveToday(row)
@@ -269,6 +283,7 @@ export const RentRowsTabContent = ({
         />
         <RentSourceCard
           title={lease ? `Kontrakt ${lease.leaseId}` : 'Kontrakt'}
+          titleAction={<ExternalLeaseLink url={lease?.externalUrl} />}
           rows={leaseRows}
           emptyText="Inget aktivt kontrakt med hyresrader hittades."
         />

@@ -1,6 +1,7 @@
 {
   "type": "organisation",
   "contactCode": "F055405",
+  "protectedIdentity": false,
   "organisation": {
     "organisationNumber": null,
     "name": "Kaffesump AB"

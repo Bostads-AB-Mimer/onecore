@@ -3,6 +3,7 @@ import { logger } from '@onecore/utilities'
 import type { LeaseChange } from '@onecore/types'
 
 import { xpandDb } from './xpandDb'
+import { cmlogRowsSince } from './cmlog-rows'
 
 // `LeaseChange.timestamp` is sourced from cmlog.logtime — used by
 // sync-leases to checkpoint after each successful sync so the next run
@@ -11,6 +12,9 @@ export type { LeaseChange }
 
 const UNDERTECKNAT_CREATE_PATTERN =
   /Värdet i fältet 'Undertecknat' ändrat från '' till '\d{4}-\d{2}-\d{2}'/
+
+// Xpand writes the lease status in parentheses at the end of the header line.
+const MAKULERAT_HEADER_PATTERN = /\(Makulerat\)\s*$/
 
 const UPPSAGT_PATCH_PATTERN =
   /Värdet i fältet 'Uppsagt datum' ändrat från '' till '\d{4}-\d{2}-\d{2}'/
@@ -33,25 +37,9 @@ const RELEVANT_CONTRACT_TYPES = [
  *
  * Only rows whose logmemo starts with "Hyreskontrakt " are returned.
  * If no timestamp is provided, returns all matching rows.
- *
- * Note: cmlog.logtime is a naive SQL Server `datetime` populated by xpand
- * with Swedish local time. Knex/mssql passes our JS Date as UTC; the driver
- * converts to the SQL Server session's local time for comparison. On a
- * machine running in Sweden this matches the column's wall clock, so the
- * `since` threshold lands where it reads.
  */
-export const cmlogLeaseChanges = (
-  db: Knex,
-  since: Date | null
-): Promise<{ logmemo: string; logtime: Date }[]> => {
-  const base = db
-    .from('cmlog')
-    .whereLike('logmemo', 'Hyreskontrakt %')
-    .orderBy('logtime', 'asc')
-    .select('logmemo', 'logtime')
-
-  return since ? base.andWhere('logtime', '>', since) : base
-}
+export const cmlogLeaseChanges = (db: Knex, since: Date | null) =>
+  cmlogRowsSince(db, since, ['Hyreskontrakt %'])
 
 /**
  * Parses cmlog rows into LeaseChange entries, one per matching row.
@@ -61,7 +49,9 @@ export const cmlogLeaseChanges = (
  * the /XX suffix from the leaseId.
  *
  * Classifies action as:
- * - 'create'    — Undertecknat field set from empty to a date
+ * - 'create'    — Undertecknat field set from empty to a date, unless the
+ *                 header status is "(Makulerat)"; such a row gives no create
+ *                 and falls through to the terminate and void checks.
  * - 'terminate' — Uppsagt datum field set from empty to a date
  * - 'void'      — Makulerat datum field set from empty to a date; the emitted
  *                 leaseId is overridden with the pre-M original parsed from the
@@ -95,8 +85,17 @@ export const parseLeaseChanges = (
     if (!contactCodeMatch) continue
     const contactCode = contactCodeMatch[1]
 
+    const isUndertecknat = UNDERTECKNAT_CREATE_PATTERN.test(row.logmemo)
+    const isVoidedHeader = MAKULERAT_HEADER_PATTERN.test(firstLine)
+    if (isUndertecknat && isVoidedHeader) {
+      logger.info(
+        { leaseId, logmemo: row.logmemo },
+        'parseLeaseChanges: Undertecknat on a voided lease, skipping create'
+      )
+    }
+
     let action: 'create' | 'terminate' | 'void'
-    if (UNDERTECKNAT_CREATE_PATTERN.test(row.logmemo)) action = 'create'
+    if (isUndertecknat && !isVoidedHeader) action = 'create'
     else if (UPPSAGT_PATCH_PATTERN.test(row.logmemo)) action = 'terminate'
     else if (MAKULERAT_PATCH_PATTERN.test(row.logmemo)) action = 'void'
     else continue

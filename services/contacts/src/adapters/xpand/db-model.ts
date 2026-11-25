@@ -10,7 +10,8 @@ export type DbContact = {
   street: string
   postalCode: string
   city: string
-  protectedIdentity: string | undefined
+  /** `lagsokt`, a DATETIME presence sentinel: non-null means protected. */
+  protectedIdentity: Date | null
   specialAttention: string | undefined
 }
 

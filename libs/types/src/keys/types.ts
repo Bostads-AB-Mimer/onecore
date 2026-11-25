@@ -61,6 +61,10 @@ import {
   GetCardOwnerResponseSchema,
   GetCardOwnersResponseSchema,
   QueryCardOwnersParamsSchema,
+  // Move-in/out schemas
+  MoveInOutStatusSchema,
+  MoveInOutTenantSchema,
+  MoveInOutRowSchema,
 } from './schema'
 
 // Enum types
@@ -176,3 +180,8 @@ export type CardOwner = z.infer<typeof CardOwnerSchema>
 export type GetCardOwnerResponse = z.infer<typeof GetCardOwnerResponseSchema>
 export type GetCardOwnersResponse = z.infer<typeof GetCardOwnersResponseSchema>
 export type QueryCardOwnersParams = z.infer<typeof QueryCardOwnersParamsSchema>
+
+// Move-in / move-out types
+export type MoveInOutStatus = z.infer<typeof MoveInOutStatusSchema>
+export type MoveInOutTenant = z.infer<typeof MoveInOutTenantSchema>
+export type MoveInOutRow = z.infer<typeof MoveInOutRowSchema>

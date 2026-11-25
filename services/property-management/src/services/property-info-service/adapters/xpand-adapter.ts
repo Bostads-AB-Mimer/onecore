@@ -52,6 +52,7 @@ export const transformFromDbRentalPropertyInfo = (
           number: row.apartment_number,
           type: row.apartment_type,
           roomTypeCode: row.apartment_type_code,
+          roomCount: row.room_count ?? null,
           entrance: row.entrance,
           floor: row.floor,
           hasElevator: row.has_elevator === 1 ? true : false,
@@ -164,6 +165,7 @@ const getRentalPropertyInfo = async (
       'babuf.lghcode as apartment_code',
       'hyinf.lmnr as apartment_number',
       'balgt.code as apartment_type_code',
+      'balgt.roomcount as room_count',
       'balgt.caption as apartment_type',
       'balgh.uppgang as floor',
       'balgh.hiss as has_elevator',
@@ -244,6 +246,7 @@ const getApartmentRentalPropertyInfo = async (
         'balgh.hygienutr as wash_space',
         'balgt.caption as apartment_type',
         'balgt.code as apartment_type_code',
+        'balgt.roomcount as room_count',
         'cmvalboa.value as apartment_area'
       )
       .innerJoin('cmobt', 'cmobj.keycmobt', 'cmobt.keycmobt')
@@ -277,6 +280,7 @@ const getApartmentRentalPropertyInfo = async (
         number: trimmed.apartment_number,
         type: trimmed.apartment_type,
         roomTypeCode: trimmed.apartment_type_code,
+        roomCount: trimmed.room_count ?? null,
         entrance: trimmed.entrance,
         floor: trimmed.floor,
         hasElevator: trimmed.has_elevator === 1 ? true : false,

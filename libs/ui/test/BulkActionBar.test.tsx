@@ -48,4 +48,25 @@ describe('BulkActionBar', () => {
     )
     expect(button('Skicka').disabled).toBe(true)
   })
+
+  it('says when the selection includes rows on other pages', () => {
+    render(
+      <BulkActionBar
+        selectedCount={3}
+        includesOtherPages
+        onClear={() => {}}
+        actions={[]}
+      />
+    )
+    expect(screen.getByText(/3 valda/)).toBeTruthy()
+    expect(screen.getByText(/även på andra sidor/)).toBeTruthy()
+  })
+
+  it('shows only the count when everything selected is on this page', () => {
+    const { container } = render(
+      <BulkActionBar selectedCount={3} onClear={() => {}} actions={[]} />
+    )
+    expect(container.textContent).toContain('3 valda')
+    expect(container.textContent).not.toContain('andra sidor')
+  })
 })

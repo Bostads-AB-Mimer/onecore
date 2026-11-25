@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { LeaseInfo } from '@/entities/lease'
+import { findActiveLease, LeaseInfo } from '@/entities/lease'
 import {
   formatTenantName,
   sortLeaseContacts,
@@ -60,9 +60,7 @@ export function CurrentTenant({
     )
   }
 
-  const lease =
-    leases.find((lease) => lease.status === 'Current') ??
-    leases.find((lease) => lease.status === 'AboutToEnd')
+  const lease = findActiveLease(leases)
 
   if (!lease) {
     return (

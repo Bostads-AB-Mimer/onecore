@@ -15,6 +15,13 @@ export * from './pagination'
 export * from './search'
 export * from './resource'
 export * from './rental-objects'
+export {
+  errorName,
+  errorMessage,
+  redactedMessage,
+} from './logging/error-fields'
+export * from './concurrency'
+export * from './contact-details'
 
 export {
   logger,

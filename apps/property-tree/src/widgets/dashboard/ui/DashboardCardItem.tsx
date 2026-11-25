@@ -3,6 +3,7 @@ import { ExternalLink } from 'lucide-react'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 
+import { isThirdPartyCard } from '../config'
 import type { DashboardCard } from '../types'
 
 export function DashboardCardItem({
@@ -15,6 +16,7 @@ export function DashboardCardItem({
   onClick: (config: DashboardCard) => void
 }) {
   const Icon = config.icon
+  const showExternalIcon = isThirdPartyCard(config) && !config.isDisabled
 
   return (
     <motion.div
@@ -34,14 +36,14 @@ export function DashboardCardItem({
       >
         <CardHeader className="p-2.5 pb-1 relative">
           <CardTitle
-            className={`flex items-center gap-3 text-lg ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : ''}`}
+            className={`flex items-center gap-3 text-lg ${showExternalIcon ? 'pr-7' : ''} ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : ''}`}
           >
             <Icon
-              className={`h-5 w-5 ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-primary'}`}
+              className={`h-5 w-5 shrink-0 ${config.isDisabled ? 'text-gray-400 dark:text-gray-600' : 'text-primary'}`}
             />
             {config.title}
           </CardTitle>
-          {config.isExternal && !config.isDisabled && (
+          {showExternalIcon && (
             <ExternalLink className="h-4 w-4 text-muted-foreground absolute top-4 right-4" />
           )}
         </CardHeader>

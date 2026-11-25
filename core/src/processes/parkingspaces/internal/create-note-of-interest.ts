@@ -22,6 +22,7 @@ import {
   getContactByContactCode,
   getParkingSpaceByCode,
   getLeasesByContactCode,
+  getTenantByContactCode,
 } from '../../../adapters/leasing-adapter'
 import {
   ProcessError,
@@ -31,6 +32,17 @@ import {
 import { makeProcessError, validateRentalRules } from '../utils'
 import { sendNotificationToRole } from '../../../adapters/communication-adapter'
 import { getInvoicesSentToDebtCollection } from '../../../adapters/economy-adapter'
+
+// Tenant lookup outcomes that only mean the contact has no tenancy with a
+// housing contract: the application goes on and the rental rules decide. Any
+// other failure stops it. At runtime the adapter also passes on leasing's own
+// error types (e.g. a Tenfast outage) or undefined, so this is an allow-list:
+// a lookup failure must never let a tenant under notice through.
+const NOT_A_TENANT_OUTCOMES: readonly string[] = [
+  'contact-not-tenant',
+  'no-valid-housing-contract',
+  'contact-not-found',
+]
 
 // PROCESS Part 1 - Create Note of Interest for Scored Parking Space
 // See DOCS_Create_Note_of_Interest_for_Scored_Parking_Space.md for the full flow.
@@ -110,17 +122,40 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         `Applicant ${contactCode} is not a tenant`
       )
     }
-    //Check if applicant is eligible for renting in area with specific rental rule
-    const [validationResultResArea, validationResultProperty] =
+
+    //step 3a.1. Get the tenant, and check if applicant is eligible for renting
+    //in area with specific rental rule
+    const [tenantResult, validationResultResArea, validationResultProperty] =
       await Promise.all([
+        getTenantByContactCode(contactCode),
         validateResidentialAreaRentalRules(
           contactCode,
           listing.rentalObject.residentialAreaCode
+        ).then((res) => validateRentalRules(res, applicationType)),
+        validatePropertyRentalRules(contactCode, parkingSpaceId).then((res) =>
+          validateRentalRules(res, applicationType)
         ),
-        validatePropertyRentalRules(contactCode, parkingSpaceId),
-      ]).then((results) =>
-        results.map((res) => validateRentalRules(res, applicationType))
+      ])
+
+    //A tenant who has given notice on their only housing contract (no upcoming
+    //one) still counts as a tenant until the lease ends, but may not rent a
+    //new scored parking space.
+    if (tenantResult.ok && tenantResult.data.isAboutToLeave) {
+      return endFailingProcess(
+        log,
+        CreateNoteOfInterestErrorCodes.HousingContractTerminated,
+        403,
+        `Applicant ${contactCode} has given notice on their only housing contract and has no upcoming housing contract`
       )
+    }
+    if (!tenantResult.ok && !NOT_A_TENANT_OUTCOMES.includes(tenantResult.err)) {
+      return endFailingProcess(
+        log,
+        CreateNoteOfInterestErrorCodes.InternalError,
+        500,
+        `Tenant ${contactCode} could not be retrieved: ${tenantResult.err}`
+      )
+    }
 
     if (!validationResultResArea.ok) {
       return endFailingProcess(
@@ -147,11 +182,15 @@ export const createNoteOfInterestForInternalParkingSpace = async (
       dayjs().subtract(6, 'month').toDate()
     )
     if (!debtCollectionInvoices.ok) {
+      // The credit check fails closed: without invoices the application stops.
+      const isUnavailable = debtCollectionInvoices.err === 'unavailable'
       return endFailingProcess(
         log,
-        CreateNoteOfInterestErrorCodes.InternalError,
-        500,
-        `Failed to get invoices for contact ${applicantContact.contactCode}: ${debtCollectionInvoices.statusCode} ${debtCollectionInvoices.err}`
+        isUnavailable
+          ? CreateNoteOfInterestErrorCodes.ServiceUnavailable
+          : CreateNoteOfInterestErrorCodes.InternalError,
+        isUnavailable ? 503 : 500,
+        `Failed to get invoices for contact ${applicantContact.contactCode}: ${debtCollectionInvoices.statusCode ?? 'no status'} ${debtCollectionInvoices.err}`
       )
     }
     const creditCheck = debtCollectionInvoices.data.length === 0
@@ -192,7 +231,7 @@ export const createNoteOfInterestForInternalParkingSpace = async (
         log.push(`Sökande placerad i kö för parkeringsplats`)
       } else {
         logger.error(
-          result,
+          { status: result.status, statusText: result.statusText },
           `Could not add applicant to parking space waiting list`
         )
 
@@ -339,7 +378,7 @@ const endFailingProcess = (
   if (error) log.push(error)
 
   logger.debug(log)
-  logger.error(error ?? processErrorCode, details)
+  logger.error({ err: error, errorCode: processErrorCode }, details)
 
   sendNotificationToRole(
     'dev',
@@ -357,6 +396,7 @@ const createApplicantRequestBody = (
 ) => {
   const applicantRequestBody: Applicant = {
     id: 0, //should not be passed
+    // TODO UTH-386: name/nationalRegistrationNumber should not be persisted here.
     name: applicantContact.fullName,
     nationalRegistrationNumber: applicantContact.nationalRegistrationNumber,
     contactCode: applicantContact.contactCode,

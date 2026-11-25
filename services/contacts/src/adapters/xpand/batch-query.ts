@@ -8,6 +8,11 @@ export type ContactIncludeOptions = {
   includeEmail?: boolean
   includeAddress?: boolean
   includeRelations?: boolean
+  /**
+   * The caller (core) has verified that every requested contact is a tenant
+   * on a lease in Tenfast, so protected identities are returned unredacted.
+   */
+  verifiedTenants?: boolean
 }
 
 const BASE_COLUMNS = [

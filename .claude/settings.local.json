@@ -1,0 +1,11 @@
+{
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "linear-server"
+  ],
+  "permissions": {
+    "allow": [
+      "Skill(prereview)"
+    ]
+  }
+}

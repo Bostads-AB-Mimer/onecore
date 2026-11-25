@@ -1,11 +1,13 @@
 import { Outlet } from 'react-router-dom'
 import { Toaster } from '@onecore/ui'
 
+import { GuideSheet } from '@/widgets/guide-sheet'
 import { SidebarNavigation } from '@/widgets/sidebar'
 
 import { CommandPalette } from '@/features/search'
 
 import { FeedbackModalProvider } from '@/shared/hooks/useFeedbackModal'
+import { GuideSheetProvider } from '@/shared/hooks/useGuideSheet'
 import { SidebarToggleButton } from '@/shared/ui/layout'
 import { SidebarInset, SidebarProvider, useSidebar } from '@/shared/ui/Sidebar'
 
@@ -20,9 +22,11 @@ import { RouteDocumentTitle } from './RouteDocumentTitle'
 export function DashboardLayout() {
   return (
     <FeedbackModalProvider>
-      <SidebarProvider>
-        <DashboardLayoutContent />
-      </SidebarProvider>
+      <GuideSheetProvider>
+        <SidebarProvider>
+          <DashboardLayoutContent />
+        </SidebarProvider>
+      </GuideSheetProvider>
     </FeedbackModalProvider>
   )
 }
@@ -46,6 +50,7 @@ function DashboardLayoutContent() {
       </div>
       <Toaster />
       <FeedbackModal />
+      <GuideSheet />
     </div>
   )
 }

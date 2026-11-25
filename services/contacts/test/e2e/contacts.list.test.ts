@@ -295,4 +295,64 @@ describe('/contacts', () => {
       )
     })
   })
+
+  describe('Search (q)', () => {
+    // Repeat the key for arrays (q=a&q=b), which is what Koa reads back as
+    // an array. Axios' default would send q[]=a&q[]=b, which Koa ignores.
+    const search = async (q: string | string[]) => {
+      const params = new URLSearchParams()
+      for (const value of Array.isArray(q) ? q : [q]) params.append('q', value)
+      const response = await httpClient.get(`/contacts?${params}`)
+      expect(response.status).toBe(200)
+      return response.data
+    }
+
+    const codesFor = async (q: string | string[]) =>
+      (await search(q)).content.map((c: any) => c.contactCode)
+
+    // Seeded national ids: P001000 is stored with twelve digits
+    // (198505106478), P000111 with ten (8110237073).
+    describe('national id', () => {
+      it.each([
+        ['twelve digits as stored', '198505106478', 'P001000'],
+        ['ten digits against a twelve-digit row', '8505106478', 'P001000'],
+        ['hyphenated against a twelve-digit row', '850510-6478', 'P001000'],
+        ['eight-digit prefix with century', '19850510', 'P001000'],
+        ['six-digit prefix without century', '850510', 'P001000'],
+        ['twelve digits against a ten-digit row', '198110237073', 'P000111'],
+        ['six-digit prefix against a ten-digit row', '811023', 'P000111'],
+      ])('matches %s', async (_label, q, expectedCode) => {
+        expect(await codesFor(q)).toEqual([expectedCode])
+      })
+
+      it('does not match on fewer than six digits', async () => {
+        expect(await codesFor('8505')).toEqual([])
+      })
+    })
+
+    describe('code, name and address', () => {
+      it('matches the contact code', async () => {
+        expect(await codesFor('P0001')).toEqual(['P000111'])
+      })
+
+      it('requires every word to match the contact', async () => {
+        expect(await codesFor('Testbert Användarsson')).toEqual(['P000111'])
+        expect(await codesFor('Testbert Personsson')).toEqual([])
+      })
+
+      it('matches the current invoice address', async () => {
+        expect(await codesFor('Nya Testgatan 45')).toEqual(['P000111'])
+      })
+
+      it('intersects repeated q parameters', async () => {
+        expect(await codesFor(['Testgatan', 'P0001'])).toEqual(['P000111'])
+      })
+    })
+
+    it('returns an empty page, not 404, when nothing matches', async () => {
+      const data = await search('finns-inte-alls')
+      expect(data.content).toEqual([])
+      expect(data._meta.totalRecords).toBe(0)
+    })
+  })
 })

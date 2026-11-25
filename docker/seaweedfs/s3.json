@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "onecore-local",
+      "credentials": [
+        {
+          "accessKey": "minio",
+          "secretKey": "minio123"
+        }
+      ],
+      "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+    }
+  ]
+}

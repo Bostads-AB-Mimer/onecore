@@ -4,15 +4,316 @@ import * as adapter from '@src/services/common/adapters/xledger-adapter'
 import config from '@src/common/config'
 import { schemas } from '@onecore/types'
 
-afterEach(nock.cleanAll)
+afterEach(() => {
+  nock.abortPendingRequests()
+  nock.cleanAll()
+})
 
 const { origin, pathname } = new URL(config.xledger.url)
+
+const rateLimitBody = {
+  errors: [
+    { code: 'BAD_REQUEST.BURST_RATE_LIMIT_REACHED', message: 'Rate limited' },
+  ],
+}
+const matchIdBody = {
+  data: { arTransactions: { edges: [{ node: { matchId: 1 } }] } },
+}
+
+describe('makeXledgerRequest rate limiting', () => {
+  const defaultPolicy = { ...adapter.xledgerRequestPolicy }
+
+  beforeEach(() => {
+    adapter.setXledgerRequestPolicy({ baseDelayMs: 1, maxDelayMs: 5 })
+  })
+
+  afterEach(() => {
+    adapter.setXledgerRequestPolicy(defaultPolicy)
+  })
+
+  it('retries after a burst rate limit and succeeds', async () => {
+    nock(origin).post(pathname).reply(200, rateLimitBody)
+    nock(origin).post(pathname).reply(200, rateLimitBody)
+    nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+    expect(nock.isDone()).toBe(true)
+  })
+
+  it('gives up after maxAttempts instead of retrying forever', async () => {
+    adapter.setXledgerRequestPolicy({ maxAttempts: 3 })
+    const scope = nock(origin).post(pathname).times(3).reply(200, rateLimitBody)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).rejects.toThrow(
+      /rate limit.*3 attempts/i
+    )
+    expect(scope.isDone()).toBe(true)
+    expect(extra.isDone()).toBe(false)
+  })
+
+  it('waits with exponential backoff and jitter between attempts', () => {
+    adapter.setXledgerRequestPolicy({ baseDelayMs: 1000, maxDelayMs: 10_000 })
+
+    expect(adapter.retryDelayMs(1, () => 0)).toBe(500)
+    expect(adapter.retryDelayMs(2, () => 0)).toBe(1000)
+    expect(adapter.retryDelayMs(3, () => 0)).toBe(2000)
+    expect(adapter.retryDelayMs(1, () => 0.5)).toBe(1000)
+    expect(adapter.retryDelayMs(1, () => 0.999)).toBeLessThan(1500)
+    expect(adapter.retryDelayMs(10, () => 0.999)).toBeLessThan(15_000)
+    expect(adapter.retryDelayMs(10, () => 0.5)).toBe(10_000)
+  })
+
+  it('releases its slot while sleeping between retries', async () => {
+    adapter.setXledgerRequestPolicy({
+      maxConcurrency: 1,
+      baseDelayMs: 100,
+      maxDelayMs: 100,
+    })
+    nock(origin).post(pathname).reply(200, rateLimitBody)
+    nock(origin).post(pathname).times(2).reply(200, matchIdBody)
+
+    const rateLimited = adapter.getInvoiceMatchId('1')
+    const started = Date.now()
+    const normal = adapter.getInvoiceMatchId('2')
+
+    await expect(normal).resolves.toEqual(1)
+    expect(Date.now() - started).toBeLessThan(50)
+    await expect(rateLimited).resolves.toEqual(1)
+  })
+
+  it('never has more than maxConcurrency requests in flight', async () => {
+    adapter.setXledgerRequestPolicy({ maxConcurrency: 2 })
+    let inFlight = 0
+    let peak = 0
+
+    nock(origin)
+      .post(pathname)
+      .times(6)
+      .reply(async () => {
+        inFlight++
+        peak = Math.max(peak, inFlight)
+        await new Promise((r) => setTimeout(r, 10))
+        inFlight--
+        return [200, matchIdBody]
+      })
+
+    await Promise.all(
+      Array.from({ length: 6 }, () => adapter.getInvoiceMatchId('1'))
+    )
+
+    expect(peak).toBe(2)
+  })
+
+  it('times out and does not retry a slow request', async () => {
+    adapter.setXledgerRequestPolicy({ timeoutMs: 20 })
+    const slow = nock(origin).post(pathname).delay(200).reply(200, matchIdBody)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).rejects.toThrow(/timeout/i)
+    expect(slow.isDone()).toBe(true)
+    expect(extra.isDone()).toBe(false)
+  })
+})
+
+describe('makeXledgerRequest when Xledger is unavailable', () => {
+  const defaultPolicy = { ...adapter.xledgerRequestPolicy }
+
+  beforeEach(() => {
+    adapter.setXledgerRequestPolicy({
+      baseDelayMs: 1,
+      maxDelayMs: 5,
+      unavailableMaxAttempts: 3,
+    })
+  })
+
+  afterEach(() => {
+    adapter.setXledgerRequestPolicy(defaultPolicy)
+  })
+
+  it('retries after a 503 and succeeds', async () => {
+    nock(origin).post(pathname).reply(503)
+    nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+    expect(nock.isDone()).toBe(true)
+  })
+
+  it('gives up after unavailableMaxAttempts with XledgerUnavailableError', async () => {
+    const scope = nock(origin).post(pathname).times(3).reply(503)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    const result = adapter.getInvoiceMatchId('1')
+
+    await expect(result).rejects.toBeInstanceOf(adapter.XledgerUnavailableError)
+    await expect(result).rejects.toMatchObject({ status: 503 })
+    expect(scope.isDone()).toBe(true)
+    expect(extra.isDone()).toBe(false)
+  })
+
+  it('retries a read after a 502', async () => {
+    nock(origin).post(pathname).reply(502)
+    nock(origin).post(pathname).reply(200, matchIdBody)
+
+    await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+  })
+
+  it('does not retry a 504, since it may mean a slow query', async () => {
+    nock(origin).post(pathname).reply(504)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    const result = adapter.getInvoiceMatchId('1')
+
+    await expect(result).rejects.not.toBeInstanceOf(
+      adapter.XledgerUnavailableError
+    )
+    await expect(result).rejects.toThrow(/status code 504/)
+    expect(extra.isDone()).toBe(false)
+  })
+
+  it.each(['ECONNREFUSED', 'ECONNRESET'])(
+    'retries a read after %s',
+    async (code) => {
+      nock(origin).post(pathname).replyWithError({ code })
+      nock(origin).post(pathname).reply(200, matchIdBody)
+
+      await expect(adapter.getInvoiceMatchId('1')).resolves.toEqual(1)
+    }
+  )
+
+  it('rethrows other errors unchanged', async () => {
+    nock(origin).post(pathname).reply(400)
+    const extra = nock(origin).post(pathname).reply(200, matchIdBody)
+
+    const result = adapter.getInvoiceMatchId('1')
+
+    await expect(result).rejects.not.toBeInstanceOf(
+      adapter.XledgerUnavailableError
+    )
+    await expect(result).rejects.toThrow(/status code 400/)
+    expect(extra.isDone()).toBe(false)
+  })
+})
+
+type CustomerCodesBody = {
+  variables: { filter: { code_in: string[] }; after?: string }
+}
+
+describe('getExistingCustomerCodes', () => {
+  const defaultPolicy = { ...adapter.xledgerRequestPolicy }
+
+  beforeEach(() => {
+    adapter.setXledgerRequestPolicy({ baseDelayMs: 1, maxDelayMs: 5 })
+  })
+
+  afterEach(() => {
+    adapter.setXledgerRequestPolicy(defaultPolicy)
+  })
+
+  const customersReply = (codes: string[], hasNextPage = false) => ({
+    data: {
+      customers: {
+        edges: codes.map((code) => ({ cursor: `c-${code}`, node: { code } })),
+        pageInfo: { hasNextPage },
+      },
+    },
+  })
+
+  it('sends codes in chunks of 100 and returns the codes Xledger knows', async () => {
+    const requests: string[][] = []
+    nock(origin)
+      .post(pathname, (body: CustomerCodesBody) => {
+        requests.push(body.variables.filter.code_in)
+        return true
+      })
+      .times(2)
+      .reply(200, (_uri, body) => {
+        const known = (body as CustomerCodesBody).variables.filter.code_in
+        return customersReply(known.filter((c) => c === 'P1' || c === 'P150'))
+      })
+    const codes = Array.from({ length: 150 }, (_, i) => `P${i + 1}`)
+
+    const result = await adapter.getExistingCustomerCodes(codes)
+
+    expect(requests.map((r) => r.length)).toEqual([100, 50])
+    expect(requests.flat()).toEqual(codes)
+    expect([...result].sort()).toEqual(['P1', 'P150'])
+  })
+
+  it('follows the cursor when Xledger has more pages', async () => {
+    const afters: (string | undefined)[] = []
+    nock(origin)
+      .post(pathname, (body: CustomerCodesBody) => {
+        afters.push(body.variables.after)
+        return true
+      })
+      .reply(200, customersReply(['P1'], true))
+    nock(origin)
+      .post(pathname, (body: CustomerCodesBody) => {
+        afters.push(body.variables.after)
+        return true
+      })
+      .reply(200, customersReply(['P2'], false))
+
+    const result = await adapter.getExistingCustomerCodes(['P1', 'P2'])
+
+    expect(afters).toEqual([undefined, 'c-P1'])
+    expect(result).toEqual(['P1', 'P2'])
+  })
+
+  it('returns [] without calling Xledger when given no codes', async () => {
+    const scope = nock(origin).post(pathname).reply(200, customersReply([]))
+
+    await expect(adapter.getExistingCustomerCodes([])).resolves.toEqual([])
+    expect(scope.isDone()).toBe(false)
+  })
+
+  it('rejects when Xledger answers with an error that is not a rate limit', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        errors: [{ code: 'BAD_REQUEST.SOMETHING_ELSE', message: 'Nope' }],
+      })
+
+    await expect(adapter.getExistingCustomerCodes(['P1'])).rejects.toThrow()
+  })
+
+  it.each([
+    'BAD_REQUEST.BURST_LIMIT_REACHED',
+    'BAD_REQUEST.CONCURRENCY_LIMIT_REACHED',
+  ])('retries once after %s', async (code) => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, { errors: [{ code, message: 'Rate limited' }] })
+    nock(origin).post(pathname).reply(200, customersReply(['P1']))
+
+    await expect(adapter.getExistingCustomerCodes(['P1'])).resolves.toEqual([
+      'P1',
+    ])
+    expect(nock.isDone()).toBe(true)
+  })
+})
 
 describe(adapter.getInvoicesByContactCode, () => {
   it('returns null when customer does not exist', async () => {
     nock(origin).post(pathname).reply(200, {
       data: null,
     })
+
+    const result = await adapter.getInvoicesByContactCode('P12345')
+    expect(result).toBeNull()
+  })
+
+  it('returns null when Xledger finds no customer with the code', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          customers: {
+            edges: [],
+          },
+        },
+      })
 
     const result = await adapter.getInvoicesByContactCode('P12345')
     expect(result).toBeNull()
@@ -96,6 +397,7 @@ describe(adapter.getInvoicesByContactCode, () => {
                   invoiceRemaining: 100,
                   subledger: {
                     code: 'code',
+                    description: 'Test Tenant',
                   },
                   period: {
                     fromDate: '2025-01-01',
@@ -220,6 +522,93 @@ describe(adapter.getInvoicesByContactCode, () => {
         }),
       }),
     ])
+  })
+})
+
+type CapturedGraphQlBody = {
+  query: string
+  variables: {
+    first: number
+    filter: {
+      invoiceNumber_in: string[]
+      headerTransactionSourceDbId_in: number[]
+    }
+  }
+}
+
+describe(adapter.getInvoicesByInvoiceNumbers, () => {
+  it('returns [] without calling Xledger when given no invoice numbers', async () => {
+    // Act
+    // No nock interceptor registered — an HTTP call would throw.
+    const result = await adapter.getInvoicesByInvoiceNumbers([])
+
+    // Assert
+    expect(result).toEqual([])
+  })
+
+  it('requests a page size well above the invoice-number chunk size', async () => {
+    // Arrange
+    // One invoice number can match several transaction rows, so `first` must
+    // exceed the chunk size or Xledger silently truncates the result.
+    const bodies: CapturedGraphQlBody[] = []
+    nock(origin)
+      .post(pathname, (body: CapturedGraphQlBody) => {
+        bodies.push(body)
+        return true
+      })
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+
+    // Act
+    await adapter.getInvoicesByInvoiceNumbers(['552012345678'])
+
+    // Assert
+    expect(bodies[0].variables.first).toBeGreaterThanOrEqual(1000)
+  })
+
+  it('passes invoice numbers as GraphQL variables, not into the query document', async () => {
+    // Arrange
+    const bodies: CapturedGraphQlBody[] = []
+    nock(origin)
+      .post(pathname, (body: CapturedGraphQlBody) => {
+        bodies.push(body)
+        return true
+      })
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+    // The second value would break the query if it were interpolated.
+    const invoiceNumbers = ['552012345678', '1" ) { x }', '12345K']
+
+    // Act
+    const result = await adapter.getInvoicesByInvoiceNumbers(invoiceNumbers)
+
+    // Assert
+    expect(result).toEqual([])
+    expect(bodies[0].variables.filter.invoiceNumber_in).toEqual(invoiceNumbers)
+    expect(bodies[0].query).not.toContain('552012345678')
+    // Without the source filter the same invoice number also matches payment
+    // and credit transaction rows.
+    expect(bodies[0].variables.filter.headerTransactionSourceDbId_in).toEqual(
+      expect.arrayContaining([600, 797, 3536])
+    )
+  })
+
+  it('splits many invoice numbers into several requests', async () => {
+    // Arrange
+    const requests: string[][] = []
+    nock(origin)
+      .post(pathname, (body: CapturedGraphQlBody) => {
+        requests.push(body.variables.filter.invoiceNumber_in)
+        return true
+      })
+      .times(3)
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+    const invoiceNumbers = Array.from({ length: 120 }, (_, i) => String(i))
+
+    // Act
+    await adapter.getInvoicesByInvoiceNumbers(invoiceNumbers)
+
+    // Assert
+    expect(requests.flat()).toEqual(invoiceNumbers)
+    expect(requests.every((chunk) => chunk.length <= 50)).toBe(true)
   })
 })
 
@@ -399,9 +788,10 @@ describe(adapter.getPaymentsSince, () => {
       amount: -1000,
       paymentDate: new Date('2026-04-02'),
       transactionSourceCode: 'OCR',
+      cursor: 'cursor-42',
     })
     expect(() =>
-      schemas.v1.InvoicePaymentEventSchema.array().parse(result.events)
+      schemas.v1.PaymentSyncEventSchema.array().parse(result.events)
     ).not.toThrow()
   })
 
@@ -501,7 +891,10 @@ describe(adapter.getPaymentsSince, () => {
 
     const result = await adapter.getPaymentsSince('some-cursor')
 
-    expect(result.events).toHaveLength(2)
+    expect(result.events.map((e) => e.cursor)).toEqual([
+      'page1-cursor',
+      'page2-cursor',
+    ])
     expect(result.lastCursor).toBe('page2-cursor')
   })
 
@@ -622,6 +1015,22 @@ describe(adapter.updateInvoiceDeferralDate, () => {
       updateArTransactions: { edges: [{ node: { dbId: 298929893 } }] },
     },
   }
+
+  it('does not retry the mutation when Xledger is unavailable, since it may have been applied', async () => {
+    nock(origin).post(pathname).reply(200, mockDbIdResponse)
+    nock(origin).post(pathname).reply(200, mockInvoiceResponse(null))
+    const mutation = nock(origin).post(pathname).reply(503)
+    const retry = nock(origin).post(pathname).reply(200, mutationReply)
+
+    const result = adapter.updateInvoiceDeferralDate(invoiceNumber, newDueDate)
+
+    await expect(result).rejects.not.toBeInstanceOf(
+      adapter.XledgerUnavailableError
+    )
+    await expect(result).rejects.toThrow(/status code 503/)
+    expect(mutation.isDone()).toBe(true)
+    expect(retry.isDone()).toBe(false)
+  })
 
   it('sends "Anstånd till YYYY-MM-DD" as text variable when invoice has no existing text', async () => {
     let mutationBody: any
@@ -842,6 +1251,267 @@ describe(adapter.submitMiscellaneousInvoice, () => {
 
     const result = await adapter.submitMiscellaneousInvoice(invoice)
 
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(adapter.getPeriodInformationFromDateStrings, () => {
+  it('returns empty values for a single-month period invoiced in the same month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-01',
+      '2026-03-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '' })
+  })
+
+  it('uses fromDate as invoice date when invoiceDate is null', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      null,
+      '2026-03-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '' })
+  })
+
+  it('returns number of periods for a multi-month period starting in the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-01-15',
+      '2026-01-01',
+      '2026-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '3' })
+  })
+
+  it('returns offset to period start when the period starts after the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-20',
+      '2026-04-01',
+      '2026-04-30'
+    )
+
+    expect(result).toEqual({ periodStart: '1', periods: '1' })
+  })
+
+  it('returns offset and number of periods for a multi-month period starting after the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-03-20',
+      '2026-05-01',
+      '2026-07-31'
+    )
+
+    expect(result).toEqual({ periodStart: '2', periods: '3' })
+  })
+
+  it('returns a negative offset when the period starts before the invoice month', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-05-10',
+      '2026-04-01',
+      '2026-04-30'
+    )
+
+    expect(result).toEqual({ periodStart: '-1', periods: '1' })
+  })
+
+  it('counts the offset across New Year when the period starts in the next year', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2025-12-20',
+      '2026-01-01',
+      '2026-01-31'
+    )
+
+    expect(result).toEqual({ periodStart: '1', periods: '1' })
+  })
+
+  it('counts the periods across New Year when the period spans it', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2025-12-01',
+      '2025-12-01',
+      '2026-02-28'
+    )
+
+    expect(result).toEqual({ periodStart: '', periods: '3' })
+  })
+
+  it('counts both offset and periods across New Year', () => {
+    const result = adapter.getPeriodInformationFromDateStrings(
+      '2026-11-20',
+      '2027-01-01',
+      '2027-03-31'
+    )
+
+    expect(result).toEqual({ periodStart: '2', periods: '3' })
+  })
+})
+
+describe(adapter.getMiscellaneousInvoices, () => {
+  it('returns transformed invoices and pageInfo on success', async () => {
+    nock(origin)
+      .post(pathname)
+      .reply(200, {
+        data: {
+          salesOrders: {
+            edges: [
+              {
+                cursor: 'cursor-1',
+                node: {
+                  invoiceDate: '2023-02-15T00:00:00.000Z',
+                  invoiceNumber: '552303315030452',
+                  ourRef: { name: 'Jane Doe' },
+                  subledger: { code: 'P123456' },
+                  invoiceAmount: 500,
+                  headerInfo:
+                    '705-025-03-0205/01: Skadedjursbekämpning: Råttor',
+                  invoiceFile: { url: 'https://xledger.example.com/files/1' },
+                  invoiceBaseItems: {
+                    edges: [
+                      {
+                        node: {
+                          text: 'Skadedjursbekämpning',
+                          amount: 500,
+                          quantity: 1,
+                          unitPrice: 500,
+                          glObject1: { code: '12345' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+            pageInfo: { hasNextPage: true },
+          },
+        },
+      })
+
+    const result = await adapter.getMiscellaneousInvoices({})
+
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        content: [
+          {
+            invoiceId: '552303315030452',
+            amount: 500,
+            invoiceBaseItems: [
+              {
+                text: 'Skadedjursbekämpning',
+                amount: 500,
+                quantity: 1,
+                unitPrice: 500,
+                costCentre: '12345',
+              },
+            ],
+            invoiceDate: new Date('2023-02-15T00:00:00.000Z'),
+            reference: 'P123456',
+            ourReference: 'Jane Doe',
+            description: '705-025-03-0205/01: Skadedjursbekämpning: Råttor',
+            invoiceFileUrl: 'https://xledger.example.com/files/1',
+          },
+        ],
+        pageInfo: { hasNextPage: true, endCursor: 'cursor-1' },
+      },
+    })
+  })
+
+  it('returns unknown when Xledger returns no edges', async () => {
+    nock(origin).post(pathname).reply(200, { data: {} })
+
+    const result = await adapter.getMiscellaneousInvoices({})
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+
+  it('returns unknown on request failure', async () => {
+    nock(origin).post(pathname).reply(500)
+
+    const result = await adapter.getMiscellaneousInvoices({})
+
+    expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(adapter.getInvoiceFile, () => {
+  const fileUrl = 'https://files.xledger.example.com/invoice/12345.pdf'
+  const invoiceNode = (invoiceFile: { url: string } | null) => ({
+    data: {
+      arTransactions: {
+        edges: [
+          {
+            node: {
+              invoiceNumber: '12345',
+              invoiceDate: '2025-01-01',
+              invoiceRemaining: 100,
+              subledger: { code: 'P12345', description: 'Test Tenant' },
+              period: { fromDate: '2025-01-01', toDate: '2025-01-01' },
+              dueDate: '2025-01-31',
+              text: null,
+              headerTransactionSourceDbId: 600,
+              amount: 100,
+              invoiceFile,
+            },
+          },
+        ],
+      },
+    },
+  })
+
+  it('downloads the file Xledger links to', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, invoiceNode({ url: fileUrl }))
+    nock('https://files.xledger.example.com')
+      .get('/invoice/12345.pdf')
+      .reply(200, Buffer.from('%PDF-1.4 mock'))
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: true, data: Buffer.from('%PDF-1.4 mock') })
+  })
+
+  it('returns invoice-not-found when Xledger has no such invoice', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, { data: { arTransactions: { edges: [] } } })
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: false, err: 'invoice-not-found' })
+  })
+
+  it('returns file-not-found when the invoice has no file', async () => {
+    // Arrange
+    nock(origin).post(pathname).reply(200, invoiceNode(null))
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
+    expect(result).toEqual({ ok: false, err: 'file-not-found' })
+  })
+
+  it('returns unknown when the file download fails', async () => {
+    // Arrange
+    nock(origin)
+      .post(pathname)
+      .reply(200, invoiceNode({ url: fileUrl }))
+    nock('https://files.xledger.example.com')
+      .get('/invoice/12345.pdf')
+      .reply(403)
+
+    // Act
+    const result = await adapter.getInvoiceFile('12345')
+
+    // Assert
     expect(result).toEqual({ ok: false, err: 'unknown' })
   })
 })

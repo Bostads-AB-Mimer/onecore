@@ -108,27 +108,6 @@ export type InvoiceDataRow = Record<string, string | number>
 
 export type Invoice = Record<string, string | number | Date>
 
-export type LedgerInvoice = {
-  contractCode: string
-  invoiceNumber: string
-  invoiceFromDate: string
-  invoiceToDate: string
-  invoiceDate: string
-  ledgerAccount: string
-  totalAccount: string
-  tenantName: string
-}
-
-export type InvoiceContract = {
-  invoiceNumber: string
-  invoiceFromDate: string
-  invoiceToDate: string
-  ledgerAccount: string
-  totalAccount: string
-  counterPart?: string | undefined
-  tenantName: string
-}
-
 export type CounterPartCustomer = {
   customerName: string
   counterPartCode: string
@@ -154,4 +133,32 @@ export const xledgerDateString = (date: Date | null | undefined) => {
   } else {
     return ''
   }
+}
+
+export type ExportedInvoiceRow = {
+  amount?: number
+  deduction?: number
+  vat?: number
+  rowTotalAmount?: number
+  invoiceTotalAmount?: number
+  invoiceDate?: Date
+  invoiceDueDate?: Date
+  invoiceNumber?: string
+  invoiceRowText?: string | null
+  fromDate?: Date
+  toDate?: Date
+  contractCode?: string
+  rentArticle?: string | null
+  account?: string
+  costCode?: string
+  property?: string
+  freeCode?: string
+  totalAccount?: string
+  ledgerAccount?: string
+  contactCode?: string
+  tenantName?: string
+  company?: string
+
+  // remove?
+  roundoff?: number
 }

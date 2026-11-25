@@ -1,6 +1,7 @@
 {
   "type": "organisation",
   "contactCode": "F020420",
+  "protectedIdentity": false,
   "contactKey": "_0J41591U6",
   "organisation": {
     "organisationNumber": "040126 662",

@@ -29,6 +29,7 @@ import {
   relatedContactsForMany,
   relatedContactsInRole,
 } from '@src/adapters/related-contacts'
+import { invoiceRecipientCodes } from '@src/adapters/contact-relations'
 
 /**
  * Creates a ContactsRepository that reads contact data from the Xpand
@@ -44,6 +45,34 @@ export const xpandContactsRepository = (
   db: Resource<knex.Knex>,
   contactsDb: Resource<knex.Knex>
 ): ContactsRepository => {
+  /**
+   * Transforms rows to contacts, first deciding which protected identities are
+   * exempt from redaction: all of them when the caller has verified the
+   * contacts as tenants (`verifiedTenants`), otherwise those that are an annan
+   * fakturamottagare. Whether someone is a tenant is decided by core against
+   * Tenfast, the master for leases — this service cannot ask Tenfast itself.
+   */
+  const toContacts = async (
+    rows: DbContactRow[],
+    verifiedTenants = false
+  ): Promise<Contact[]> => {
+    const candidates = [
+      ...new Set(
+        rows
+          .filter((r) => r.protectedIdentity !== null)
+          .map((r) => r.contactCode.trim())
+      ),
+    ]
+    if (candidates.length === 0 || verifiedTenants) {
+      return transformDbContactRows(rows, new Set(candidates))
+    }
+    const invoiceRecipients = await invoiceRecipientCodes(
+      contactsDb.get(),
+      candidates
+    )
+    return transformDbContactRows(rows, invoiceRecipients)
+  }
+
   /**
    * Populates `relatedContacts` on a batch of contacts using a single grouped
    * relation query (not N+1). Contacts with no relations get an empty array.
@@ -111,7 +140,7 @@ export const xpandContactsRepository = (
       ])
 
       return {
-        content: transformDbContactRows(rows),
+        content: await toContacts(rows),
         totalRecords,
       }
     },
@@ -129,7 +158,7 @@ export const xpandContactsRepository = (
         .hasContactCode(contactCode)
         .getOne(db.get())
 
-      const contact = transformDbContactRows(dbContactRows)[0]
+      const [contact] = await toContacts(dbContactRows)
       if (!contact) return null
       contact.relatedContacts = await relatedContactsFor(
         db.get(),
@@ -150,8 +179,16 @@ export const xpandContactsRepository = (
     ) => {
       if (contactCodes.length === 0) return []
 
-      const rows = await contactsByCodesQuery(db.get(), contactCodes, options)
-      const contacts = transformDbContactRows(rows)
+      // MSSQL caps WHERE IN at 2100 parameters — chunk to stay well under
+      const CHUNK_SIZE = 1000
+      const allRows: DbContactRow[] = []
+      for (let i = 0; i < contactCodes.length; i += CHUNK_SIZE) {
+        const chunk = contactCodes.slice(i, i + CHUNK_SIZE)
+        const rows = await contactsByCodesQuery(db.get(), chunk, options)
+        allRows.push(...rows)
+      }
+
+      const contacts = await toContacts(allRows, options?.verifiedTenants)
 
       return options?.includeRelations
         ? withRelatedContacts(contacts)
@@ -177,16 +214,25 @@ export const xpandContactsRepository = (
     /**
      * Retrieves a contact by their national ID number.
      *
+     * Matches both the ten- and twelve-digit form of a personnummer, since
+     * Xpand stores a mix of both — see `parseNationalId`. Falls back to a
+     * plain digit match for input it doesn't recognise (e.g. an orgnr).
+     *
      * @param nid - The national ID number to search for.
      *
      * @returns A promise that resolves to the Contact object if found,
      */
     getByNationalIdNumber: async (nid: NationalIdNumber) => {
+      const forms = parseNationalId(nid)
+      const candidates = forms
+        ? [forms.twelveDigits, forms.tenDigits]
+        : [nid.replaceAll(/[^0-9]/g, '')]
+
       const dbContactRows = await contactsQuery()
-        .hasNationalId(nid.replaceAll(/[^0-9]/g, ''))
+        .hasNationalId(candidates)
         .getOne(db.get())
 
-      const contact = transformDbContactRows(dbContactRows)[0]
+      const [contact] = await toContacts(dbContactRows)
       if (!contact) return null
       contact.relatedContacts = await relatedContactsFor(
         db.get(),
@@ -237,7 +283,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return withRelatedContacts(transformDbContactRows(rows))
+        return withRelatedContacts(await toContacts(rows))
       }
 
       return []
@@ -267,7 +313,7 @@ export const xpandContactsRepository = (
           .withObjectKeyIn(contactObjectKeys)
           .getPage(db.get())
 
-        return withRelatedContacts(transformDbContactRows(rows))
+        return withRelatedContacts(await toContacts(rows))
       }
 
       return []
@@ -287,15 +333,15 @@ export const xpandContactsRepository = (
       const rows = await contactsQuery()
         .withContactCodeIn(codes)
         .getPage(db.get(), { page: 0, pageSize: codes.length })
-      const contacts = transformDbContactRows(rows)
+      const contacts = await toContacts(rows)
       return options?.includeRelations
         ? withRelatedContacts(contacts)
         : contacts
     },
 
     /**
-     * Retrieves contact codes for contacts updated since the given timestamp,
-     * each paired with the latest logtime for that code. Results are ordered
+     * Retrieves the current contact codes of contacts updated since the given
+     * timestamp, each paired with the latest logtime for that contact. Results are ordered
      * by timestamp ascending so callers can checkpoint per item. If no
      * timestamp is provided, returns all matching rows.
      *
@@ -305,18 +351,7 @@ export const xpandContactsRepository = (
     getChangedContactCodes: async (
       since: Date | null
     ): Promise<{ contactCode: string; timestamp: Date }[]> => {
-      const rows = await cmlogContactChanges(db.get(), since)
-
-      const byContactCode = new Map<string, Date>()
-      for (const row of rows) {
-        const match = (row['logmemo'] as string)?.match(/^Kontakt (\S+)/)
-        if (!match) continue
-        byContactCode.set(match[1], row['logtime'] as Date)
-      }
-
-      const contactCodes = Array.from(byContactCode.entries())
-        .map(([contactCode, timestamp]) => ({ contactCode, timestamp }))
-        .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+      const contactCodes = await cmlogContactChanges(db.get(), since)
 
       logger.info(
         { contactCodes: contactCodes.map((c) => c.contactCode) },

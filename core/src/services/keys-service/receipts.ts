@@ -428,7 +428,7 @@ export const routes = (router: KoaRouter) => {
    * /receipts/{id}:
    *   delete:
    *     summary: Delete a receipt
-   *     description: Delete a receipt by ID (and associated file from MinIO)
+   *     description: Delete a receipt by ID (and associated file from file storage)
    *     tags: [Keys Service]
    *     parameters:
    *       - in: path

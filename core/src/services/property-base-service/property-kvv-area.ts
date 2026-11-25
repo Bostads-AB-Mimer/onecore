@@ -11,6 +11,7 @@ import {
   PropertyKvvAreaLookupSchema,
   type PutPropertyKvvAreaBody,
   PutPropertyKvvAreaBodySchema,
+  ResolveKvvAreaQuerySchema,
 } from './schemas'
 
 // Same realm role guarded by GET /cost-centers/:id/tree (capabilities.canEdit).
@@ -36,6 +37,11 @@ export const routes = (router: KoaRouter) => {
    *       kvartersvärd (hydrated from Keycloak; `null` if unset or if Keycloak
    *       is unreachable). Used by Odoo to stamp maintenance requests with
    *       their district. 404 when the property has no KVV-area link.
+   *
+   *       **Deprecated.** Answers the property default only and ignores
+   *       building-level exceptions on split properties. Use
+   *       `GET /kvv-areas/resolve` instead. Kept until Odoo has moved over.
+   *     deprecated: true
    *     tags:
    *       - Property KVV Area
    *     parameters:
@@ -64,6 +70,8 @@ export const routes = (router: KoaRouter) => {
    *     security:
    *       - bearerAuth: []
    */
+  // Deprecated: property default only, blind to split-property exceptions.
+  // Remove once Odoo calls GET /kvv-areas/resolve (its only caller).
   router.get('(.*)/properties/:propertyCode/kvv-area', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
     const { propertyCode } = ctx.params
@@ -94,6 +102,112 @@ export const routes = (router: KoaRouter) => {
 
     // Resolved by id, not via the property-manager role list — see the note in
     // kvv-areas.ts: this is Odoo's per-errand path and must stay one cheap call.
+    const { kvvArea, costCenter, responsibleKeycloakUserId } = result.data
+
+    ctx.body = {
+      content: PropertyKvvAreaLookupSchema.parse({
+        kvvArea,
+        costCenter,
+        responsible: await resolveUserById(responsibleKeycloakUserId),
+      }),
+      ...metadata,
+    }
+  })
+
+  /**
+   * @swagger
+   * /kvv-areas/resolve:
+   *   get:
+   *     summary: Resolve the KVV-area (förvaltningsområde) and district of a location
+   *     description: |
+   *       Location-level lookup for split properties: if the location's
+   *       building carries a KVV-area exception, that area wins over the
+   *       property's link. Give exactly one of `rentalId` (lägenhet, bilplats,
+   *       lokal), `buildingCode` (facilities and building-level errands) or
+   *       `propertyCode` (markyta objects and property-level errands). Send
+   *       the most specific key you have; the keys are not combined since they
+   *       may disagree. The responsible kvartersvärd is hydrated from Keycloak
+   *       (`null` if unset or unreachable). This is the per-errand lookup Odoo
+   *       should use; `GET /properties/{code}/kvv-area` answers the property
+   *       default only.
+   *     tags:
+   *       - Property KVV Area
+   *     parameters:
+   *       - in: query
+   *         name: rentalId
+   *         schema:
+   *           type: string
+   *         description: Rental object id.
+   *       - in: query
+   *         name: buildingCode
+   *         schema:
+   *           type: string
+   *         description: Building code.
+   *       - in: query
+   *         name: propertyCode
+   *         schema:
+   *           type: string
+   *         description: Property code.
+   *     responses:
+   *       200:
+   *         description: KVV-area, cost center and responsible for the location
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/PropertyKvvAreaLookup'
+   *       400:
+   *         description: Not exactly one of rentalId, buildingCode or propertyCode was given
+   *       404:
+   *         description: |
+   *           Unknown location or no KVV-area resolves. The body carries
+   *           `code: KVV_AREA_NOT_FOUND` so callers can tell this apart from
+   *           a routing 404.
+   *       500:
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.get('(.*)/kvv-areas/resolve', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx, [
+      'rentalId',
+      'propertyCode',
+      'buildingCode',
+    ])
+    const parsed = ResolveKvvAreaQuerySchema.safeParse(ctx.query)
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        error:
+          'Exactly one of rentalId, buildingCode or propertyCode is required',
+        ...metadata,
+      }
+      return
+    }
+
+    const result = await propertyBaseAdapter.resolveKvvArea(parsed.data)
+
+    if (!result.ok) {
+      if (result.err === 'not-found') {
+        ctx.status = 404
+        ctx.body = {
+          error: 'Location has no KVV-area',
+          code: 'KVV_AREA_NOT_FOUND',
+          ...metadata,
+        }
+        return
+      }
+      logger.error(
+        { err: result.err, metadata },
+        'GET /kvv-areas/resolve failed'
+      )
+      ctx.status = 500
+      ctx.body = { error: 'Internal server error', ...metadata }
+      return
+    }
+
     const { kvvArea, costCenter, responsibleKeycloakUserId } = result.data
 
     ctx.body = {

@@ -148,7 +148,7 @@ This table tracks which services have which parts of the pipeline. **Update this
 | work-order | Yes | Yes | Yes | Yes | Full pipeline |
 | inspection | Yes | Yes | Yes | Yes | Full pipeline |
 | leasing | Yes | Yes | Partial | No | Schemas not fully registered. Core uses @onecore/types instead |
-| communication | No | No | No | No | No type pipeline |
+| communication | Yes (@onecore/types communication) | Yes (okapi) | Partial | Yes | Okapi routes (communication-log, guides, release-notes, message-templates) emit OpenAPI consumed by core/src/adapters/communication-adapter/generated; legacy infobip/linear routes have no spec |
 | property-management | No | Partial (JSDoc) | No | No | Basic Swagger via JSDoc, no Zod |
 | economy | No | No | No | No | No type pipeline |
 | file-storage | No | Partial (JSDoc) | No | No | Basic Swagger via JSDoc, no Zod |

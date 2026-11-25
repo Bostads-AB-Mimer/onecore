@@ -1,4 +1,5 @@
 import request from 'supertest'
+import { logger } from '@onecore/utilities'
 import Koa from 'koa'
 import KoaRouter from '@koa/router'
 import bodyParser from 'koa-bodyparser'
@@ -20,7 +21,7 @@ describe('POST /customers/:contactCode/sync', () => {
 
     jest
       .spyOn(customerService, 'syncCustomer')
-      .mockResolvedValueOnce({ dbId: '12345' })
+      .mockResolvedValueOnce({ customer: { dbId: '12345' }, previous: null })
 
     const res = await request(app.callback())
       .post(`/customers/${payload.contactCode}/sync`)
@@ -44,6 +45,29 @@ describe('POST /customers/:contactCode/sync', () => {
     expect(res.body.error).toBe('Internal server error')
   })
 
+  it('logs why the sync failed, without the contact values', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    jest
+      .spyOn(customerService, 'syncCustomer')
+      .mockRejectedValueOnce(
+        new Error(`Xledger refused ${payload.fullName} at ${payload.street}`)
+      )
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation()
+
+    await request(app.callback())
+      .post(`/customers/${payload.contactCode}/sync`)
+      .send(payload)
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contactCode: payload.contactCode,
+        message: 'Xledger refused [redacted] at [redacted]',
+      }),
+      'Error syncing contact to Xledger'
+    )
+    errorSpy.mockRestore()
+  })
+
   it('responds with 200 and skipped:true when contact does not exist and create not requested', async () => {
     const payload = factory.syncContactToEconomyPayload.build()
 
@@ -62,7 +86,7 @@ describe('POST /customers/:contactCode/sync', () => {
 
     jest
       .spyOn(customerService, 'syncCustomer')
-      .mockResolvedValueOnce({ dbId: '12345' })
+      .mockResolvedValueOnce({ customer: { dbId: '12345' }, previous: null })
 
     const res = await request(app.callback())
       .post(`/customers/${payload.contactCode}/sync`)
@@ -70,6 +94,54 @@ describe('POST /customers/:contactCode/sync', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.skipped).toBe(false)
+  })
+
+  it('returns undo with the previous values after an update', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    const previous = {
+      fullName: 'Gammal, Namn',
+      street: 'Gamla gatan 1',
+      zipCode: '22222',
+      city: 'Västerås',
+      emailAddress: 'gammal@test.se',
+    }
+    jest
+      .spyOn(customerService, 'syncCustomer')
+      .mockResolvedValueOnce({ customer: '12345', previous })
+
+    const res = await request(app.callback())
+      .post(`/customers/${payload.contactCode}/sync`)
+      .send(payload)
+
+    expect(res.status).toBe(200)
+    expect(res.body.undo).toEqual({ previous })
+    expect(res.body.content).toBe('12345')
+  })
+
+  it('returns a null undo after a create, since nothing can be put back', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    jest
+      .spyOn(customerService, 'syncCustomer')
+      .mockResolvedValueOnce({ customer: { dbId: '1' }, previous: null })
+
+    const res = await request(app.callback())
+      .post(`/customers/${payload.contactCode}/sync?create=true`)
+      .send(payload)
+
+    expect(res.status).toBe(200)
+    expect(res.body.undo).toBeNull()
+  })
+
+  it('returns no undo when skipped', async () => {
+    const payload = factory.syncContactToEconomyPayload.build()
+    jest.spyOn(customerService, 'syncCustomer').mockResolvedValueOnce(null)
+
+    const res = await request(app.callback())
+      .post(`/customers/${payload.contactCode}/sync`)
+      .send(payload)
+
+    expect(res.body.skipped).toBe(true)
+    expect(res.body.undo).toBeUndefined()
   })
 
   it('responds with 400 when request body is invalid', async () => {

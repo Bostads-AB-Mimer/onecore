@@ -13,6 +13,9 @@ export const TenfastRentalObjectFactory = Factory.define<TenfastRentalObject>(
     hyraExcludingVat: 287.17,
     hyror: [TenfastInvoiceRowFactory.build()],
     externalId: 'externalId-1',
+    postadress: 'Ibbarbo 6',
+    postnummer: '73113',
+    stad: 'KOLSVA',
     contractTemplate: 'template-001',
     category: { code: 'Bilplats', label: 'Bilplats' },
     tags: [],
@@ -27,6 +30,9 @@ export const TenfastInvoiceRowFactory = Factory.define<TenfastInvoiceRow>(
     from: toYearMonthDayString(new Date('2013-03-01')),
     article: '12334567' + sequence,
     label: 'Hyra p-plats',
+    // Set on real rent rows in Tenfast; rows with the same label share one
+    // line on the invoice.
+    consolidationLabel: 'Hyra p-plats',
     _id: sequence.toString(),
   })
 )

@@ -82,7 +82,7 @@ const getColumns = (listingId: number, address: string): Array<GridColDef> => {
     {
       field: 'address',
       headerName: 'Boendeadress',
-      valueGetter: (v) => v.row.address.street,
+      valueGetter: (v) => v.row.address?.street ?? '',
       ...sharedProps,
       flex: 1.25,
     },
@@ -111,7 +111,7 @@ const getColumns = (listingId: number, address: string): Array<GridColDef> => {
       field: 'parkingSpaceContracts',
       headerName: 'Har bilplats (G/K)',
       valueFormatter: (v) =>
-        v.value.filter(
+        v.value?.filter(
           (l: any) =>
             l.status == LeaseStatus.Current || l.status == LeaseStatus.Upcoming
         ).length

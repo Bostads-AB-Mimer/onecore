@@ -9,11 +9,11 @@ export const formatDate = (date: Date | string | null | undefined) => {
   return d.toLocaleDateString('sv-SE')
 }
 
-export const formatCurrency = (amount: number) => {
+export const formatCurrency = (amount: number, maximumFractionDigits = 0) => {
   return new Intl.NumberFormat('sv-SE', {
     style: 'currency',
     currency: 'SEK',
-    maximumFractionDigits: 0,
+    maximumFractionDigits,
   }).format(amount)
 }
 

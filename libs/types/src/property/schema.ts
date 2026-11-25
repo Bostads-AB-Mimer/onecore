@@ -33,6 +33,18 @@ export const UpdateMalarEnergiFacilityIdResponseSchema = z.object({
   malarEnergiFacilityId: z.string(), // echoed back after a successful write
 })
 
+// ---- Residence: media (photos and energy declaration) ----
+// 'residence' means the photos belong to this rental id. 'shared' means they
+// were found on a coarser code level, so they may show the building rather
+// than this residence.
+export const ResidenceMediaImageLevelSchema = z.enum(['residence', 'shared'])
+
+export const ResidenceMediaSchema = z.object({
+  images: z.array(z.string().url()), // in file number order
+  imageLevel: ResidenceMediaImageLevelSchema.nullable(), // null when no images
+  energyDeclarationUrl: z.string().url().nullable(),
+})
+
 // ---- Apartment temperatures (EcoGuard Curves) ----
 // Request/response shapes shared by the property service and the core proxy.
 export const ApartmentTemperaturesIntervalSchema = z.enum(['H', 'D'])
@@ -92,6 +104,16 @@ export const PropertyKvvAreaLookupSchema = z.object({
   responsibleKeycloakUserId: z.string().nullable(), // core expands to a user
 })
 
+const resolveKey = z.string().trim().min(1)
+
+// GET /kvv-areas/resolve: exactly one key. The keys may disagree, so callers
+// send the most specific one they have; the service resolves the rest.
+export const ResolveKvvAreaQuerySchema = z.union([
+  z.object({ rentalId: resolveKey }).strict(),
+  z.object({ buildingCode: resolveKey }).strict(),
+  z.object({ propertyCode: resolveKey }).strict(),
+])
+
 // One KVV-area as listed by GET /kvv-areas, with its cost center (distrikt).
 export const KvvAreaWithCostCenterSchema = KvvAreaRefSchema.extend({
   costCenter: CostCenterRefSchema,
@@ -108,6 +130,9 @@ export const MarketAreaSchema = z.object({
 // ---- Rental objects ----
 // Shared by the property service and core's proxy. Source of truth — do not
 // re-declare in consumers; core-only divergences are derived in core.
+// TODO(MIM-2177): residence and parking shapes drift (Residence, ResidenceSummary,
+// ResidenceSearchResult, ResidenceDetails, ParkingSpace). Target: one RentalObject
+// base that Residence, ParkingSpace, Facility etc. extend with type-specific fields.
 
 // One rental object (balgh/babps/balok/bahyr structure row): what it is,
 // where it sits, and its postal address.
@@ -263,9 +288,16 @@ const propertyTreeDepth2 = () =>
     children: z.array(propertyTreeDepth1()).optional(),
   })
 
+// A split property appears once per area: `default` is the linked area's side
+// (incl. markytor, so property-level errands), `exception` an excepted building.
+// Absent on an unsplit property.
+export const PropertyShareKindSchema = z.enum(['default', 'exception'])
+
 export const PropertyTreeNodeSchema = z.object({
   ...propertyTreeNodeFields(),
   children: z.array(propertyTreeDepth2()).optional(),
+  // Split property nodes under the cost-center grouping only.
+  share: PropertyShareKindSchema.optional(),
 })
 
 export type PropertyTreeNode = z.infer<typeof PropertyTreeNodeSchema>
@@ -351,6 +383,7 @@ export const CostCenterTreePropertySchema = z.object({
   buildings: z.array(CostCenterTreeBuildingSchema),
   parkingAreas: z.array(CostCenterTreeParkingAreaSchema),
   aggregates: CostCenterTreeAggregatesSchema,
+  share: PropertyShareKindSchema.optional(),
 })
 
 export type CostCenterTreeProperty = z.infer<

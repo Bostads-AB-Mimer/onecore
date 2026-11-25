@@ -183,9 +183,15 @@ export function TenantKeyLoans({ contactCode, leases }: TenantKeyLoansProps) {
   const activeLeases = useMemo(() => {
     if (!leases?.length) return []
     return leases.filter(
-      (l) => Number(l.status) !== LeaseStatus.Ended && l.status !== 'Ended'
+      (l) =>
+        Number(l.status) !== LeaseStatus.Ended &&
+        l.status !== 'Ended' &&
+        !(
+          l.subletContactId === contactCode &&
+          !l.tenantContactIds?.includes(contactCode)
+        )
     )
-  }, [leases])
+  }, [leases, contactCode])
 
   const rentalObjectCodes = useMemo(
     () => [...new Set(activeLeases.map((l) => l.rentalPropertyId))],

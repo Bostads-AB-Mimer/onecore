@@ -28,6 +28,44 @@ describe('rental-objects adapter', () => {
       )
     })
 
+    it('sends rentAt as a query parameter', async () => {
+      // Arrange
+      nock(config.tenantsLeasesService.url)
+        .get('/rental-objects/by-code/123-456-789/availability')
+        .query({ rentAt: '2100-01-16' })
+        .reply(200, {
+          content: factory.rentalObjectAvailabilityInfo.build({
+            rentalObjectCode: '123-456-789',
+          }),
+        })
+
+      // Act
+      const result = await leasingAdapter.getRentalObjectAvailabilityByCode(
+        '123-456-789',
+        '2100-01-16'
+      )
+
+      // Assert
+      expect(result.ok).toBe(true)
+    })
+
+    it('should return invalid-rent-at when leasing answers 400', async () => {
+      // Arrange
+      nock(config.tenantsLeasesService.url)
+        .get(/rental-objects\/by-code\/123\/availability/)
+        .reply(400, { error: 'invalid-rent-at' })
+
+      // Act
+      const result = await leasingAdapter.getRentalObjectAvailabilityByCode(
+        '123',
+        'not-a-day'
+      )
+
+      // Assert
+      assert(!result.ok)
+      expect(result.err).toBe('invalid-rent-at')
+    })
+
     it('should return availability-not-found when rentalObjectCode does not exist', async () => {
       // Arrange
       nock(config.tenantsLeasesService.url)
@@ -119,6 +157,44 @@ describe('rental-objects adapter', () => {
       // Assert
       assert(result.ok)
       expect(result.data).toEqual(availabilities)
+    })
+
+    it('sends rentAtByRentalObjectCode in the request body', async () => {
+      // Arrange
+      const rentalObjectCodes = ['123', '456']
+      const rentAtByRentalObjectCode = { '123': '2100-01-16' }
+      nock(config.tenantsLeasesService.url)
+        .post('/rental-objects/availabilities', {
+          rentalObjectCodes,
+          rentAtByRentalObjectCode,
+        })
+        .reply(200, { content: [] })
+
+      // Act
+      const result = await leasingAdapter.getRentalObjectAvailabilities(
+        rentalObjectCodes,
+        rentAtByRentalObjectCode
+      )
+
+      // Assert
+      expect(result.ok).toBe(true)
+    })
+
+    it('should return invalid-request when leasing answers 400', async () => {
+      // Arrange
+      nock(config.tenantsLeasesService.url)
+        .post('/rental-objects/availabilities')
+        .reply(400)
+
+      // Act
+      const result = await leasingAdapter.getRentalObjectAvailabilities(
+        ['123'],
+        { '123': 'not-a-day' }
+      )
+
+      // Assert
+      assert(!result.ok)
+      expect(result.err).toBe('invalid-request')
     })
 
     it('should return availabilities-not-found when no availabilities are found', async () => {

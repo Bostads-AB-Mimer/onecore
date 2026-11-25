@@ -38,7 +38,7 @@ describe('GET /listing-area-text-content', () => {
   it('responds with 500 if adapter fails', async () => {
     jest
       .spyOn(leasingAdapter, 'listListingAreaTextContent')
-      .mockResolvedValueOnce({ ok: false, err: 'unknown' })
+      .mockResolvedValueOnce({ ok: false, err: 'request-failed' })
 
     const res = await request(app.callback()).get('/listing-area-text-content')
 

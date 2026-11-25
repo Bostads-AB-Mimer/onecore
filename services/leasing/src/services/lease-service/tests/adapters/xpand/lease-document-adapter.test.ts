@@ -75,8 +75,8 @@ describe(getTerminationDocumentPdf, () => {
     const result = await getTerminationDocumentPdf('123-456/01')
 
     expect(result).toEqual({
-      filename: 'new.pdf',
-      content: Buffer.from('pdf-bytes'),
+      ok: true,
+      data: { filename: 'new.pdf', content: Buffer.from('pdf-bytes') },
     })
   })
 
@@ -109,7 +109,10 @@ describe(getTerminationDocumentPdf, () => {
 
     const result = await getTerminationDocumentPdf('123-456/01')
 
-    expect(result?.filename).toBe('Bekräftelse på uppsägning.pdf')
+    expect(result).toMatchObject({
+      ok: true,
+      data: { filename: 'Bekräftelse på uppsägning.pdf' },
+    })
   })
 
   it('does not fall back to withdrawn termination confirmation', async () => {
@@ -125,7 +128,7 @@ describe(getTerminationDocumentPdf, () => {
 
     const result = await getTerminationDocumentPdf('123-456/01')
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ ok: true, data: null })
   })
 
   it('returns null when no uppsägning document is found', async () => {
@@ -140,7 +143,7 @@ describe(getTerminationDocumentPdf, () => {
 
     const result = await getTerminationDocumentPdf('123-456/01')
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ ok: true, data: null })
   })
 
   it('returns null when the picked document has no decodable file content', async () => {
@@ -156,7 +159,7 @@ describe(getTerminationDocumentPdf, () => {
 
     const result = await getTerminationDocumentPdf('123-456/01')
 
-    expect(result).toBeNull()
+    expect(result).toEqual({ ok: true, data: null })
   })
 })
 
@@ -184,8 +187,8 @@ describe(getSignedContractPdf, () => {
     const result = await getSignedContractPdf('123-456/01')
 
     expect(result).toEqual({
-      filename: 'old.pdf',
-      content: Buffer.from('pdf-bytes'),
+      ok: true,
+      data: { filename: 'old.pdf', content: Buffer.from('pdf-bytes') },
     })
   })
 
@@ -203,8 +206,8 @@ describe(getSignedContractPdf, () => {
     const result = await getSignedContractPdf('123-456/01')
 
     expect(result).toEqual({
-      filename: 'kontrakt.pdf',
-      content: Buffer.from('pdf-bytes'),
+      ok: true,
+      data: { filename: 'kontrakt.pdf', content: Buffer.from('pdf-bytes') },
     })
   })
 
@@ -216,8 +219,8 @@ describe(getSignedContractPdf, () => {
     const result = await getSignedContractPdf('123-456/01')
 
     expect(result).toEqual({
-      filename: 'signed.pdf',
-      content: Buffer.from('pdf-bytes'),
+      ok: true,
+      data: { filename: 'signed.pdf', content: Buffer.from('pdf-bytes') },
     })
   })
 })

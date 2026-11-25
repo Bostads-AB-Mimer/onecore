@@ -328,6 +328,52 @@ describe('replyToOffer', () => {
       })
     })
 
+    it('returns 409 rental-object-not-available and keeps the offer open when the parking space is not available', async () => {
+      const offer = factory.detailedOffer.build()
+      getOfferByIdSpy.mockResolvedValueOnce({
+        ok: true,
+        data: offer,
+      })
+
+      const listing = factory.listing.build()
+      getListingByListingIdSpy.mockResolvedValue(listing)
+
+      getParkingSpaceByCodeSpy.mockResolvedValue({
+        ok: true,
+        data: factory.vacantParkingSpace
+          .params({
+            rentalObjectCode: listing.rentalObjectCode,
+          })
+          .build(),
+      })
+
+      getLeasesForContactCode.mockResolvedValueOnce([factory.lease.build()])
+      validatePropertyRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+      validateResidentialAreaRentalRules.mockResolvedValue({
+        ok: true,
+        data: { reason: '', applicationType: 'Additional' },
+      })
+
+      createLeaseSpy.mockResolvedValueOnce({
+        ok: false,
+        err: ReplyToOfferErrorCodes.RentalObjectNotAvailable,
+      })
+
+      const result = await replyProcesses.acceptOffer(offer.id)
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          processStatus: ProcessStatus.failed,
+          error: ReplyToOfferErrorCodes.RentalObjectNotAvailable,
+          httpStatus: 409,
+        })
+      )
+      expect(closeOfferByAcceptSpy).not.toHaveBeenCalled()
+    })
+
     it('returns success even if sendNotificationToRole fails', async () => {
       const offer = factory.detailedOffer.build()
 

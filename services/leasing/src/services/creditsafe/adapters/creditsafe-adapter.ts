@@ -38,10 +38,7 @@ const getConsumerReport = async (pnr: string): Promise<ConsumerReport> => {
       },
       xml: xml,
     })
-    logger.info(
-      { headers: response.headers },
-      'Outgoing request to Creditsafe completed'
-    )
+    logger.info({ url }, 'Outgoing request to Creditsafe completed')
 
     const { body } = response
 

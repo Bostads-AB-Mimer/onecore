@@ -14,7 +14,11 @@ import {
   ContactType,
   ObjectKey,
 } from '@src/domain/contact'
-import { redact, trimRow } from './common'
+import {
+  placeholderEmailAddress,
+  placeholderPhoneNumber,
+} from '@onecore/utilities'
+import { applyContactDetailsMode, REDACTED, trimRow } from './common'
 import { transformPhoneNumbers } from './phone'
 import { transformEmailAddresses } from './email'
 import { toAddresses } from './address'
@@ -36,15 +40,24 @@ export const toCommunicationFragment = (
   protectedIdentity: boolean
 ) => {
   return {
-    phoneNumbers: redact(
+    phoneNumbers: applyContactDetailsMode(
       transformPhoneNumbers(contactDetails.phoneNumbers),
-      'phoneNumber',
-      protectedIdentity
+      protectedIdentity,
+      (phone) => ({ ...phone, phoneNumber: REDACTED }),
+      (phone) => ({
+        ...phone,
+        phoneNumber: placeholderPhoneNumber(row.contactCode),
+        comment: undefined,
+      })
     ),
-    emailAddresses: redact(
+    emailAddresses: applyContactDetailsMode(
       transformEmailAddresses(contactDetails.emailAddresses),
-      'emailAddress',
-      protectedIdentity
+      protectedIdentity,
+      (email) => ({ ...email, emailAddress: REDACTED }),
+      (email) => ({
+        ...email,
+        emailAddress: placeholderEmailAddress(row.contactCode),
+      })
     ),
     specialAttention: !!row.specialAttention,
   }
@@ -53,33 +66,38 @@ export const toCommunicationFragment = (
 /**
  * Transform a DbContact row to a ContactIndividual domain object.
  *
+ * A protected identity is redacted unless `exempt` — a tenant (verified
+ * against Tenfast by core) or an annan fakturamottagare, whose data in Xpand
+ * is already anonymised and is needed for invoicing. `protectedIdentity` is
+ * reported either way.
+ *
  * @param row The DbContact row
  * @param contactDetails The DbContactDetails for the contact
+ * @param exempt Whether a protected identity is exempt from redaction
  *
  * @returns The transformed ContactIndividual
  */
 export const toIndividual = (
   row: DbContact,
-  contactDetails: DbContactDetails
+  contactDetails: DbContactDetails,
+  exempt = false
 ): ContactIndividual => {
   const protectedIdentity = row.protectedIdentity !== null
+  const redacted = protectedIdentity && !exempt
 
   return {
     type: 'individual',
     ...toContactKeys(row),
+    protectedIdentity,
     personal: {
-      firstName: protectedIdentity ? 'redacted' : row.firstName || '',
-      lastName: protectedIdentity ? 'redacted' : row.lastName || '',
-      fullName: protectedIdentity ? 'redacted' : row.fullName,
-      nationalId: protectedIdentity ? 'redacted' : row.nid,
-      birthDate: protectedIdentity ? 'redacted' : row.birthDate,
+      firstName: redacted ? 'redacted' : row.firstName || '',
+      lastName: redacted ? 'redacted' : row.lastName || '',
+      fullName: redacted ? 'redacted' : row.fullName,
+      nationalId: redacted ? 'redacted' : row.nid,
+      birthDate: redacted ? 'redacted' : row.birthDate,
     },
-    communication: toCommunicationFragment(
-      row,
-      contactDetails,
-      protectedIdentity
-    ),
-    addresses: toAddresses(contactDetails.addresses, protectedIdentity),
+    communication: toCommunicationFragment(row, contactDetails, redacted),
+    addresses: toAddresses(contactDetails.addresses, redacted),
   }
 }
 
@@ -93,6 +111,7 @@ export const toOrganisation = (
   return {
     type: 'organisation',
     ...toContactKeys(row),
+    protectedIdentity: false,
     organisation: {
       organisationNumber: row.nid,
       name: row.fullName,
@@ -144,26 +163,39 @@ export const resolveContactType = (dbContact: DbContact): ContactType => {
 
 export const transformDbContacts = (
   dbRows: DbContact[],
-  metadata: DbContactDetailsMap
+  metadata: DbContactDetailsMap,
+  exemptCodes: Set<string> = new Set()
 ) => {
   return dbRows.map((row) =>
-    transformDbContact(row, metadata[row.contactKey] ?? NO_CONTACT_DETAILS)
+    transformDbContact(
+      row,
+      metadata[row.contactKey] ?? NO_CONTACT_DETAILS,
+      exemptCodes
+    )
   )
 }
 
+/**
+ * @param exemptCodes Trimmed codes of contacts exempt from redaction: an annan
+ *                    fakturamottagare, or a tenant verified by the caller.
+ */
 export const transformDbContact = (
   dbRow: DbContact,
-  contactDetails: DbContactDetails
+  contactDetails: DbContactDetails,
+  exemptCodes: Set<string> = new Set()
 ): Contact => {
   const row = trimRow(dbRow)
   const type = resolveContactType(dbRow)
 
   return type === 'individual'
-    ? toIndividual(row, contactDetails)
+    ? toIndividual(row, contactDetails, exemptCodes.has(row.contactCode.trim()))
     : toOrganisation(row, contactDetails)
 }
 
-export const toContact = (rows: DbContactRow[]): Contact => {
+export const toContact = (
+  rows: DbContactRow[],
+  exemptCodes: Set<string> = new Set()
+): Contact => {
   const [contactData] = rows
   const contactDetails: DbContactDetails = {
     phoneNumbers: [],
@@ -192,7 +224,7 @@ export const toContact = (rows: DbContactRow[]): Contact => {
     }
   })
 
-  return transformDbContact(contactData, contactDetails)
+  return transformDbContact(contactData, contactDetails, exemptCodes)
 }
 
 export const collapseContactRows = (rows: DbContactRow[]) => {
@@ -205,7 +237,12 @@ export const collapseContactRows = (rows: DbContactRow[]) => {
   )
 }
 
-export const transformDbContactRows = (rows: DbContactRow[]) => {
+export const transformDbContactRows = (
+  rows: DbContactRow[],
+  exemptCodes: Set<string> = new Set()
+) => {
   const byContact = collapseContactRows(rows)
-  return Object.values(byContact).map(toContact)
+  return Object.values(byContact).map((contactRows) =>
+    toContact(contactRows, exemptCodes)
+  )
 }

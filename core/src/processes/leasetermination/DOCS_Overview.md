@@ -16,11 +16,12 @@ De processer i den här mappen beskriver hur ett hyreskontrakt avslutas — anti
 
 Tenfast håller ett `stage`-fält på avtalet som onecore mappar till sin egen `LeaseStatus`. De statusar som rör den här dokumentationen:
 
-| Tenfast `stage`         | onecore `LeaseStatus` | Betydelse                                                             |
-| ----------------------- | --------------------- | --------------------------------------------------------------------- |
-| `preTermination`        | PreliminaryTerminated | Hyresgästen har begärt uppsägning via simplesign, väntar på signering |
-| `terminationScheduled`  | AboutToEnd            | Uppsägningen är bekräftad, avtalet löper på uppsägningstiden ut       |
-| `terminated`/`archived` | Ended                 | Avtalet har upphört                                                   |
+| Tenfast `stage`                | onecore `LeaseStatus` | Betydelse                                                                                                                                                              |
+| ------------------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `terminationSigningInProgress` | PreliminaryTerminated | Uppsägningen är skickad för signering. Avtalets `endDate` är tomt och slutdatumet ligger i `simplesignTermination.preliminaryEndDate`, som onecore visar som slutdatum |
+| `preTermination`               | PreliminaryTerminated | Uppsägningen är begärd och avtalet har slutdatum, men den är inte hanterad                                                                                             |
+| `terminationScheduled`         | AboutToEnd            | Uppsägningen är bekräftad, avtalet löper på uppsägningstiden ut                                                                                                        |
+| `terminated`/`archived`        | Ended                 | Avtalet har upphört                                                                                                                                                    |
 
 Tenfast har även ett `cancellation`-objekt på avtalet (`cancelled`, `requested`, `cancelledByType`, `preferredMoveOutDate` m.fl.) som fungerar som revisionsspår. Fältet `cancelledByType` är det som skiljer ett hyresgäst-initierat uppsägningsförsök (`'hyresgast'`, hårdkodat av onecore i den preliminära uppsägningen) från ett system-/Xpand-drivet.
 
@@ -33,3 +34,4 @@ Tenfast har även ett `cancellation`-objekt på avtalet (`cancelled`, `requested
 
 - **Bilplatser filtreras tyst bort ur Xpand-synken — avsiktligt.** `cmlog`-adaptern klassificerar `Garagekontrakt`-rader precis som `Bostadskontrakt`/`Lokalkontrakt`, men det schemalagda scriptet `core/src/scripts/sync-leases` (funktionen `isResidenceOrStorage`) synkar bara hyresobjekt av typen lägenhet eller lokal+förråd. En bilplats som sägs upp eller makuleras direkt i Xpand loggas som "rental object type not in scope, skipping" och **synkas aldrig till Tenfast** via det här flödet. Det är korrekt beteende, inte en lucka: bilplatser är Tenfast-native och avslutas antingen via hyresgästens självservice ([Hyresgäst Begär Uppsägning av Bilplats](./DOCS_Preliminary_Terminate_Lease.md), som Tenfast själv bekräftar med ett anrop tillbaka till Core — se noten där) eller direkt i Tenfast — aldrig via Xpands `cmlog`.
 - **`terminate` är idempotent, `void` är det inte.** Se respektive dokuments "Att känna till" för detaljer — det påverkar hur en redan behandlad rad beter sig om synken körs om.
+- **Synken som helhet** — schemaläggning, felkö, återförsök, mejl och vad som händer om något ligger nere — beskrivs i [Synk från Xpand](../../scripts/DOCS_Sync_Overview.md) och [Synka Avtal](../../scripts/sync-leases/DOCS_Sync_Leases.md).

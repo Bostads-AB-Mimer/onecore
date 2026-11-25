@@ -110,7 +110,7 @@ export const ListingPreview = ({
               whiteSpace: 'pre-line',
             }}
           >
-            {block.content || 'Underrubrik...'}
+            {block.content || 'Underrubrik 2...'}
           </Typography>
         )
 
@@ -136,15 +136,16 @@ export const ListingPreview = ({
             {renderParagraphs(
               block.content || '',
               {
-                // Mirrors the public site, where "Underrubrik 2" renders as an h3
-                // (Graphik 1.375rem, weight 500)
+                // "Underrubrik 3" is an h3 below "Underrubrik 2" (1.5rem Bison);
+                // Graphik is wider than Bison, so it needs a smaller size to read
+                // as smaller
                 width: '100%',
-                fontSize: '1.375rem',
+                fontSize: '1.125rem',
                 fontFamily: 'graphikRegular',
                 fontWeight: 500,
                 lineHeight: 1.1,
               },
-              'Underrubrik 2...'
+              'Underrubrik 3...'
             )}
           </Box>
         )
@@ -263,6 +264,11 @@ export const ListingPreview = ({
           border: '2px solid',
           borderColor: 'grey.300',
           minHeight: 300,
+          // The preview sits in a sticky column, so long content scrolls
+          // inside the panel. The offset leaves room for the sticky top gap,
+          // the heading above and the caption below.
+          maxHeight: 'calc(100vh - 120px)',
+          overflowY: 'auto',
         }}
       >
         {(rentalObjectCode || label) && (

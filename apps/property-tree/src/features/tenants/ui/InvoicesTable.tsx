@@ -14,6 +14,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 import { useInvoicePaymentEvents } from '../hooks/useInvoicePaymentEvents'
 import { hasInvoiceDeferral } from '../lib/invoiceDeferral'
 import { InvoiceDeferralAction } from './InvoiceDeferralAction'
+import { InvoicePdfDownloadButton } from './InvoicePdfDownloadButton'
+import { InvoiceSendButton } from './InvoiceSendButton'
 
 const currencyFormatter = new Intl.NumberFormat('sv-SE', {
   style: 'currency',
@@ -366,8 +368,8 @@ export const InvoicesTable = (props: Props) => {
             {invoice.credit.originalInvoiceId}
           </div>
         )}
-        {invoice.invoiceFileUrl && (
-          <div className="mb-3">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start empty:hidden">
+          {invoice.invoiceFileUrl && (
             <Button
               variant="outline"
               size="sm"
@@ -380,8 +382,13 @@ export const InvoicesTable = (props: Props) => {
               <FileText className="h-4 w-4 mr-2" />
               Se PDF
             </Button>
-          </div>
-        )}
+          )}
+          <InvoicePdfDownloadButton invoice={invoice} />
+          <InvoiceSendButton
+            invoice={invoice}
+            contactCode={props.contactCode}
+          />
+        </div>
         {props.contactCode && (
           <InvoiceDeferralAction
             invoice={invoice}

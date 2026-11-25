@@ -1,6 +1,13 @@
 import { Lease, Contact, WaitingList, WaitingListType } from '@onecore/types'
 
-import { logger, paginateKnex, PaginatedResponse } from '@onecore/utilities'
+import {
+  contactDetailsMode,
+  logger,
+  paginateKnex,
+  PaginatedResponse,
+  placeholderEmailAddress,
+  placeholderPhoneNumber,
+} from '@onecore/utilities'
 import { Knex } from 'knex'
 import { Context } from 'koa'
 import { AdapterResult } from '../types'
@@ -83,6 +90,41 @@ const getStorageWaitingList = (rows: Array<any>): WaitingList | undefined => {
     }
 }
 
+type ContactPhoneNumber = NonNullable<Contact['phoneNumbers']>[number]
+
+const REDACTED = 'redacted'
+
+const pickContactDetails = (
+  contactCode: string,
+  emailAddress: string | null | undefined,
+  phoneNumbers: ContactPhoneNumber[],
+  protectedIdentity: boolean
+): { emailAddress: string | undefined; phoneNumbers: ContactPhoneNumber[] } => {
+  const mode = contactDetailsMode()
+  if (mode === 'real') {
+    return {
+      emailAddress:
+        emailAddress == null || protectedIdentity ? undefined : emailAddress,
+      phoneNumbers,
+    }
+  }
+  if (mode === 'redacted' || protectedIdentity) {
+    return {
+      emailAddress: REDACTED,
+      phoneNumbers: phoneNumbers.map((p) => ({ ...p, phoneNumber: REDACTED })),
+    }
+  }
+  const code = contactCode.trim()
+  return {
+    emailAddress:
+      emailAddress == null ? undefined : placeholderEmailAddress(code),
+    phoneNumbers: phoneNumbers.map((p) => ({
+      ...p,
+      phoneNumber: placeholderPhoneNumber(code),
+    })),
+  }
+}
+
 const transformFromDbContact = (
   rows: Array<any>,
   phoneNumbers: any,
@@ -118,13 +160,12 @@ const transformFromDbContact = (
           },
         }
       : {}),
-    phoneNumbers: phoneNumbers,
-    emailAddress:
-      process.env.NODE_ENV === 'production'
-        ? row.emailAddress == null || protectedIdentity
-          ? undefined
-          : row.emailAddress
-        : 'redacted',
+    ...pickContactDetails(
+      row.contactCode,
+      row.emailAddress,
+      phoneNumbers,
+      protectedIdentity
+    ),
     isTenant,
     parkingSpaceWaitingList: getParkingSpaceWaitingList(rows),
     housingWaitingList: getHousingWaitingList(rows),
@@ -666,9 +707,7 @@ const getLeases = async (leaseIds: string[]) => {
       'hyobj.makuldatum AS terminationDate'
     )
     .innerJoin('hyhav', 'hyhav.keyhyhav', 'hyobj.keyhyhav')
-    .whereRaw(
-      `hyobj.hyobjben IN (${leaseIds.map((id) => `'${id}'`).join(', ')})`
-    )
+    .whereIn('hyobj.hyobjben', leaseIds)
 
   return rows.map((row) => transformFromXPandDb.toLease(row, [], []))
 }
@@ -743,21 +782,20 @@ const getContacts = async (contactCodes: string[]) => {
         postalCode: row.postalCode,
         city: row.city,
       },
-      phoneNumbers: row.phoneNumber
-        ? [
-            {
-              phoneNumber: row.phoneNumber,
-              type: '',
-              isMainNumber: true,
-            },
-          ]
-        : [],
-      emailAddress:
-        process.env.NODE_ENV === 'production'
-          ? row.emailAddress == null || protectedIdentity
-            ? undefined
-            : row.emailAddress
-          : 'redacted',
+      ...pickContactDetails(
+        row.contactCode,
+        row.emailAddress,
+        row.phoneNumber
+          ? [
+              {
+                phoneNumber: row.phoneNumber,
+                type: '',
+                isMainNumber: true,
+              },
+            ]
+          : [],
+        protectedIdentity
+      ),
       isTenant: false,
       specialAttention: !!row.specialAttention,
       protectedIdentity: protectedIdentity,
@@ -828,7 +866,37 @@ const formatDate = (date: Date) => {
   return date.toISOString().split('T')[0]
 }
 
+/**
+ * The ids (`<rental object code>/NN`) of every lease Xpand has on the rental
+ * object, ended and voided (/NNM) ones included, so a lease created in Tenfast
+ * can continue the numbering (AVTAL-612).
+ */
+const getLeaseIdsByRentalObjectCode = async (
+  rentalObjectCode: string
+): Promise<AdapterResult<string[], 'could-not-get-lease-ids'>> => {
+  try {
+    // [, % and _ are wildcards in a LIKE pattern. The pattern is cast to the
+    // column's type: a string binding is sent as NVARCHAR, and comparing the
+    // VARCHAR column with it converts the column on every row, so SQL Server
+    // cannot use its index.
+    const pattern = `${rentalObjectCode.replace(/[[%_]/g, '[$&]')}/%`
+    const rows: Array<{ leaseId: string }> = await xpandDb
+      .from('hyobj')
+      .select('hyobj.hyobjben as leaseId')
+      .whereRaw('hyobj.hyobjben LIKE CAST(? AS VARCHAR(60))', [pattern])
+
+    return { ok: true, data: rows.map((row) => row.leaseId.trim()) }
+  } catch (err) {
+    logger.error(
+      { err, rentalObjectCode },
+      'tenantLeaseAdapter.getLeaseIdsByRentalObjectCode'
+    )
+    return { ok: false, err: 'could-not-get-lease-ids' }
+  }
+}
+
 export {
+  getLeaseIdsByRentalObjectCode,
   getLeases,
   getContactByNationalRegistrationNumber,
   getContactByContactCode,

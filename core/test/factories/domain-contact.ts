@@ -6,6 +6,7 @@ export const DomainContactFactory = Factory.define<ContactIndividual>(
     type: 'individual',
     contactCode: `P${100000 + sequence}`,
     contactKey: `k-${sequence}`,
+    protectedIdentity: false,
     personal: {
       nationalId: '199001011234',
       birthDate: '1990-01-01',

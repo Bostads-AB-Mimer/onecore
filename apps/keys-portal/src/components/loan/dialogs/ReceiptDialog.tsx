@@ -46,10 +46,10 @@ export function ReceiptDialog({
   const signerLabel = isMaintenance ? 'entreprenören' : 'hyresgästen'
 
   const handlePrint = async () => {
-    const data = getPrintData(addSignature(comment))
-    if (!data) return
     setIsPrinting(true)
     try {
+      const data = await getPrintData(addSignature(comment))
+      if (!data) return
       await printReceipt(data)
     } finally {
       setIsPrinting(false)

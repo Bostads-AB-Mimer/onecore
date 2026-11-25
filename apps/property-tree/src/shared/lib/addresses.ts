@@ -15,3 +15,11 @@ export function sortStreetAddresses(addresses: string[]): string[] {
     return sa.number - sb.number
   })
 }
+
+export function openAddressInGoogleMaps(address: string) {
+  window.open(
+    `https://maps.google.com/?q=${encodeURIComponent(address)}`,
+    '_blank',
+    'noopener,noreferrer'
+  )
+}

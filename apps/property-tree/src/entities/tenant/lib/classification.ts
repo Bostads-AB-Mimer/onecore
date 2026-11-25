@@ -6,10 +6,12 @@ export function isOrganization(tenant: Pick<Tenant, 'contactCode'>) {
 
 export function getTenantRoles(
   tenant: Pick<Tenant, 'isTenant'> &
-    Partial<Pick<Tenant, 'parkingSpaceWaitingList'>>
+    Partial<Pick<Tenant, 'parkingSpaceWaitingList'>>,
+  { isSubletTenant = false }: { isSubletTenant?: boolean } = {}
 ) {
   const roles: string[] = []
   if (tenant.isTenant) roles.push('Hyresgäst')
+  if (isSubletTenant) roles.push('Andrahandshyresgäst')
   if (tenant.parkingSpaceWaitingList) roles.push('Sökande')
   return roles.length > 0 ? roles.join(', ') : '-'
 }

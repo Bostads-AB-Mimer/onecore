@@ -20,6 +20,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import KeyLoan from './pages/KeyLoan'
 import ActivityLog from './pages/ActivityLog'
 import MaintenanceKeys from './pages/MaintenanceKeys'
+import MoveInOut from './pages/MoveInOut'
 import { PageTitle } from './components/PageTitle'
 
 const queryClient = new QueryClient({
@@ -50,6 +51,7 @@ const AppContent = () => (
           <Route path="/KeyLoan" element={<KeyLoan />} />
           <Route path="/maintenance-keys" element={<MaintenanceKeys />} />
           <Route path="/activity-log" element={<ActivityLog />} />
+          <Route path="/move-in-out" element={<MoveInOut />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

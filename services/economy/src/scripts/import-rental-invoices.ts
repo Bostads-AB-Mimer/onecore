@@ -2,10 +2,12 @@ import { logger } from '@onecore/utilities'
 import {
   closeDatabases,
   getBatchAggregatedRowsCsv,
-  getBatchContactsCsv,
   getBatchLedgerRowsCsv,
   importInvoiceRows,
   markBatchAsProcessed,
+} from '../services/xpand-rental-invoice-service/service'
+import {
+  getBatchContactsCsv,
   uploadInvoiceFile,
 } from '../services/invoice-service/service'
 import fs from 'fs/promises'
@@ -13,6 +15,13 @@ import config from '../common/config'
 import { sep } from 'node:path'
 import { sendEmail } from '../common/adapters/infobip-adapter'
 
+/**
+ * Exports accounting for rental invoices created in Xpand to Xledger.
+ * Rental invoices created in Tenfast are exported by
+ * export-rental-invoices-accounting.
+ *
+ * Usage: import-rental-invoices [companyIds] [earliestStartDate] [dryRun]
+ */
 const importRentalInvoicesScript = async (
   companyIds: string[],
   earliestStartDate: Date,
@@ -38,7 +47,7 @@ const importRentalInvoicesScript = async (
     const result = await importInvoiceRows(startDate, endDate, companyId)
     const batchId = result.batchId
 
-    if (result.batchId) {
+    if (batchId) {
       if (result.errors?.length && result.errors?.length > 0) {
         hasErrors = true
       }

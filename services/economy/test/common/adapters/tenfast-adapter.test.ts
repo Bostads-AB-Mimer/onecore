@@ -1,10 +1,12 @@
 import axios from 'axios'
+import { logger } from '@onecore/utilities'
 import assert from 'node:assert'
 import {
   getTenantByContactCode,
   getRentalProperty,
   getLease,
   getInvoicesForTenant,
+  getInvoicesByContactCode,
   getInvoiceByOcr,
   getInvoiceArticle,
   getActiveLeasesByRentalObjectCodes,
@@ -13,8 +15,14 @@ import {
   getAutogiroConsentByNationalRegistrationNumber,
   setGracePeriod,
   listNewOutboundExports,
+  getRentalLosses,
+  getLeasesByTenantId,
+  markInvoicesAsExported,
+  getInvoicesNotExported,
+  getRecipientCodesOfInvoicesNotExported,
 } from '@src/common/adapters/tenfast/tenfast-adapter'
-import { PaymentStatus } from '@onecore/types'
+import { MimerCompany } from '@src/common/types/typesv2'
+import { LeaseType, PaymentStatus } from '@onecore/types'
 import {
   TenfastTenantFactory,
   TenfastRentalPropertyFactory,
@@ -26,6 +34,7 @@ import {
   TenfastInvoiceRowFactory,
   TenfastAutogiroConsentFactory,
   TenfastOutboundExportFactory,
+  invoice as InvoiceFactory,
 } from '../../factories'
 
 // Mock axios
@@ -76,18 +85,57 @@ describe('Tenfast Adapter', () => {
       })
     })
 
-    it('should return error when request fails with non-200 status', async () => {
-      mockAxios.request.mockResolvedValue({
-        status: 500,
-        statusText: 'Internal Server Error',
-      })
+    it('lets a 404 through instead of throwing, so a contact missing in Tenfast gives null', async () => {
+      // Arrange
+      mockAxios.request.mockResolvedValue({ status: 404, data: 'Not Found' })
 
+      // Act
+      await getTenantByContactCode('P135129')
+
+      // Assert
+      const [config] = mockAxios.request.mock.calls[0]
+      expect(config.validateStatus?.(404)).toBe(true)
+      expect(config.validateStatus?.(200)).toBe(true)
+      expect(config.validateStatus?.(500)).toBe(false)
+    })
+
+    it('logs the status and message, not the raw request error, when the request fails', async () => {
+      // Arrange
+      const requestError = Object.assign(new Error('Request failed'), {
+        response: { status: 502 },
+        config: { headers: { 'api-token': 'secret-token' } },
+      })
+      mockAxios.request.mockRejectedValue(requestError)
+      // Once for the timeout check in makeTenfastRequest, once in the catch.
+      mockAxios.isAxiosError.mockReturnValueOnce(true).mockReturnValueOnce(true)
+
+      // Act
       const result = await getTenantByContactCode('P999999')
 
+      // Assert
+      assert(!result.ok)
+      expect(logger.error).toHaveBeenCalledWith(
+        { contactCode: 'P999999', status: 502, error: 'Request failed' },
+        'tenfast-adapter.getTenantByContactCode'
+      )
+      expect(
+        JSON.stringify(jest.mocked(logger.error).mock.calls)
+      ).not.toContain('secret-token')
+    })
+
+    it('returns an error when Tenfast answers with a server error', async () => {
+      // Arrange
+      mockAxios.request.mockRejectedValue(
+        new Error('Request failed with status code 500')
+      )
+
+      // Act
+      const result = await getTenantByContactCode('P999999')
+
+      // Assert
       expect(result).toEqual({
         ok: false,
-        err: 'Internal Server Error',
-        statusCode: 500,
+        err: 'Request failed with status code 500',
       })
     })
 
@@ -124,6 +172,17 @@ describe('Tenfast Adapter', () => {
           params: expect.objectContaining({ hyresvard: 'test-hyresvard-id' }),
         })
       )
+    })
+
+    it('accepts a parking space without skvNummer (AVTAL-348)', async () => {
+      const { skvNummer: _, ...parkingSpace } =
+        TenfastRentalPropertyFactory.build({ typ: 'parkering' })
+      mockAxios.request.mockResolvedValue({ status: 200, data: parkingSpace })
+
+      const result = await getRentalProperty(parkingSpace.externalId)
+
+      assert(result.ok)
+      expect(result.data.apartmentNumber).toBe(0)
     })
 
     it('should return error when rental property is not found (404)', async () => {
@@ -185,6 +244,29 @@ describe('Tenfast Adapter', () => {
           }),
         })
       )
+    })
+
+    it.each([
+      ['bostad', LeaseType.HousingContract],
+      ['parkering', LeaseType.ParkingSpaceContract],
+      ['lokal', LeaseType.CommercialTenantContract],
+      ['förråd', LeaseType.CommercialTenantContract],
+      ['Förråd', LeaseType.CommercialTenantContract],
+      ['forrad', LeaseType.CommercialTenantContract],
+      ['unknown', LeaseType.OtherContract],
+    ])('maps rental object typ "%s" to %s', async (typ, expected) => {
+      const mockLease = TenfastLeaseFactory.build({
+        hyresobjekt: [TenfastRentalPropertyFactory.build({ typ })],
+      })
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: mockLease,
+      })
+
+      const result = await getLease(mockLease.externalId)
+
+      assert(result.ok)
+      expect(result.data.type).toBe(expected)
     })
 
     it('should encode lease IDs containing slashes correctly', async () => {
@@ -257,9 +339,15 @@ describe('Tenfast Adapter', () => {
           params: expect.objectContaining({
             hyresvard: 'test-hyresvard-id',
             hyresgast: 'tenant-123',
-            paginate: 'false',
+            limit: 1000,
           }),
         })
+      )
+      // `paginate` is a cursor in Tenfast, so the first page is requested
+      // without it.
+      expect(mockAxios.request).toHaveBeenCalledTimes(1)
+      expect(mockAxios.request.mock.calls[0][0].params).not.toHaveProperty(
+        'paginate'
       )
 
       assert(result.ok)
@@ -288,6 +376,170 @@ describe('Tenfast Adapter', () => {
         vat: 0,
         printGroup: 'Hyra bostad',
       })
+    })
+
+    it('sends from without an upper bound so invoices for future periods are included', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: TenfastInvoicesByTenantIdResponseFactory.build(),
+      })
+
+      await getInvoicesForTenant('tenant-123', new Date('2026-10-01'))
+
+      const [config] = mockAxios.request.mock.calls[0]
+      expect(config.params).toEqual(
+        expect.objectContaining({ from: '2026-10-01' })
+      )
+      expect(config.params).not.toHaveProperty('to')
+    })
+
+    it('follows the next cursor until every page of invoices is fetched', async () => {
+      const buildInvoice = (ocrNumber: string) =>
+        TenfastInvoiceFactory.build({
+          ocrNumber,
+          hyror: [TenfastInvoiceRowFactory.build()],
+        })
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [buildInvoice('55000001')],
+            next: 'cursor-1',
+            totalCount: 2,
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [buildInvoice('55000002')],
+            prev: 'cursor-0',
+            next: null,
+            totalCount: 2,
+          }),
+        })
+
+      const result = await getInvoicesForTenant(
+        'tenant-123',
+        new Date('2026-10-01')
+      )
+
+      assert(result.ok)
+      expect(result.data.map(({ invoice }) => invoice.invoiceId)).toEqual([
+        '55000001',
+        '55000002',
+      ])
+      expect(mockAxios.request).toHaveBeenCalledTimes(2)
+      const [firstPage, secondPage] = mockAxios.request.mock.calls.map(
+        ([config]) => config.params
+      )
+      expect(firstPage).not.toHaveProperty('paginate')
+      expect(secondPage).toEqual(
+        expect.objectContaining({
+          hyresvard: 'test-hyresvard-id',
+          hyresgast: 'tenant-123',
+          limit: 1000,
+          from: '2026-10-01',
+          paginate: 'cursor-1',
+        })
+      )
+    })
+
+    it('fails instead of returning a partial list when a later page fails', async () => {
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            next: 'cursor-1',
+            totalCount: 2,
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 500,
+          statusText: 'Internal Server Error',
+          data: { records: [{ hyresgast: 'tenant data' }] },
+        })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      expect(result).toEqual({ ok: false, err: 'request-failed' })
+      // The adapter asks axios to resolve every status, so a failed page
+      // really does arrive as a response like the one mocked above.
+      const [config] = mockAxios.request.mock.calls[1]
+      expect(config.validateStatus?.(500)).toBe(true)
+      // The response body can hold tenant data and must stay out of the log.
+      expect(JSON.stringify(jest.mocked(logger.warn).mock.calls)).not.toContain(
+        'tenant data'
+      )
+    })
+
+    it('keeps fetching while Tenfast returns a next cursor, even past totalCount', async () => {
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            next: 'cursor-1',
+            // An invoice created between the two pages is not counted here.
+            totalCount: 1,
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            next: null,
+            totalCount: 2,
+          }),
+        })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      assert(result.ok)
+      expect(result.data).toHaveLength(2)
+    })
+
+    it('fails when Tenfast returns the same cursor again instead of duplicating invoices', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: TenfastInvoicesByTenantIdResponseFactory.build({
+          next: 'cursor-1',
+          totalCount: 5,
+        }),
+      })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      expect(result).toEqual({ ok: false, err: 'pagination-error' })
+      expect(mockAxios.request).toHaveBeenCalledTimes(2)
+    })
+
+    it('fails when a page is empty although more pages are announced', async () => {
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            next: 'cursor-1',
+            totalCount: 3,
+          }),
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [],
+            next: 'cursor-2',
+            totalCount: 3,
+          }),
+        })
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      expect(result).toEqual({ ok: false, err: 'pagination-error' })
+    })
+
+    it('returns request-failed when the request itself fails', async () => {
+      mockAxios.request.mockRejectedValue(new Error('socket hang up'))
+
+      const result = await getInvoicesForTenant('tenant-123')
+
+      expect(result).toEqual({ ok: false, err: 'request-failed' })
     })
 
     it('maps tenfast deferral source when grace period is present on invoice', async () => {
@@ -383,6 +635,138 @@ describe('Tenfast Adapter', () => {
     })
   })
 
+  describe(getInvoicesByContactCode, () => {
+    // Tenfast references an article on an invoice row by its internal id.
+    const articleId = '6af2c8b04b883398396c10bd'
+
+    const mockTenfast = (articleResponse: { status: number; data: unknown }) =>
+      mockAxios.request.mockImplementation(async (config: { url?: string }) => {
+        if (config.url?.includes('/extras/hyresgaster/')) {
+          return { status: 200, data: TenfastTenantFactory.build() }
+        }
+        if (config.url?.includes('/articles/')) {
+          return articleResponse
+        }
+        return {
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [
+              TenfastInvoiceFactory.build({
+                hyror: [
+                  TenfastInvoiceRowFactory.build({ article: articleId }),
+                  TenfastInvoiceRowFactory.build({ article: articleId }),
+                ],
+              }),
+            ],
+          }),
+        }
+      })
+
+    it('shows the article code instead of the Tenfast article id on invoice rows', async () => {
+      // Arrange
+      mockTenfast({
+        status: 200,
+        data: TenfastRentArticleFactory.build({
+          _id: articleId,
+          code: 'HYRAB',
+        }),
+      })
+
+      // Act
+      const invoices = await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const rows = invoices[0].invoice.invoiceRows
+      expect(rows.map((row) => row.rentArticle)).toEqual(['HYRAB', 'HYRAB'])
+    })
+
+    it('looks up each article once, even when several rows use it', async () => {
+      // Arrange
+      mockTenfast({
+        status: 200,
+        data: TenfastRentArticleFactory.build({
+          _id: articleId,
+          code: 'HYRAB',
+        }),
+      })
+
+      // Act
+      await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const articleRequests = mockAxios.request.mock.calls.filter(([config]) =>
+        config.url?.includes('/articles/')
+      )
+      expect(articleRequests).toHaveLength(1)
+    })
+
+    it('keeps the article id when the article cannot be fetched', async () => {
+      // Arrange
+      mockTenfast({ status: 404, data: {} })
+
+      // Act
+      const invoices = await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const rows = invoices[0].invoice.invoiceRows
+      expect(rows.map((row) => row.rentArticle)).toEqual([articleId, articleId])
+    })
+
+    it('gives each row the code of its own article and leaves rows without an article alone', async () => {
+      // Arrange
+      const feeArticleId = '6af2c8b04b883398396c10d0'
+      const missingArticleId = '6af2c8b04b883398396c10ff'
+      const codeById: Record<string, string> = {
+        [articleId]: 'HYRAB',
+        [feeArticleId]: 'HYRESSATT',
+      }
+      mockAxios.request.mockImplementation(async (config: { url?: string }) => {
+        if (config.url?.includes('/extras/hyresgaster/')) {
+          return { status: 200, data: TenfastTenantFactory.build() }
+        }
+        if (config.url?.includes('/articles/')) {
+          const id = config.url.split('/articles/')[1]
+          return codeById[id]
+            ? {
+                status: 200,
+                data: TenfastRentArticleFactory.build({
+                  _id: id,
+                  code: codeById[id],
+                }),
+              }
+            : { status: 404, data: {} }
+        }
+        return {
+          status: 200,
+          data: TenfastInvoicesByTenantIdResponseFactory.build({
+            records: [
+              TenfastInvoiceFactory.build({
+                hyror: [
+                  TenfastInvoiceRowFactory.build({ article: articleId }),
+                  TenfastInvoiceRowFactory.build({ article: feeArticleId }),
+                  TenfastInvoiceRowFactory.build({ article: missingArticleId }),
+                  TenfastInvoiceRowFactory.build({ article: null }),
+                ],
+              }),
+            ],
+          }),
+        }
+      })
+
+      // Act
+      const invoices = await getInvoicesByContactCode('P123456')
+
+      // Assert
+      const rows = invoices[0].invoice.invoiceRows
+      expect(rows.map((row) => row.rentArticle)).toEqual([
+        'HYRAB',
+        'HYRESSATT',
+        missingArticleId,
+        null,
+      ])
+    })
+  })
+
   describe(getInvoiceByOcr, () => {
     const ocr = '55123456'
     const mockInvoice = TenfastInvoiceByOcrResponseFactory.build()
@@ -454,6 +838,57 @@ describe('Tenfast Adapter', () => {
       })
     })
 
+    it('should accept articles without label, type and accountNr', async () => {
+      // Newer articles from the Tenfast API no longer include label, type
+      // or a top-level accountNr (title/defaultLabel are used instead).
+      const mockArticle = {
+        _id: '6a0ed9d2c08642aaffb6323a',
+        hyresvard: '6909970c8825e06c8eca329b',
+        createdAt: '2026-05-21T10:09:22.520Z',
+        updatedAt: '2026-05-21T10:09:22.520Z',
+        title: 'Ersättning för värme och kyla',
+        defaultLabel: 'Ersättning för värme och kyla',
+        code: 'NAVETVÄRMEM',
+        accountConfigurations: [
+          {
+            projectCode: '',
+            accountNr: 3016,
+            categoryCode: 'Intäkter',
+            debitType: 'HYRA',
+            costCenter: '0061',
+            property: '26001',
+            freeText: '20006',
+          },
+        ],
+        consolidationLabel: '',
+        rentalLoss: false,
+        vat: 0,
+        category: 'Hyra/Inkasso',
+        description: '',
+        includeInContract: true,
+        adjustmentType: 'negotiation',
+      }
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: mockArticle,
+      })
+
+      const result = await getInvoiceArticle('NAVETVÄRMEM')
+
+      expect(result).toEqual({
+        ok: true,
+        data: {
+          _id: mockArticle._id,
+          hyresvard: mockArticle.hyresvard,
+          createdAt: mockArticle.createdAt,
+          title: mockArticle.title,
+          code: mockArticle.code,
+          includeInContract: true,
+          accountConfigurations: mockArticle.accountConfigurations,
+        },
+      })
+    })
+
     it('should return error when article is not found', async () => {
       mockAxios.request.mockResolvedValue({
         status: 404,
@@ -464,7 +899,7 @@ describe('Tenfast Adapter', () => {
 
       expect(result).toEqual({
         ok: false,
-        err: 'Not Found',
+        err: 'not-found',
       })
     })
 
@@ -681,6 +1116,179 @@ describe('Tenfast Adapter', () => {
         leaseEndDate,
       })
     })
+
+    it('returns the tenant ids of the matched lease', async () => {
+      makeBatchResponse([
+        {
+          _id: 'obj-1',
+          externalId: '306-008-01-0201',
+          avtal: [
+            TenfastLeaseFactory.build({
+              externalId: '306-008-01-0201/01',
+              startDate: new Date('2025-01-01'),
+              endDate: null,
+              stage: 'active',
+              hyresgaster: ['tenant-1', { _id: 'tenant-2' }] as any,
+              hyresobjekt: [],
+            }),
+          ],
+        },
+      ])
+
+      const result = await getActiveLeasesByRentalObjectCodes({
+        rentalObjectCodes: ['306-008-01-0201'],
+        periodStart,
+        periodEnd,
+      })
+
+      expect(result.get('306-008-01-0201')).toMatchObject({
+        tenantIds: ['tenant-1', 'tenant-2'],
+      })
+    })
+  })
+
+  describe(getLeasesByTenantId, () => {
+    const makeLease = (overrides: object = {}) => ({
+      externalId: '306-008-01-0302/12',
+      stage: 'upcoming',
+      startDate: '2026-11-01',
+      endDate: null,
+      hyresobjekt: [{ _id: 'obj-1', typ: 'bostad' }],
+      ...overrides,
+    })
+
+    const makePage = (records: object[], next: string | null = null) => ({
+      status: 200,
+      data: { records, prev: null, next, totalCount: records.length },
+    })
+
+    it('fetches the leases of the tenant with rental objects populated', async () => {
+      mockAxios.request.mockResolvedValueOnce(makePage([makeLease()]))
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      expect(mockAxios.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: '/v1/hyresvard/avtal',
+          params: expect.objectContaining({
+            hyresgast: 'tenant-1',
+            populate: 'hyresobjekt',
+          }),
+        })
+      )
+      expect(result).toEqual({
+        ok: true,
+        data: [
+          {
+            leaseId: '306-008-01-0302/12',
+            stage: 'upcoming',
+            startDate: new Date('2026-11-01'),
+            endDate: null,
+            isResidential: true,
+          },
+        ],
+      })
+    })
+
+    it.each([
+      ['a parking space', [{ _id: 'obj-1', typ: 'parkering' }], false],
+      ['an unpopulated rental object', ['obj-1'], false],
+      ['a rental object without type', [{ _id: 'obj-1' }], false],
+      [
+        'a residential and a storage object',
+        [
+          { _id: 'obj-1', typ: 'forrad' },
+          { _id: 'obj-2', typ: 'Bostad' },
+        ],
+        true,
+      ],
+    ])(
+      'tells whether a lease on %s is residential',
+      async (_, hyresobjekt, isResidential) => {
+        mockAxios.request.mockResolvedValueOnce(
+          makePage([makeLease({ hyresobjekt })])
+        )
+
+        const result = await getLeasesByTenantId('tenant-1')
+
+        assert(result.ok)
+        expect(result.data[0].isResidential).toBe(isResidential)
+      }
+    )
+
+    it('follows pagination', async () => {
+      mockAxios.request
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: [makeLease({ externalId: 'a/01' })],
+            prev: null,
+            next: 'cursor-1',
+            totalCount: 2,
+          },
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          data: {
+            records: [makeLease({ externalId: 'b/01' })],
+            prev: 'cursor-1',
+            next: null,
+            totalCount: 2,
+          },
+        })
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      assert(result.ok)
+      expect(result.data.map((lease) => lease.leaseId)).toEqual([
+        'a/01',
+        'b/01',
+      ])
+      expect(mockAxios.request).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          params: expect.objectContaining({ paginate: 'cursor-1' }),
+        })
+      )
+    })
+
+    it('stops when a page has no records', async () => {
+      mockAxios.request.mockResolvedValue({
+        status: 200,
+        data: { records: [], prev: null, next: 'cursor-1', totalCount: 5 },
+      })
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      expect(result).toEqual({ ok: true, data: [] })
+      expect(mockAxios.request).toHaveBeenCalledTimes(1)
+    })
+
+    it('returns an error on unexpected status', async () => {
+      mockAxios.request.mockResolvedValueOnce({ status: 500, data: {} })
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns an error when the response does not parse', async () => {
+      mockAxios.request.mockResolvedValueOnce({
+        status: 200,
+        data: { records: [{ stage: 'active' }] },
+      })
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
+
+    it('returns an error when the request throws', async () => {
+      mockAxios.request.mockRejectedValueOnce(new Error('network'))
+
+      const result = await getLeasesByTenantId('tenant-1')
+
+      expect(result).toEqual({ ok: false, err: 'unknown' })
+    })
   })
 })
 
@@ -840,6 +1448,35 @@ describe(getInvoicePdf, () => {
     })
   })
 
+  it('returns the pdf for an invoice covering a parking space (AVTAL-348)', async () => {
+    // A co-invoiced apartment and parking space. Tenfast leaves out
+    // skvNummer for the parking space.
+    const [apartmentLease] = mockInvoice.avtal
+    const { skvNummer: _, ...parkingSpace } = apartmentLease.hyresobjekt[0]
+    const coInvoiced = {
+      ...mockInvoice,
+      avtal: [
+        apartmentLease,
+        {
+          ...apartmentLease,
+          _id: 'lease-parking',
+          hyresobjekt: [{ ...parkingSpace, externalId: '806-721-00-0018' }],
+        },
+      ],
+    }
+    mockAxios.request
+      .mockResolvedValueOnce({ status: 200, data: coInvoiced })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: Buffer.from('%PDF-1.4 mock'),
+        headers: {},
+      })
+
+    const result = await getInvoicePdf(ocr)
+
+    expect(result.ok).toBe(true)
+  })
+
   it('returns not-found when OCR lookup returns 404', async () => {
     mockAxios.request.mockResolvedValueOnce({
       status: 404,
@@ -918,11 +1555,10 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
 
     await getAutogiroConsentByNationalRegistrationNumber('199001011234')
 
+    expect(mockAxios.request).toHaveBeenCalledTimes(1)
     expect(mockAxios.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        params: expect.objectContaining({
-          'filter[payerSSN]': '19900101-1234',
-        }),
+        params: { 'filter[payerSSN]': '19900101-1234', limit: 10 },
       })
     )
   })
@@ -935,13 +1571,47 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
 
     await getAutogiroConsentByNationalRegistrationNumber('19900101-1234')
 
+    expect(mockAxios.request).toHaveBeenCalledTimes(1)
     expect(mockAxios.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        params: expect.objectContaining({
-          'filter[payerSSN]': '19900101-1234',
-        }),
+        params: { 'filter[payerSSN]': '19900101-1234', limit: 10 },
       })
     )
+  })
+
+  it('returns null when the only consent is cancelled, even without payer fields', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [{ _id: 'cancelled-1', status: 'CANCELLED' }],
+        prev: null,
+        next: null,
+        totalCount: 1,
+      },
+    })
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    expect(result).toEqual({ ok: true, data: null })
+  })
+
+  it('returns the active consent when a cancelled one comes first', async () => {
+    const consent = TenfastAutogiroConsentFactory.build()
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [{ _id: 'cancelled-1', status: 'CANCELLED' }, consent],
+        prev: null,
+        next: null,
+        totalCount: 2,
+      },
+    })
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    expect(result).toEqual({ ok: true, data: consent })
   })
 
   it('returns error on non-200 response', async () => {
@@ -971,6 +1641,41 @@ describe(getAutogiroConsentByNationalRegistrationNumber, () => {
 
     assert(!result.ok)
     expect(result.err).toBe('schema-error')
+  })
+
+  it('returns schema-error on an unknown consent status', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [{ _id: 'consent-1', status: 'PENDING' }],
+        prev: null,
+        next: null,
+        totalCount: 1,
+      },
+    })
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    assert(!result.ok)
+    expect(result.err).toBe('schema-error')
+  })
+
+  it('logs a failed request without the raw error', async () => {
+    const error = Object.assign(new Error('Network Error'), {
+      isAxiosError: true,
+      config: { headers: { 'api-token': 'secret-token' } },
+    })
+    mockAxios.request.mockRejectedValueOnce(error)
+    mockAxios.isAxiosError.mockReturnValueOnce(true)
+    const logSpy = jest.spyOn(logger, 'error').mockImplementation(() => {})
+
+    const result =
+      await getAutogiroConsentByNationalRegistrationNumber('199001011234')
+
+    expect(result).toEqual({ ok: false, err: 'Network Error' })
+    expect(JSON.stringify(logSpy.mock.calls)).not.toContain('secret-token')
+    logSpy.mockRestore()
   })
 })
 
@@ -1099,6 +1804,48 @@ describe(setGracePeriod, () => {
   })
 })
 
+describe('TenfastInvoicesByExportedResponseSchema', () => {
+  // Regression test for AVTAL-36: the /v1/hyresvard/hyror endpoint returns
+  // lease objects that are far leaner than the full TenfastLeaseSchema (no
+  // populated hyresobjekt, no reference/invitationsToRegister/canDelete/
+  // depositState, etc). The schema must accept those payloads.
+  it('parses invoices whose avtal records only carry the fields used downstream', () => {
+    const TenfastInvoicesByExportedResponseSchema = jest.requireActual(
+      '@src/common/adapters/tenfast/schemas'
+    ).TenfastInvoicesByExportedResponseSchema
+
+    const leanInvoice = {
+      ...TenfastInvoiceFactory.build(),
+      avtal: [
+        {
+          _id: 'lease-lean',
+          externalId: '306-008-01-0201/01',
+          hyresgaster: [
+            {
+              _id: 'tenant-1',
+              externalId: 'P1',
+              displayName: 'Lean Tenant',
+            },
+          ],
+        },
+      ],
+    }
+
+    const parsed = TenfastInvoicesByExportedResponseSchema.safeParse({
+      records: [leanInvoice],
+    })
+
+    expect(parsed.success).toBe(true)
+    if (parsed.success) {
+      expect(parsed.data.records[0]).toMatchObject({
+        contractCode: '306-008-01-0201/01',
+        recipientContactCode: 'P1',
+        recipientName: 'Lean Tenant',
+      })
+    }
+  })
+})
+
 describe(listNewOutboundExports, () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -1192,5 +1939,491 @@ describe(listNewOutboundExports, () => {
     const result = await listNewOutboundExports()
 
     expect(result).toEqual({ ok: false, err: 'unknown' })
+  })
+})
+
+describe(getRentalLosses, () => {
+  const reportId = '6aeafb7fbe29b7ac851dbf2b'
+  const company = {
+    tenfastId: 'test-hyresvard-id',
+    xpandId: '001',
+  } as any
+
+  const buildRentalLoss = (externalId: string, hyror: any[]) => ({
+    month: '2026-11',
+    hyresvard: { id: 'test-hyresvard-id', name: 'Mimer' },
+    hyresobjekt: {
+      id: `id-${externalId}`,
+      externalId,
+      fastighetId: 'fastighet',
+      postadress: 'Gatan 1',
+      postnummer: '722 11',
+      stad: 'VÄSTERÅS',
+      skvNummer: null,
+      objektnummer: '0201',
+      typ: 'Bostad',
+      hyror,
+    },
+    days: { month: 30, contracted: 0, uncontracted: 30 },
+    uncontractedIntervals: [{ from: '2026-11-01', to: '2026-11-30' }],
+    avtalIds: [],
+    relatedAvtalCoverage: [],
+  })
+
+  const rentRow = {
+    _id: 'hyra-1',
+    label: 'Hyra',
+    amount: 3000,
+    vat: 0,
+    hyresobjekt: 'id-RO1',
+    article: 'article-1',
+    includeInContract: true,
+  }
+
+  const article = {
+    ...TenfastRentArticleFactory.build(),
+    code: 'HYRA',
+    accountConfigurations: [
+      {
+        accountNr: 3015,
+        categoryCode: 'Intäkter',
+        debitType: 'HYRESBORTFALL',
+        costCenter: '',
+        property: '',
+        freeText: '',
+        projectCode: '',
+      },
+      {
+        accountNr: 3085,
+        categoryCode: 'Kostnad/Inköp',
+        debitType: 'HYRESBORTFALL',
+        costCenter: '',
+        property: '',
+        freeText: '',
+        projectCode: '',
+      },
+    ],
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('returns every rental loss and lists objects without rent rows separately', async () => {
+    const rentalLosses = [
+      buildRentalLoss('EMPTY1', []),
+      ...Array.from({ length: 11 }, (_, i) =>
+        buildRentalLoss(`RO${i}`, [rentRow])
+      ),
+      buildRentalLoss('EMPTY2', []),
+    ]
+    mockAxios.request.mockImplementation(async (config: any) =>
+      config.url.includes('/reports/')
+        ? { status: 200, data: rentalLosses }
+        : { status: 200, data: article }
+    )
+
+    const result = await getRentalLosses(company, reportId)
+
+    expect(mockAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining(
+          `/v1/hyresvard/reports/${reportId}/download`
+        ),
+      })
+    )
+    assert(result.ok)
+    expect(result.data.rentalLosses).toHaveLength(11)
+    expect(result.data.rentalLosses[0].rentalLossRows).toHaveLength(1)
+    expect(result.data.rentalObjectsWithoutRentRows).toEqual([
+      'EMPTY1',
+      'EMPTY2',
+    ])
+    expect(result.data.errors).toEqual([])
+  })
+
+  it('reports rent rows whose article cannot be retrieved', async () => {
+    mockAxios.request.mockImplementation(async (config: any) =>
+      config.url.includes('/reports/')
+        ? { status: 200, data: [buildRentalLoss('RO1', [rentRow])] }
+        : { status: 404, data: {} }
+    )
+
+    const result = await getRentalLosses(company, reportId)
+
+    assert(result.ok)
+    expect(result.data.errors).toEqual([
+      {
+        rentalObject: 'RO1',
+        error: 'Kunde inte hämta hyresartikel article-1',
+      },
+    ])
+  })
+
+  const mockReport = (rentalLosses: any[]) =>
+    mockAxios.request.mockImplementation(async (config: any) =>
+      config.url.includes('/reports/')
+        ? { status: 200, data: rentalLosses }
+        : { status: 200, data: article }
+    )
+
+  const withProration = (rentalLoss: any, amounts: number[]) => ({
+    ...rentalLoss,
+    proration: {
+      simplifiedInterval: { from: '2026-11-01', to: '2026-11-30' },
+      hyraRows: amounts.map((amount, i) => ({
+        ...rentRow,
+        _id: `prorated-${i}`,
+        amount,
+        accountingRows: null,
+        proratedInterval: { from: '2026-11-01', to: '2026-11-30' },
+      })),
+    },
+  })
+
+  it('leaves out rent rows that are not valid during the uncontracted period', async () => {
+    mockReport([
+      buildRentalLoss('RO1', [
+        { ...rentRow, _id: 'old', amount: 1000, to: '2026-10-31' },
+        { ...rentRow, _id: 'current', amount: 3000 },
+        { ...rentRow, _id: 'new', amount: 5000, from: '2026-12-01' },
+      ]),
+    ])
+
+    const result = await getRentalLosses(company, reportId)
+
+    assert(result.ok)
+    expect(result.data.rentalLosses).toHaveLength(1)
+    expect(
+      result.data.rentalLosses[0].rentalLossRows.map((row) => row.amount)
+    ).toEqual([3000])
+  })
+
+  it('prorates a rent row starting inside the uncontracted period to its own dates', async () => {
+    mockReport([
+      buildRentalLoss('RO1', [
+        { ...rentRow, amount: 3000, from: '2026-11-21', to: null },
+      ]),
+    ])
+
+    const result = await getRentalLosses(company, reportId)
+
+    assert(result.ok)
+    const [row] = result.data.rentalLosses[0].rentalLossRows
+    // 10 of 30 days
+    expect(row.amount).toBe(1000)
+    expect(row.fromDate).toEqual(new Date('2026-11-21'))
+    expect(row.toDate).toEqual(new Date('2026-11-30'))
+  })
+
+  it('accepts objects without proration, as Tenfast returns for contracted objects', async () => {
+    mockReport([
+      {
+        ...buildRentalLoss('RO1', [rentRow]),
+        days: { month: 30, contracted: 30, uncontracted: 0 },
+        proration: null,
+      },
+      { ...buildRentalLoss('RO2', [rentRow]), proration: null },
+    ])
+
+    const result = await getRentalLosses(company, reportId)
+
+    assert(result.ok)
+    expect(result.data.rentalLosses.map((loss) => loss.rentalObject)).toEqual([
+      'RO2',
+    ])
+    expect(result.data.checksumMismatches).toEqual([])
+  })
+
+  it('reports no checksum mismatch when the amount matches Tenfast proration', async () => {
+    mockReport([withProration(buildRentalLoss('RO1', [rentRow]), [3000])])
+
+    const result = await getRentalLosses(company, reportId)
+
+    assert(result.ok)
+    expect(result.data.checksumMismatches).toEqual([])
+  })
+
+  it('reports a checksum mismatch but still returns the rental loss', async () => {
+    mockReport([withProration(buildRentalLoss('RO1', [rentRow]), [2500])])
+
+    const result = await getRentalLosses(company, reportId)
+
+    assert(result.ok)
+    expect(result.data.rentalLosses).toHaveLength(1)
+    expect(result.data.checksumMismatches).toEqual([
+      {
+        rentalObject: 'RO1',
+        month: '2026-11',
+        calculatedAmount: 3000,
+        tenfastAmount: 2500,
+        diff: 500,
+      },
+    ])
+  })
+
+  it('checks rows left out for missing rental loss accounts against Tenfast too', async () => {
+    mockAxios.request.mockImplementation(async (config: any) =>
+      config.url.includes('/reports/')
+        ? {
+            status: 200,
+            data: [withProration(buildRentalLoss('RO1', [rentRow]), [3000])],
+          }
+        : { status: 200, data: { ...article, accountConfigurations: [] } }
+    )
+
+    const result = await getRentalLosses(company, reportId)
+
+    assert(result.ok)
+    expect(result.data.rentalLosses[0].rentalLossRows).toEqual([])
+    expect(result.data.checksumMismatches).toEqual([])
+  })
+})
+
+describe(markInvoicesAsExported, () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('marks every invoice and returns no failures when all succeed', async () => {
+    mockAxios.request.mockResolvedValue({ status: 200, data: {} })
+    const invoices = [
+      InvoiceFactory.build({ invoiceId: '1', externalId: 'ext-1' }),
+      InvoiceFactory.build({ invoiceId: '2', externalId: 'ext-2' }),
+    ]
+
+    const failures = await markInvoicesAsExported(invoices)
+
+    expect(failures).toEqual([])
+    expect(mockAxios.request).toHaveBeenCalledTimes(2)
+    expect(mockAxios.request.mock.calls[1][0].url).toBe(
+      '/v1/hyresvard/hyror/ext-2/manual-export'
+    )
+  })
+
+  it('keeps going after a failed invoice and returns the failures', async () => {
+    mockAxios.request
+      .mockRejectedValueOnce(new Error('socket hang up'))
+      .mockResolvedValueOnce({ status: 503, data: {} })
+      .mockResolvedValueOnce({ status: 200, data: {} })
+    const invoices = [
+      InvoiceFactory.build({ invoiceId: '1', externalId: 'ext-1' }),
+      InvoiceFactory.build({ invoiceId: '2', externalId: 'ext-2' }),
+      InvoiceFactory.build({ invoiceId: '3', externalId: 'ext-3' }),
+      InvoiceFactory.build({ invoiceId: '4', externalId: undefined }),
+    ]
+
+    const failures = await markInvoicesAsExported(invoices)
+
+    expect(mockAxios.request).toHaveBeenCalledTimes(3)
+    expect(failures).toEqual([
+      { invoiceNumber: '1', error: 'request-failed' },
+      { invoiceNumber: '2', error: 'request-failed', status: 503 },
+      { invoiceNumber: '4', error: 'missing-external-id' },
+    ])
+  })
+})
+
+describe(getInvoicesNotExported, () => {
+  const company = {
+    tenfastId: 'test-hyresvard-id',
+    xpandId: '001',
+  } as MimerCompany // only the ids are read by getInvoicesNotExported
+
+  const article = {
+    ...TenfastRentArticleFactory.build(),
+    code: 'HYRA',
+    accountConfigurations: [
+      {
+        accountNr: 3011,
+        categoryCode: 'Intäkter',
+        debitType: 'HYRA',
+        costCenter: '',
+        property: '',
+        freeText: '',
+        projectCode: '',
+      },
+    ],
+  }
+
+  // Answers the invoice list with the given rows and article lookups with
+  // the given response. Rental object lookups get 404 and are left as is.
+  const mockTenfast = (
+    rows: ReturnType<typeof TenfastInvoiceRowFactory.build>[],
+    articleResponse: () => Promise<{ status: number; data?: unknown }>
+  ) => {
+    const record = TenfastInvoiceFactory.build({ hyror: rows })
+    mockAxios.request.mockImplementation(async (config) => {
+      if (config.url === '/v1/hyresvard/hyror') {
+        return { status: 200, data: { records: [record] } }
+      }
+      if (config.url?.startsWith('/v1/hyresvard/articles/')) {
+        return articleResponse()
+      }
+      return { status: 404, data: {} }
+    })
+    return record
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('exports an invoice whose rows all have an article with accounting', async () => {
+    mockTenfast(
+      [TenfastInvoiceRowFactory.build({ article: 'a-1' })],
+      async () => ({
+        status: 200,
+        data: article,
+      })
+    )
+
+    const result = await getInvoicesNotExported(1000, company)
+
+    assert(result.ok)
+    expect(result.data.errors).toEqual([])
+    expect(result.data.invoices).toHaveLength(1)
+    expect(result.data.invoices[0].invoiceRows[0]).toMatchObject({
+      account: '3011',
+    })
+  })
+
+  it('leaves out an invoice with a row that has no article', async () => {
+    const record = mockTenfast(
+      [TenfastInvoiceRowFactory.build({ article: null })],
+      async () => ({ status: 200, data: article })
+    )
+
+    const result = await getInvoicesNotExported(1000, company)
+
+    assert(result.ok)
+    expect(result.data.invoices).toEqual([])
+    expect(result.data.errors).toEqual([
+      {
+        invoiceNumber: record.ocrNumber,
+        code: 'missing-rent-article',
+        error: 'Minst en hyresrad på avin saknar hyresartikel',
+      },
+    ])
+  })
+
+  it('leaves out an invoice whose article does not exist in Tenfast', async () => {
+    const record = mockTenfast(
+      [TenfastInvoiceRowFactory.build({ article: 'a-1' })],
+      async () => ({ status: 404, data: {} })
+    )
+
+    const result = await getInvoicesNotExported(1000, company)
+
+    assert(result.ok)
+    expect(result.data.invoices).toEqual([])
+    expect(result.data.errors).toEqual([
+      {
+        invoiceNumber: record.ocrNumber,
+        code: 'rent-article-not-found',
+        rentArticle: 'a-1',
+        error: 'Hyresartikeln a-1 finns inte i Tenfast',
+      },
+    ])
+  })
+
+  it('leaves out an invoice whose article lookup fails', async () => {
+    const record = mockTenfast(
+      [TenfastInvoiceRowFactory.build({ article: 'a-1' })],
+      async () => {
+        throw new Error('socket hang up')
+      }
+    )
+
+    const result = await getInvoicesNotExported(1000, company)
+
+    assert(result.ok)
+    expect(result.data.invoices).toEqual([])
+    expect(result.data.errors).toEqual([
+      {
+        invoiceNumber: record.ocrNumber,
+        code: 'rent-article-fetch-failed',
+        rentArticle: 'a-1',
+        error: 'Kunde inte hämta hyresartikeln a-1 från Tenfast',
+      },
+    ])
+  })
+})
+
+describe(getRecipientCodesOfInvoicesNotExported, () => {
+  const company = {
+    tenfastId: 'test-hyresvard-id',
+    xpandId: '001',
+  } as MimerCompany // only the ids are read
+
+  const record = (externalIds: string[]) => ({
+    avtal: [{ hyresgaster: externalIds.map((externalId) => ({ externalId })) }],
+  })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('walks every page with the export filters and returns trimmed, unique codes', async () => {
+    mockAxios.request
+      .mockResolvedValueOnce({
+        status: 200,
+        data: {
+          records: [record(['P1']), record(['P2 '])],
+          next: 'cursor-1',
+        },
+      })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { records: [record(['P1'])], next: null },
+      })
+
+    const result = await getRecipientCodesOfInvoicesNotExported(company)
+
+    assert(result.ok)
+    expect(result.data).toEqual(['P1', 'P2'])
+    expect(mockAxios.request).toHaveBeenCalledTimes(2)
+    const [firstPage, secondPage] = mockAxios.request.mock.calls.map(
+      ([config]) => config.params
+    )
+    const filters = {
+      isManuallyExported: 'false',
+      isCancelled: 'false',
+      status: 'issued',
+      hyresvard: 'test-hyresvard-id',
+    }
+    expect(firstPage).toEqual(expect.objectContaining(filters))
+    expect(firstPage).not.toHaveProperty('paginate')
+    expect(secondPage).toEqual(
+      expect.objectContaining({ ...filters, paginate: 'cursor-1' })
+    )
+  })
+
+  it('skips records without avtal or hyresgaster, and empty codes', async () => {
+    mockAxios.request.mockResolvedValueOnce({
+      status: 200,
+      data: {
+        records: [
+          { avtal: [] },
+          { avtal: [{ hyresgaster: [] }] },
+          record(['  ']),
+          record(['P7']),
+        ],
+        next: null,
+      },
+    })
+
+    const result = await getRecipientCodesOfInvoicesNotExported(company)
+
+    assert(result.ok)
+    expect(result.data).toEqual(['P7'])
+  })
+
+  it('fails when a page fails', async () => {
+    mockAxios.request.mockResolvedValueOnce({ status: 500, data: {} })
+
+    const result = await getRecipientCodesOfInvoicesNotExported(company)
+
+    expect(result).toEqual({ ok: false, err: 'request-failed' })
   })
 })

@@ -8,11 +8,53 @@ import {
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
+import config from '../../../common/config'
 import {
   TenfastLease,
   TenfastInvoiceRow,
   TenfastRentalObject,
 } from '../adapters/tenfast/schemas'
+import { isIncludedInRent } from '../adapters/tenfast/tenfast-rental-object-helpers'
+
+// Parsed Tenfast UI base URL, cached per configured value so an invalid
+// value is only parsed and logged once instead of once per mapped lease.
+let parsedAppUrl: { appUrl: string; base: URL | undefined } | undefined
+
+const getTenfastAppBaseUrl = (): URL | undefined => {
+  const appUrl = config.tenfast.appUrl
+  if (!appUrl) return undefined
+  if (parsedAppUrl?.appUrl === appUrl) return parsedAppUrl.base
+
+  let base: URL | undefined
+  try {
+    // A trailing slash keeps any path in appUrl when resolving below
+    base = new URL(appUrl.endsWith('/') ? appUrl : `${appUrl}/`)
+  } catch (err: unknown) {
+    logger.warn({ appUrl, err }, 'tenfast.appUrl invalid')
+  }
+
+  parsedAppUrl = { appUrl, base }
+  return base
+}
+
+/**
+ * Build a link to a lease in the Tenfast web UI from its internal Tenfast id.
+ * Returns undefined when no valid Tenfast UI URL is configured, so a config
+ * error only hides the link instead of failing the lease mapping.
+ */
+export const buildTenfastLeaseUrl = (
+  tenfastLeaseId: string
+): string | undefined => {
+  const base = getTenfastAppBaseUrl()
+  if (!base) return undefined
+
+  // Relative path (no leading slash) so it is appended to the base path
+  // instead of replacing it
+  return new URL(
+    `hyresvard/avtal/${encodeURIComponent(tenfastLeaseId)}`,
+    base
+  ).toString()
+}
 
 /**
  * Map TenFAST rental object type to LeaseType enum.
@@ -23,7 +65,10 @@ const TENFAST_TYP_TO_LEASE_TYPE: Partial<Record<string, LeaseType>> = {
   parkering: LeaseType.ParkingSpaceContract,
   lokal: LeaseType.CommercialTenantContract,
   garage: LeaseType.GarageContract,
-  forrad: LeaseType.StorageContract,
+  // Tenfast sends 'förråd'. Xpand types förråd leases as Lokalkontrakt, and
+  // consumers (Odoo, keys-portal, lease search) only count that as a facility.
+  förråd: LeaseType.CommercialTenantContract,
+  forrad: LeaseType.CommercialTenantContract,
   mark: LeaseType.OtherContract,
   ovrigt: LeaseType.OtherContract,
 }
@@ -33,6 +78,51 @@ export const mapTenfastTypToLeaseType = (
 ): LeaseType => {
   if (!typ) return LeaseType.OtherContract
   return TENFAST_TYP_TO_LEASE_TYPE[typ.toLowerCase()] ?? LeaseType.OtherContract
+}
+
+/**
+ * Parking-space type codes (Xpand babpt.code) that count as a garage. Which
+ * parking-space types count as garage is a OneCore rule (AVTAL-566): Tenfast
+ * has no contract type and calls every parking lease P-Platskontrakt, so a
+ * parking lease on a space with one of these types is a Garagekontrakt.
+ * Matched on code, never on caption. Codes as they are in babpt; carports
+ * are open and stay P-Platskontrakt.
+ */
+export const GARAGE_PARKING_SPACE_TYPE_CODES = [
+  'VARMGAR', // Varmgarage
+  'VARMGAR LADD', // Varmgarage med laddbox
+  'KALLGAR', // Kallgarage
+  'KALLGAREL', // Kallgarage med el
+  'KALLGAR LADD', // Kallgarage med laddbox
+  'CENTGAR', // Centralgarage
+  'CENTGAR LADD', // Centralgarage med laddbox
+  'TERMOGAR', // Termogarage
+  'MCGAR', // Motorcykelgarage
+  'GARAGE', // Garage
+]
+
+// Xpand codes are space-padded and SQL compares them ignoring case and
+// trailing blanks; JavaScript doesn't, so both sides go through this.
+export const normaliseRentalObjectCode = (code: string): string =>
+  code.trim().toUpperCase()
+
+/**
+ * The contract type of a lease row from Tenfast: P-Platskontrakt becomes
+ * Garagekontrakt when the parking space is in `garageObjectCodes`
+ * (normalised rental object codes of spaces with a garage type). Every
+ * other contract type is returned as it is.
+ */
+export const deriveTenfastLeaseType = (
+  leaseType: LeaseType,
+  rentalObjectCode: string | null,
+  garageObjectCodes: ReadonlySet<string>
+): LeaseType => {
+  if (leaseType !== LeaseType.ParkingSpaceContract || !rentalObjectCode) {
+    return leaseType
+  }
+  return garageObjectCodes.has(normaliseRentalObjectCode(rentalObjectCode))
+    ? LeaseType.GarageContract
+    : leaseType
 }
 
 export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
@@ -46,6 +136,7 @@ export const calculateLeaseStatus = (lease: TenfastLease): LeaseStatus => {
     case 'active':
       return LeaseStatus.Current
     case 'preTermination':
+    case 'terminationSigningInProgress':
       return LeaseStatus.PreliminaryTerminated
     case 'terminationScheduled':
       return LeaseStatus.AboutToEnd
@@ -75,6 +166,7 @@ export const mapToOnecoreRentalObjectRent = (
     vatPercentage: row.vat,
     fromDate: row.from ? new Date(row.from) : undefined,
     toDate: row.to ? new Date(row.to) : undefined,
+    includedInRent: isIncludedInRent(row),
   })),
 })
 
@@ -121,16 +213,26 @@ const mapToOnecoreRentalObject = (
 // lastDebitDate: Date | undefined // Sista betaldatum
 // approvalDate: Date | undefined // När godkände mimer kontraktet?
 
+// Until the tenant signs a notice, Tenfast keeps the end date on the signing
+// request and leaves endDate empty on the lease.
+export const getLeaseEndDate = (lease: TenfastLease): Date | undefined => {
+  if (lease.endDate) return lease.endDate
+  if (lease.stage !== 'terminationSigningInProgress') return undefined
+  return lease.simplesignTermination?.preliminaryEndDate ?? undefined
+}
+
 export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
   const rentalObject = lease.hyresobjekt[0]
+  const endDate = getLeaseEndDate(lease)
 
   const stadsdel = rentalObject?.stadsdel ?? rentalObject?.fastighet?.stadsdel
 
   return {
     leaseId: lease.externalId,
     leaseNumber: lease.externalId.split('/')[1],
+    externalUrl: buildTenfastLeaseUrl(lease._id),
     leaseStartDate: lease.startDate,
-    leaseEndDate: lease.endDate ?? undefined,
+    leaseEndDate: endDate,
     status: calculateLeaseStatus(lease),
     noticeGivenBy: lease.cancellation.cancelledByType ?? undefined,
     noticeDate: lease.cancellation.handledAt ?? undefined,
@@ -138,7 +240,7 @@ export const mapToOnecoreLease = (lease: TenfastLease): Lease => {
     preferredMoveOutDate: lease.cancellation.preferredMoveOutDate ?? undefined,
     terminationDate: lease.cancellation.handledAt ?? undefined,
     contractDate: lease.signedAt ?? undefined,
-    lastDebitDate: lease.endDate ?? undefined,
+    lastDebitDate: endDate,
     approvalDate: lease.signedAt ?? undefined,
     residentialArea: stadsdel
       ? { code: stadsdel, caption: stadsdel }

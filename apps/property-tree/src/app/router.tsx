@@ -4,16 +4,24 @@ import BuildingView from '@/pages/BuildingPage'
 import { CompanyPage } from '@/pages/CompanyPage'
 import ComponentLibraryPage from '@/pages/ComponentLibraryPage'
 import { DashboardPage } from '@/pages/DashboardPage'
+import DispatchCentrePage from '@/pages/DispatchCentrePage'
 import { EconomyPage } from '@/pages/EconomyPage'
 import { FacilityPage } from '@/pages/FacilityPage'
+import { GuideCategoryPage } from '@/pages/GuideCategoryPage'
+import { GuideEditorPage } from '@/pages/GuideEditorPage'
+import { GuidePage } from '@/pages/GuidePage'
+import { GuidesPage } from '@/pages/GuidesPage'
 import { ImdPage } from '@/pages/ImdPage'
 import InspectionsView from '@/pages/InspectionsPage'
 import LeasesPage from '@/pages/LeasesPage'
 import { MaintenanceUnitPage } from '@/pages/MaintenanceUnitPage'
+import { MessageTemplatesPage } from '@/pages/MessageTemplatesPage'
+import { MiscellaneousInvoicesPage } from '@/pages/MiscellaneousInvoicesPage'
 import { ModulePage } from '@/pages/ModulePage'
 import { ParkingSpacePage } from '@/pages/ParkingSpacePage'
 import { PropertyAreasPage } from '@/pages/PropertyAreasPage'
 import { PropertyPage } from '@/pages/PropertyPage'
+import { ReleaseNotesAdminPage } from '@/pages/ReleaseNotesAdminPage'
 import { RentalBlocksPage } from '@/pages/RentalBlocksPage'
 import { ResidencePage } from '@/pages/ResidencePage'
 import { RoomPage } from '@/pages/RoomPage'
@@ -138,6 +146,16 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'Hyreskontrakt' },
           },
           {
+            path: routes.dispatchCentre,
+            element: <DispatchCentrePage />,
+            handle: { title: 'Utskick' },
+          },
+          {
+            path: routes.messageTemplates,
+            element: <MessageTemplatesPage />,
+            handle: { title: 'Mallar' },
+          },
+          {
             path: 'economy',
             element: <EconomyPage />,
             handle: { title: 'Ekonomi' },
@@ -148,9 +166,48 @@ export const router: RouterProviderProps['router'] = createBrowserRouter([
             handle: { title: 'IMD' },
           },
           {
+            path: routes.miscellaneousInvoices,
+            element: <MiscellaneousInvoicesPage />,
+            handle: { title: 'Ströfakturor' },
+          },
+          {
+            path: routes.releaseNotesAdmin,
+            element: <ReleaseNotesAdminPage />,
+            handle: { title: 'Hantera nyheter' },
+          },
+          {
             path: withTab(routes.inspections),
             element: <InspectionsView />,
             handle: { title: 'Besiktningar' },
+          },
+          {
+            path: routes.guides,
+            element: <GuidesPage />,
+            handle: { title: 'Guider' },
+          },
+          {
+            path: routes.guideNew,
+            element: <GuideEditorPage />,
+            handle: { title: 'Ny guide' },
+          },
+          {
+            path: routes.guide,
+            element: <GuidePage />,
+            // The title is the guide's own, which only GuidePage knows.
+            handle: { ownsDocumentTitle: true },
+          },
+          {
+            path: routes.guideEdit,
+            element: <GuideEditorPage />,
+            handle: { title: 'Redigera guide' },
+          },
+          {
+            // "kategori" is a reserved slug (RESERVED_SLUGS in @onecore/types),
+            // so no guide route can shadow this one.
+            path: routes.guideCategory,
+            element: <GuideCategoryPage />,
+            // The title is the category's name, which only the page knows.
+            handle: { ownsDocumentTitle: true },
           },
           ...modules.map((module) => ({
             path: module.basePath,

@@ -1,7 +1,10 @@
 import { z } from 'zod'
 
 export const DIRECTION = ['outbound', 'inbound'] as const
-export const CHANNEL = ['sms', 'email'] as const
+// 'my-pages' is a publication to the tenant portal rather than a provider send:
+// there is no address and no delivery webhook, so recipients land as 'sent'
+// with toAddress 'Mina sidor' (MIM-1957).
+export const CHANNEL = ['sms', 'email', 'my-pages'] as const
 export const RECIPIENT_STATUS = [
   'pending',
   'sent',
@@ -9,6 +12,12 @@ export const RECIPIENT_STATUS = [
   'failed',
   'bounced',
   'received',
+  // Scheduled sends (MIM-1897): 'scheduled' until our own worker claims the
+  // row at its slot, 'sending' while the provider call is in flight (delivery
+  // reports take over after 'sent'), 'cancelled' if withdrawn before then.
+  'scheduled',
+  'sending',
+  'cancelled',
 ] as const
 
 export const DirectionSchema = z.enum(DIRECTION)
@@ -25,11 +34,20 @@ export const DispatchSchema = z.object({
   messageType: z.string(),
   provider: z.string(),
   triggeredByUser: z.string().nullable(),
-  triggeredAt: z.coerce.date(),
+  // Intended send time: insert time for instant sends, the target time for
+  // scheduled sends. `createdAt` holds when the dispatch was queued.
+  sendAt: z.coerce.date(),
   recipientCount: z.number().int().nonnegative(),
   audienceCriteria: z.string().nullable(),
   inReplyToDispatchId: z.string().uuid().nullable(),
   templateId: z.string().uuid().nullable(),
+  // Current name of the template the message started from (LEFT JOIN at read
+  // time, so renames relabel history; the sent text in `body` never changes).
+  templateName: z.string().nullable(),
+  // od-<odoo id> of the maintenance request this dispatch belongs to, when it
+  // has one. Null for dispatches with no errand (bulk sends, parking offers).
+  // The internal portal builds the Odoo deep link from this code alone.
+  workOrderCode: z.string().nullable(),
   createdAt: z.coerce.date(),
 })
 
@@ -63,10 +81,27 @@ export const TemplateSchema = z.object({
   subject: z.string().nullable(),
   body: z.string(),
   categories: z.array(z.string()),
-  status: z.boolean(),
+  isActive: z.boolean(), // false = archived: hidden from the picker, still resolves in the log
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
+
+// SMS templates (first version): name + body only. channels is always 'sms',
+// subject/categories stay null. Standalone objects, not .partial()/.pick():
+// swagger dedup depends on key order.
+export const CreateTemplateSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  body: z.string().trim().min(1).max(1600),
+})
+
+export const UpdateTemplateSchema = z.object({
+  name: z.string().trim().min(1).max(255).optional(),
+  body: z.string().trim().min(1).max(1600).optional(),
+})
+
+// List filter: archived templates (isActive = 0) are hidden by default.
+export const TEMPLATE_STATUS_FILTER = ['active', 'archived', 'all'] as const
+export const TemplateStatusFilterSchema = z.enum(TEMPLATE_STATUS_FILTER)
 
 // Input shape for the logging adapter. Any route that wants to persist an
 // outbound message calls this after the provider has accepted the send.
@@ -74,7 +109,16 @@ export const LogOutboundRecipientSchema = z.object({
   contactCode: z.string().optional(),
   toAddress: z.string(),
   externalMessageId: z.string().optional(),
-  status: z.enum(['pending', 'sent', 'failed']).optional(),
+  // Subset of RecipientStatusSchema: only states a new outbound row may start
+  // in. delivered only for my-pages (no delivery reports), bounced via reports,
+  // received is inbound, cancelled only via the cancel flow.
+  status: RecipientStatusSchema.extract([
+    'pending',
+    'sent',
+    'delivered',
+    'failed',
+    'scheduled',
+  ]).optional(),
   error: z.string().optional(),
 })
 
@@ -86,10 +130,13 @@ export const LogOutboundParamsSchema = z.object({
   messageType: z.string(),
   provider: z.string(),
   triggeredByUser: z.string().optional(),
+  // Scheduled sends: the target delivery time. Omitted -> DB defaults to now.
+  sendAt: z.coerce.date().optional(),
   // passthrough() ensures the emitted JSON schema has a `properties: {}` object,
   // which koa-okapi-router's media-type linker requires (it Object.entries() it).
   audienceCriteria: z.object({}).passthrough().optional(),
   templateId: z.string().uuid().optional(),
+  workOrderCode: z.string().optional(),
   recipients: z.array(LogOutboundRecipientSchema),
 })
 
@@ -102,4 +149,193 @@ export const DispatchWithRecipientsSchema = z.object({
 export const CustomerMessageSchema = z.object({
   dispatch: DispatchSchema,
   recipient: MessageRecipientSchema,
+})
+
+export const RELEASE_NOTE_CATEGORY = [
+  'feature',
+  'fix',
+  'improvement',
+  'info',
+  'warning',
+] as const
+
+// Which part of ONECore a note concerns. A label, not a visibility filter.
+export const RELEASE_NOTE_APP = [
+  'general',
+  'property-tree',
+  'keys-portal',
+  'internal-portal',
+  'mina-sidor',
+  'sok-ledigt',
+  'odoo',
+  'core',
+  'leasing',
+  'property',
+  'work-order',
+  'keys',
+  'communication',
+  'contacts',
+  'inspection',
+  'economy',
+] as const
+
+export const ReleaseNoteCategorySchema = z.enum(RELEASE_NOTE_CATEGORY)
+export const ReleaseNoteAppSchema = z.enum(RELEASE_NOTE_APP)
+
+// publishedAt null = draft, hidden from readers without release-notes:write.
+export const ReleaseNoteSchema = z.object({
+  id: z.string().uuid(),
+  app: ReleaseNoteAppSchema,
+  title: z.string(),
+  description: z.string(),
+  category: ReleaseNoteCategorySchema,
+  pinned: z.boolean(),
+  publishedAt: z.coerce.date().nullable(),
+  createdBy: z.string().nullable(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+})
+
+// Standalone objects (no omit/extend): swagger dedup depends on key order.
+export const CreateReleaseNoteSchema = z.object({
+  app: ReleaseNoteAppSchema,
+  title: z.string().trim().min(1).max(255),
+  description: z.string().trim().min(1),
+  category: ReleaseNoteCategorySchema,
+  pinned: z.boolean().optional(),
+  publishedAt: z.coerce.date().nullable().optional(),
+})
+
+export const UpdateReleaseNoteSchema = z.object({
+  app: ReleaseNoteAppSchema.optional(),
+  title: z.string().trim().min(1).max(255).optional(),
+  description: z.string().trim().min(1).optional(),
+  category: ReleaseNoteCategorySchema.optional(),
+  pinned: z.boolean().optional(),
+  publishedAt: z.coerce.date().nullable().optional(),
+})
+
+// Service-level create input: core stamps createdBy from the verified token.
+// Null when the token carries no name, like dispatch.triggeredByUser.
+export const CreateReleaseNoteParamsSchema = z.object({
+  app: ReleaseNoteAppSchema,
+  title: z.string().trim().min(1).max(255),
+  description: z.string().trim().min(1),
+  category: ReleaseNoteCategorySchema,
+  pinned: z.boolean().optional(),
+  publishedAt: z.coerce.date().nullable().optional(),
+  createdBy: z.string().min(1).max(255).nullable().optional(),
+})
+
+// --- Dispatch centre (MIM-1911) ---
+
+// Derived dispatch-level status. Recipient rows carry raw RECIPIENT_STATUS;
+// a dispatch's status is computed from its recipients (deriveDispatchStatus in
+// services/communication). Lifecycle order.
+export const DISPATCH_STATUS = [
+  'scheduled',
+  'sending',
+  'delivered',
+  'partially_delivered',
+  'failed',
+  'cancelled',
+] as const
+export const DispatchStatusSchema = z.enum(DISPATCH_STATUS)
+
+// One persisted audience-filter criterion (row of dispatch_audience_criterion).
+// `type` is the leasing filter key (e.g. 'buildingCodes'); `value` a single code.
+export const AudienceCriterionSchema = z.object({
+  type: z.string(),
+  value: z.string(),
+})
+
+// Repeatable query param (single value or repeated) normalized to an array and
+// validated against `schema`. Query strings arrive as string | string[] and
+// koa-okapi-router does not coerce, so we do it here. Passing an enum schema
+// means a typo (e.g. status=bogus) 400s instead of being silently dropped.
+const repeatableParam = <T extends z.ZodTypeAny>(schema: T) =>
+  z
+    .union([schema, z.array(schema)])
+    // Cast pins the output to T[]; under a generic, Array.isArray doesn't narrow
+    // the ternary cleanly and TS widens it to a union of array types.
+    .transform((v) => (Array.isArray(v) ? v : [v]) as z.infer<T>[])
+    .optional()
+
+const repeatableStringParam = repeatableParam(z.string())
+
+// Inclusive upper date bound. A date-only value ('2026-07-01') means "through
+// the end of that day", so bump it to 23:59:59.999 — otherwise `sendAt <=`
+// midnight would exclude everything sent that day.
+// NOTE: date-only strings parse as UTC midnight, so a dispatch in the Swedish
+// 00:00–02:00 window lands on the previous UTC day; day-boundary filtering is
+// approximate until it keys off the Swedish-local day.
+const inclusiveUpperDate = z.string().transform((s, ctx) => {
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid date' })
+    return z.NEVER
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s.trim())) d.setUTCHours(23, 59, 59, 999)
+  return d
+})
+
+export const DispatchSearchQueryParamsSchema = z.object({
+  q: z.string().optional(),
+  channel: repeatableParam(ChannelSchema),
+  messageType: repeatableStringParam,
+  status: repeatableParam(DispatchStatusSchema),
+  source: z.enum(['manual', 'automatic']).optional(),
+  triggeredByUser: z.string().optional(),
+  // Accepts date ('2026-07-01') and full ISO strings; coerces to Date and
+  // rejects unparseable input with a 400 rather than reaching knex.
+  sendAtFrom: z.coerce.date().optional(),
+  sendAtTo: inclusiveUpperDate.optional(),
+  contactCode: z.string().optional(),
+  minRecipients: z.coerce.number().int().nonnegative().optional(),
+  audienceDistrictNames: repeatableStringParam,
+  audienceBuildingCodes: repeatableStringParam,
+  audienceAreaCodes: repeatableStringParam,
+  sortBy: z
+    .enum(['sendAt', 'recipientCount', 'createdAt'])
+    .optional()
+    .default('sendAt'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+})
+
+// A dispatch as returned by the search endpoint: dispatch row (minus the legacy
+// raw-JSON audienceCriteria column) + recipient-status rollup + derived status
+// + normalized audience criteria.
+export const DispatchListItemSchema = DispatchSchema.omit({
+  audienceCriteria: true,
+}).extend({
+  status: DispatchStatusSchema,
+  statusSummary: z.record(RecipientStatusSchema, z.number()),
+  audience: z.array(AudienceCriterionSchema),
+})
+
+// Response shapes for the scheduled-dispatch management routes, shared with
+// core's communication adapter so the shapes can't drift.
+export const CancelDispatchResponseSchema = z.object({
+  dispatchId: z.string().uuid(),
+  // 0 when the dispatch was already cancelled (idempotent no-op).
+  cancelledRecipients: z.number().int().nonnegative(),
+})
+
+export const RescheduleDispatchResponseSchema = z.object({
+  dispatchId: z.string().uuid(),
+  sendAt: z.string(),
+})
+
+// Scheduling rules the communication service enforces for scheduled sends,
+// exposed so the frontend picker can mirror them instead of hard-coding them.
+// Times are wall-clock in `timeZone`; `enabled: false` hides scheduling.
+export const ScheduleConfigSchema = z.object({
+  enabled: z.boolean(),
+  timeZone: z.string(), // IANA zone, e.g. 'Europe/Stockholm'
+  slotMinutes: z.number().int().positive(), // sendAt must fall on a slot boundary
+  blockedHours: z.object({
+    from: z.string(), // 'HH:mm', inclusive start of the daily blocked window
+    until: z.string(), // 'HH:mm', exclusive end; before `from` means overnight
+  }),
+  maxDaysAhead: z.number().int().positive(),
 })

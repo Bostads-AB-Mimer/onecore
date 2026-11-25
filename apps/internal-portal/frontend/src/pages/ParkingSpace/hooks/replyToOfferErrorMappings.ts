@@ -54,6 +54,14 @@ export function mapReplyOfferErrors(
         errorHeading: 'Ej godkänd',
         errorMessage: 'Kunde ej stänga erbjudande.',
       }
+    case ReplyToOfferErrorCodes.RentalObjectNotAvailable:
+      return {
+        status: e.response.status,
+        errorCode: ReplyToOfferErrorCodes.RentalObjectNotAvailable,
+        errorHeading: 'Ej godkänd',
+        errorMessage:
+          'Bilplatsen är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt på den (utkast, skickat för påskrift eller signerat), kanske för samma sökande. Inget nytt kontrakt skapades.',
+      }
     default: {
       return defaultError
     }

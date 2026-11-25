@@ -20,9 +20,11 @@ import {
   getAllRentalBlocks,
   searchRentalBlocks,
   getDistinctBlockReasons,
+  getRentalIdsWithBlock,
   upsertMalarEnergiFacilityId,
 } from '../adapters/residence-adapter'
 import { getResidencesByRentalIds } from '../adapters/residence-batch-adapter'
+import { getResidenceMedia } from '../adapters/residence-media-adapter'
 import {
   residencesQueryParamsSchema,
   ResidenceSchema,
@@ -35,6 +37,7 @@ import {
   searchRentalBlocksQueryParamsSchema,
   exportRentalBlocksQueryParamsSchema,
   ResidencesBatchRequestSchema,
+  rentalIdsWithBlockQueryParamsSchema,
 } from '../types/residence'
 import { parseRequest } from '../middleware/parse-request'
 import { property } from '@onecore/types'
@@ -607,6 +610,70 @@ export const routes = (router: KoaRouter) => {
 
   /**
    * @swagger
+   * /residences/rental-id/{rentalId}/media:
+   *   get:
+   *     summary: Get published photos and energy declaration for a residence.
+   *     description: |
+   *       Finds the files published on the public media host. A residence
+   *       without files returns 200 with an empty list, since this searches for
+   *       files rather than looking up one resource.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: path
+   *         name: rentalId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: The rental id of the residence.
+   *     responses:
+   *       200:
+   *         description: The published media, empty when nothing is published.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/ResidenceMedia'
+   *       400:
+   *         description: The rental id does not have the residence code format.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: invalid-rental-id
+   *       503:
+   *         description: The public media host could not be reached.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reason:
+   *                   type: string
+   *                   example: media-unavailable
+   */
+  router.get('(.*)/residences/rental-id/:rentalId/media', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+
+    const result = await getResidenceMedia(ctx.params.rentalId)
+
+    if (!result.ok) {
+      ctx.status = result.err === 'invalid-rental-id' ? 400 : 503
+      ctx.body = { reason: result.err, ...metadata }
+      return
+    }
+
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
    * /residences/rental-id/{rentalId}/rental-blocks:
    *   get:
    *     summary: Get rental blocks by rental ID
@@ -1107,6 +1174,68 @@ export const routes = (router: KoaRouter) => {
         }
       } catch (err) {
         logger.error(err, 'Error fetching all rental blocks')
+        ctx.status = 500
+        const errorMessage =
+          err instanceof Error ? err.message : 'unknown error'
+        ctx.body = { reason: errorMessage, ...metadata }
+      }
+    }
+  )
+
+  /**
+   * @swagger
+   * /residences/rental-blocks/rental-ids:
+   *   get:
+   *     summary: Rental ids carrying a matching rental block
+   *     description: >
+   *       Lean companion to /residences/rental-blocks/search. Returns only the
+   *       distinct rental ids, with no pagination, rent data or district
+   *       enrichment - for consumers that need to answer "is this object
+   *       blocked" in bulk.
+   *     tags:
+   *       - Residences
+   *     parameters:
+   *       - in: query
+   *         name: blockReason
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: string
+   *         style: form
+   *         explode: true
+   *         description: Filter by block reason caption (supports multiple values)
+   *       - in: query
+   *         name: active
+   *         schema:
+   *           type: boolean
+   *         description: >
+   *           true = not yet ended (toDate >= today or null), false = already
+   *           ended (toDate < today). If omitted, all blocks.
+   *     responses:
+   *       200:
+   *         description: Successfully retrieved rental ids
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/GetRentalIdsWithBlockResponse'
+   *       400:
+   *         description: Invalid query parameters.
+   *       500:
+   *         description: Internal server error
+   */
+  router.get(
+    '(.*)/residences/rental-blocks/rental-ids',
+    parseRequest({ query: rentalIdsWithBlockQueryParamsSchema }),
+    async (ctx) => {
+      const metadata = generateRouteMetadata(ctx)
+
+      try {
+        const rentalIds = await getRentalIdsWithBlock(ctx.request.parsedQuery)
+
+        ctx.status = 200
+        ctx.body = { content: rentalIds, ...metadata }
+      } catch (err) {
+        logger.error({ err }, 'Error fetching rental ids with block')
         ctx.status = 500
         const errorMessage =
           err instanceof Error ? err.message : 'unknown error'

@@ -2,6 +2,11 @@ import type { Lease, Tenant } from '@/services/types'
 
 import { GET } from './core/base-api'
 
+/** The rental object part of a lease id ("807-032-99-0001/01" → "807-032-99-0001"). */
+export function rentalObjectFromLeaseId(leaseId: string): string {
+  return leaseId.split('/')[0].trim()
+}
+
 export function dedupeLeases(leases: Lease[]): Lease[] {
   const seen = new Set<string>()
   return (leases ?? []).filter((l) => {

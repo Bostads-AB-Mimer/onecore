@@ -44,6 +44,9 @@ export interface Config {
   economyService: {
     url: string
   }
+  exportRentalInvoiceAccounting: {
+    companyIds: string[]
+  }
   inspectionService: {
     url: string
   }
@@ -139,6 +142,9 @@ const config = configPackage({
     },
     economyService: {
       url: 'http://localhost:5080',
+    },
+    exportRentalInvoiceAccounting: {
+      companyIds: ['001'],
     },
     inspectionService: {
       url: 'http://localhost:5090',
@@ -242,6 +248,7 @@ export default {
   communicationService: config.get('communicationService'),
   workOrderService: config.get('workOrderService'),
   economyService: config.get('economyService'),
+  exportRentalInvoiceAccounting: config.get('exportRentalInvoiceAccounting'),
   inspectionService: config.get('inspectionService'),
   minaSidor: config.get('minaSidor'),
   emailAddresses: config.get('emailAddresses'),

@@ -16,7 +16,14 @@ import {
 import { z } from 'zod'
 
 import { AdapterResult } from './../types'
-import type { LeaseChange } from '@onecore/types'
+import {
+  RentalObjectTypeChangesSchema,
+  SyncRentalObjectTypeResponseSchema,
+  type LeaseChange,
+  type RentalObjectTypeChanges,
+  type SyncRentalObjectTypeRequest,
+  type SyncRentalObjectTypeResponse,
+} from '@onecore/types'
 import config from '../../common/config'
 
 //todo: move to global config or handle error statuses in middleware
@@ -128,9 +135,18 @@ const getLeasesForPropertyId = async (
       includeNonTenantContacts: options.includeNonTenantContacts.toString(),
     }),
   })
+  // Explicit validateStatus: the process-wide default (<500) would let other
+  // 4xx through with no content, which callers would read as "no leases".
   const leasesResponse = await axios.get(
-    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`
+    `${tenantsLeasesServiceUrl}/leases/by-rental-object-code/${propertyId}?${queryParams.toString()}`,
+    { validateStatus: (status) => status === 200 || status === 404 }
   )
+
+  // Leasing answers 404 for a rental object it has no leases for.
+  if (leasesResponse.status === 404) {
+    return []
+  }
+
   return leasesResponse.data.content
 }
 
@@ -349,18 +365,20 @@ const getTenantByContactCode = async (
       if (res.data?.type === 'no-valid-housing-contract') {
         return { ok: false, err: 'no-valid-housing-contract' }
       }
-      // 'contact-not-tenant' and 'contact-leases-not-found' both mean the
-      // contact has no tenancy.
+      // 'contact-not-tenant', 'contact-leases-not-found' and
+      // 'tenfast-tenant-not-found' (no tenant in Tenfast, e.g. a former
+      // tenant) all mean the contact has no tenancy.
       if (
         res.data?.type === 'contact-not-tenant' ||
-        res.data?.type === 'contact-leases-not-found'
+        res.data?.type === 'contact-leases-not-found' ||
+        res.data?.type === 'tenfast-tenant-not-found'
       ) {
         return { ok: false, err: 'contact-not-tenant' }
       }
       // A 404 without a recognized leasing error type is not a business
       // outcome — e.g. a proxy/gateway 404 or a misrouted service URL.
       logger.error(
-        { status: res.status, body: res.data },
+        { status: res.status },
         'leasing-adapter.getTenantByContactCode: unrecognized 404 response'
       )
       return { ok: false, err: 'unknown' }
@@ -514,113 +532,6 @@ async function createOrUpdateApplicationProfileByContactCode(
   }
 }
 
-// Text Content functions
-type ListingTextContent = z.infer<typeof leasing.v1.ListingTextContentSchema>
-type CreateListingTextContentRequest = z.infer<
-  typeof leasing.v1.CreateListingTextContentRequestSchema
->
-type UpdateListingTextContentRequest = z.infer<
-  typeof leasing.v1.UpdateListingTextContentRequestSchema
->
-
-const getListingTextContentByRentalObjectCode = async (
-  rentalObjectCode: string
-): Promise<AdapterResult<ListingTextContent, 'not-found' | 'unknown'>> => {
-  try {
-    const response = await axios.get<{
-      content: ListingTextContent
-    }>(`${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`)
-
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'unknown' }
-  } catch (err) {
-    logger.error(
-      err,
-      'Error getting listing text content by rental object code:'
-    )
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const createListingTextContent = async (
-  data: CreateListingTextContentRequest
-): Promise<AdapterResult<ListingTextContent, 'conflict' | 'unknown'>> => {
-  try {
-    const response = await axios.post<{
-      content: ListingTextContent
-    }>(`${tenantsLeasesServiceUrl}/listing-text-content`, data)
-
-    if (response.status === 201) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 409) {
-      return { ok: false, err: 'conflict' }
-    }
-
-    return { ok: false, err: 'unknown' }
-  } catch (err) {
-    logger.error(err, 'Error creating listing text content:')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const updateListingTextContent = async (
-  rentalObjectCode: string,
-  data: UpdateListingTextContentRequest
-): Promise<AdapterResult<ListingTextContent, 'not-found' | 'unknown'>> => {
-  try {
-    const response = await axios.put<{
-      content: ListingTextContent
-    }>(
-      `${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`,
-      data
-    )
-
-    if (response.status === 200) {
-      return { ok: true, data: response.data.content }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'unknown' }
-  } catch (err) {
-    logger.error(err, 'Error updating listing text content:')
-    return { ok: false, err: 'unknown' }
-  }
-}
-
-const deleteListingTextContent = async (
-  rentalObjectCode: string
-): Promise<AdapterResult<void, 'not-found' | 'unknown'>> => {
-  try {
-    const response = await axios.delete(
-      `${tenantsLeasesServiceUrl}/listing-text-content/${rentalObjectCode}`
-    )
-
-    if (response.status === 200) {
-      return { ok: true, data: undefined }
-    }
-
-    if (response.status === 404) {
-      return { ok: false, err: 'not-found' }
-    }
-
-    return { ok: false, err: 'unknown' }
-  } catch (err) {
-    logger.error(err, 'Error deleting listing text content:')
-    return { ok: false, err: 'unknown' }
-  }
-}
 export type PreliminaryTerminateLeaseRequestParams = z.infer<
   typeof leasing.v1.PreliminaryTerminateLeaseRequestSchema
 >
@@ -676,7 +587,7 @@ const preliminaryTerminateLease = async (
     }
 
     logger.error(
-      { status: response.status, data: response.data },
+      { status: response.status },
       'Failed to preliminary terminate lease'
     )
     return { ok: false, err: 'termination-failed' }
@@ -717,10 +628,18 @@ const preliminaryTerminateLease = async (
     return { ok: false, err: 'unknown' }
   }
 }
+const ContactsByFiltersResponseSchema = z.object({
+  content: z.array(leasing.v1.ContactInfoSchema),
+})
 
 const getContactsByFilters = async (
   queryParams: Record<string, string | string[] | undefined>
-): Promise<AdapterResult<{ content: leasing.v1.ContactInfo[] }, 'unknown'>> => {
+): Promise<
+  AdapterResult<
+    leasing.v1.ContactInfo[],
+    'invalid-request' | 'service-unavailable' | 'schema-error' | 'unknown'
+  >
+> => {
   try {
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/contacts/from-lease-search`,
@@ -729,51 +648,63 @@ const getContactsByFilters = async (
         paramsSerializer: {
           indexes: null,
         },
+        // Explicit validateStatus: the process-wide default (<500) would hand
+        // a 400 error body back as if it were the list of contacts.
+        validateStatus: (status) => status === 200,
       }
     )
 
-    return { ok: true, data: response.data }
-  } catch (err) {
-    logger.error({ err }, 'leasingAdapter.getContactsByFilters')
+    return {
+      ok: true,
+      data: ContactsByFiltersResponseSchema.parse(response.data).content,
+    }
+  } catch (err: unknown) {
+    if (err instanceof z.ZodError) {
+      logger.error(
+        { issues: err.issues },
+        'leasingAdapter.getContactsByFilters: unexpected response shape'
+      )
+      return { ok: false, err: 'schema-error' }
+    }
+
+    const status = err instanceof AxiosError ? err.response?.status : undefined
+
+    if (status === 400) {
+      return { ok: false, err: 'invalid-request', statusCode: 400 }
+    }
+    // The lease cache is still loading; leasing sends Retry-After.
+    if (status === 503) {
+      return { ok: false, err: 'service-unavailable', statusCode: 503 }
+    }
+
+    logger.error(
+      { status, error: err instanceof Error ? err.message : String(err) },
+      'leasingAdapter.getContactsByFilters'
+    )
     return { ok: false, err: 'unknown' }
   }
 }
 
-interface ExportLeasesResult {
-  data: Buffer
-  contentType: string
-  contentDisposition: string
-}
-
-const exportLeasesToExcel = async (
+const getLeasesForExport = async (
   queryParams: Record<string, string | string[] | undefined>
-): Promise<AdapterResult<ExportLeasesResult, 'unknown'>> => {
+): Promise<AdapterResult<leasing.v1.LeaseSearchResult[], 'unknown'>> => {
   try {
     const response = await axios.get(
       `${tenantsLeasesServiceUrl}/leases/export`,
       {
         params: queryParams,
-        responseType: 'arraybuffer',
         paramsSerializer: {
           indexes: null,
         },
       }
     )
 
-    return {
-      ok: true,
-      data: {
-        data: response.data,
-        contentType:
-          response.headers['content-type']?.toString() ||
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        contentDisposition:
-          response.headers['content-disposition'] ||
-          `attachment; filename="hyreskontrakt-${new Date().toISOString().split('T')[0]}.xlsx"`,
-      },
-    }
+    return { ok: true, data: response.data.content }
   } catch (err) {
-    logger.error({ err }, 'leasingAdapter.exportLeasesToExcel')
+    // Let 503s (cache warming up) bubble up so the route can detect them,
+    // same as searchLeases.
+    if (err instanceof AxiosError && err.response?.status === 503) throw err
+    logger.error({ err }, 'leasingAdapter.getLeasesForExport')
     return { ok: false, err: 'unknown' }
   }
 }
@@ -798,12 +729,15 @@ const syncContactToLeasing = async (
       return { ok: true, data: { skipped: response.data?.skipped === true } }
     }
 
-    logger.error(response.data, 'leasing-adapter.syncContactToLeasing')
+    logger.error(
+      { status: response.status },
+      'leasing-adapter.syncContactToLeasing'
+    )
     return { ok: false, err: 'sync-failed', statusCode: response.status }
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
       logger.error(
-        { status: err.response.status, data: err.response.data },
+        { status: err.response.status },
         'leasing-adapter.syncContactToLeasing'
       )
       return { ok: false, err: 'sync-failed', statusCode: err.response.status }
@@ -813,6 +747,12 @@ const syncContactToLeasing = async (
   }
 }
 
+// Must stay under the sync CronJobs' activeDeadlineSeconds (300s) and above
+// Leasing's own worst case (six 10s Tenfast calls plus one 60s upload).
+const SYNC_FETCH_TIMEOUT_MS = 2 * 60_000
+const SYNC_LEASE_TIMEOUT_MS = 3 * 60_000
+const SYNC_RENTAL_OBJECT_TYPE_TIMEOUT_MS = 2 * 60_000
+
 const getUpdatedLeases = async (
   since: Date | null
 ): Promise<AdapterResult<LeaseChange[], 'unknown'>> => {
@@ -820,6 +760,7 @@ const getUpdatedLeases = async (
     const params = since ? { since: since.toISOString() } : {}
     const response = await axios.get(`${tenantsLeasesServiceUrl}/leases/sync`, {
       params,
+      timeout: SYNC_FETCH_TIMEOUT_MS,
     })
 
     if (response.status === 200) {
@@ -839,6 +780,22 @@ const getUpdatedLeases = async (
   }
 }
 
+const syncLeaseFailure = (
+  statusCode: number,
+  body: unknown
+): { ok: false; err: 'sync-failed'; statusCode: number; detail?: string } => {
+  const { error, detail } =
+    (body as { error?: unknown; detail?: unknown } | undefined) ?? {}
+  return {
+    ok: false,
+    err: 'sync-failed',
+    statusCode,
+    ...(typeof error === 'string' && {
+      detail: typeof detail === 'string' ? `${error}: ${detail}` : error,
+    }),
+  }
+}
+
 const syncLease = async (
   leaseId: string,
   contactCode: string | undefined,
@@ -848,6 +805,10 @@ const syncLease = async (
     {
       action: 'created' | 'terminated' | 'voided' | 'skipped'
       leaseId: string
+      // Set on create and terminate: whether the PDF from Xpand is on the Tenfast lease.
+      // 'failed' only on create, with documentError naming the failed step.
+      document?: 'attached' | 'already-attached' | 'missing' | 'failed'
+      documentError?: string
     },
     'sync-failed' | 'unknown'
   >
@@ -855,24 +816,104 @@ const syncLease = async (
   try {
     const response = await axios.post(
       `${tenantsLeasesServiceUrl}/leases/sync`,
-      { leaseId, contactCode, action }
+      { leaseId, contactCode, action },
+      { timeout: SYNC_LEASE_TIMEOUT_MS }
     )
 
     if (response.status === 200 || response.status === 201) {
       return { ok: true, data: response.data.content }
     }
 
-    logger.error(response.data, 'leasing-adapter.syncLease')
-    return { ok: false, err: 'sync-failed', statusCode: response.status }
+    logger.error({ status: response.status }, 'leasing-adapter.syncLease')
+    return syncLeaseFailure(response.status, response.data)
   } catch (err) {
+    if (axios.isAxiosError(err) && err.response) {
+      logger.error({ status: err.response.status }, 'leasing-adapter.syncLease')
+      return syncLeaseFailure(err.response.status, err.response.data)
+    }
     logger.error({ err }, 'leasing-adapter.syncLease')
     return { ok: false, err: 'unknown' }
   }
 }
 
+const getRentalObjectTypeChanges = async (
+  since: Date | null
+): Promise<AdapterResult<RentalObjectTypeChanges, 'unknown'>> => {
+  try {
+    const params = since ? { since: since.toISOString() } : {}
+    const response = await axios.get(
+      `${tenantsLeasesServiceUrl}/rental-objects/types/sync`,
+      { params, validateStatus: () => true, timeout: SYNC_FETCH_TIMEOUT_MS }
+    )
+
+    if (response.status !== 200)
+      return { ok: false, err: 'unknown', statusCode: response.status }
+
+    const parsed = RentalObjectTypeChangesSchema.safeParse(
+      response.data?.content
+    )
+    if (!parsed.success) {
+      logger.error(
+        { error: parsed.error.issues },
+        'leasing-adapter.getRentalObjectTypeChanges: invalid response'
+      )
+      return { ok: false, err: 'unknown', statusCode: response.status }
+    }
+    return { ok: true, data: parsed.data }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.getRentalObjectTypeChanges')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const syncRentalObjectType = async (
+  rentalObjectCode: string,
+  code: string | null
+): Promise<
+  AdapterResult<
+    { action: SyncRentalObjectTypeResponse['action'] },
+    'unknown-type' | 'rejected' | 'sync-failed'
+  >
+> => {
+  try {
+    const response = await axios.post(
+      `${tenantsLeasesServiceUrl}/rental-objects/${encodeURIComponent(rentalObjectCode)}/type/sync`,
+      { code } satisfies SyncRentalObjectTypeRequest,
+      {
+        validateStatus: () => true,
+        timeout: SYNC_RENTAL_OBJECT_TYPE_TIMEOUT_MS,
+      }
+    )
+
+    if (response.status === 200) {
+      const parsed = SyncRentalObjectTypeResponseSchema.safeParse(
+        response.data?.content
+      )
+      if (parsed.success)
+        return { ok: true, data: { action: parsed.data.action } }
+    }
+
+    if (response.status === 422) {
+      if (response.data?.error === 'unknown-rental-object-type')
+        return { ok: false, err: 'unknown-type', statusCode: 422 }
+      if (response.data?.error === 'rental-object-rejected')
+        return { ok: false, err: 'rejected', statusCode: 422 }
+    }
+
+    logger.error(
+      { rentalObjectCode, status: response.status },
+      'leasing-adapter.syncRentalObjectType'
+    )
+    return { ok: false, err: 'sync-failed', statusCode: response.status }
+  } catch (err) {
+    logger.error({ err }, 'leasing-adapter.syncRentalObjectType')
+    return { ok: false, err: 'sync-failed' }
+  }
+}
+
 export {
   addApplicantToWaitingList,
-  exportLeasesToExcel,
+  getLeasesForExport,
   syncContactToLeasing,
   getContactsByFilters,
   getApplicationProfileByContactCode,
@@ -895,12 +936,10 @@ export {
   resetWaitingList,
   createContactComment,
   createOrUpdateApplicationProfileByContactCode,
-  getListingTextContentByRentalObjectCode,
-  createListingTextContent,
-  updateListingTextContent,
-  deleteListingTextContent,
   getUpdatedLeases,
   syncLease,
+  getRentalObjectTypeChanges,
+  syncRentalObjectType,
 }
 
 export {
@@ -982,3 +1021,10 @@ export {
   updateListingAreaTextContent,
   deleteListingAreaTextContent,
 } from './listing-area-text-content'
+
+export {
+  getListingTextContentByRentalObjectCode,
+  createListingTextContent,
+  updateListingTextContent,
+  deleteListingTextContent,
+} from './listing-text-content'

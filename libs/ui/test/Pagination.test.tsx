@@ -58,3 +58,81 @@ describe('Pagination', () => {
     expect(screen.getAllByText('...')).toHaveLength(2)
   })
 })
+
+describe('Pagination page size selector', () => {
+  it('renders nothing on a single page without a page size selector', () => {
+    const { container } = render(
+      <Pagination
+        currentPage={1}
+        totalPages={1}
+        totalRecords={40}
+        pageSize={100}
+        onPageChange={() => {}}
+      />
+    )
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('shows the selector on a single page, without page buttons', () => {
+    render(
+      <Pagination
+        currentPage={1}
+        totalPages={1}
+        totalRecords={40}
+        pageSize={100}
+        onPageChange={() => {}}
+        pageSizeOptions={[50, 100]}
+        onPageSizeChange={() => {}}
+      />
+    )
+    expect(screen.getByText('Rader per sida')).toBeTruthy()
+    expect(screen.getByRole('combobox').textContent).toBe('100')
+    expect(screen.queryByTitle('Nästa sida')).toBeNull()
+  })
+
+  it('shows the selector next to the page buttons on several pages', () => {
+    render(
+      <Pagination
+        currentPage={1}
+        totalPages={3}
+        totalRecords={250}
+        pageSize={100}
+        onPageChange={() => {}}
+        pageSizeOptions={[50, 100]}
+        onPageSizeChange={() => {}}
+      />
+    )
+    expect(screen.getByRole('combobox')).toBeTruthy()
+    expect(screen.getByTitle('Nästa sida')).toBeTruthy()
+  })
+
+  it('renders nothing without results', () => {
+    const { container } = render(
+      <Pagination
+        currentPage={1}
+        totalPages={1}
+        totalRecords={0}
+        pageSize={100}
+        onPageChange={() => {}}
+        pageSizeOptions={[50, 100]}
+        onPageSizeChange={() => {}}
+      />
+    )
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('leaves out the selector without a change handler', () => {
+    render(
+      <Pagination
+        currentPage={1}
+        totalPages={3}
+        totalRecords={250}
+        pageSize={100}
+        onPageChange={() => {}}
+        pageSizeOptions={[50, 100]}
+      />
+    )
+    expect(screen.queryByRole('combobox')).toBeNull()
+    expect(screen.getByTitle('Nästa sida')).toBeTruthy()
+  })
+})

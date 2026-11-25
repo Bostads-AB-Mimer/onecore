@@ -15,6 +15,8 @@ export const HomeInsuranceExportRowSchema = z.object({
   nationalIdNumber: z.string(),
   fullName: z.string(),
   address: z.string(),
+  postalCode: z.string(),
+  city: z.string(),
   phoneNumber: z.string(),
   email: z.string().nullable(),
 })

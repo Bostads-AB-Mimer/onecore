@@ -454,4 +454,63 @@ describe('parseLeaseChanges', () => {
       expect(result[1].timestamp).toEqual(new Date('2026-04-29T10:00:00Z'))
     })
   })
+
+  describe('voided leases signed afterwards', () => {
+    it('emits nothing for a Makulerat row where only Undertecknat is set', () => {
+      const rows = [
+        {
+          logmemo:
+            "Hyreskontrakt 100-001-01-0001/09M2, TESTGATAN 1, P000001, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.",
+          logtime: new Date('2026-11-18T10:00:00Z'),
+        },
+      ]
+
+      expect(parseLeaseChanges(rows)).toEqual([])
+    })
+
+    it('emits only a void when a Makulerat row holds both Undertecknat and Makulerat datum', () => {
+      const rows = [
+        {
+          logmemo:
+            "Hyreskontrakt 100-001-01-0001/09M2, TESTGATAN 1, P000001, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.\nVärdet i fältet 'Makulerat datum' ändrat från '' till '2026-11-18'.\nVärdet i fältet 'Kontraktsnummer' ändrat från '100-001-01-0001/09' till '100-001-01-0001/09M2'.",
+          logtime: new Date('2026-11-18T10:00:00Z'),
+        },
+      ]
+
+      expect(parseLeaseChanges(rows)).toEqual([
+        {
+          leaseId: '100-001-01-0001/09',
+          contactCode: 'P000001',
+          rentalObjectId: '100-001-01-0001',
+          action: 'void',
+          timestamp: new Date('2026-11-18T10:00:00Z'),
+        },
+      ])
+    })
+
+    it('keeps the Kommande create and drops the later Makulerat Undertecknat row', () => {
+      const rows = [
+        {
+          logmemo:
+            "Hyreskontrakt 100-001-01-0001/02, TESTGATAN 1, P000001, Bostadskontrakt (Kommande)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-17'.",
+          logtime: new Date('2026-11-17T10:00:00Z'),
+        },
+        {
+          logmemo:
+            "Hyreskontrakt 100-001-01-0001/02M2, TESTGATAN 1, P000001, Bostadskontrakt (Makulerat)\nVärdet i fältet 'Undertecknat' ändrat från '' till '2026-11-18'.",
+          logtime: new Date('2026-11-18T10:00:00Z'),
+        },
+      ]
+
+      expect(parseLeaseChanges(rows)).toEqual([
+        {
+          leaseId: '100-001-01-0001/02',
+          contactCode: 'P000001',
+          rentalObjectId: '100-001-01-0001',
+          action: 'create',
+          timestamp: new Date('2026-11-17T10:00:00Z'),
+        },
+      ])
+    })
+  })
 })

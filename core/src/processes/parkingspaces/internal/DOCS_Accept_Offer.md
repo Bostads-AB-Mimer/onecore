@@ -4,6 +4,8 @@ _Del av [processöversikten](./DOCS_Overview.md) för poängsatta bilplatser._
 
 En sökande accepterar ett erbjudande om en poängsatt bilplats, skapat av [Create Offer](./DOCS_Create_Offer_for_Scored_Parking_Space.md)-processen — antingen själv via Mina Sidor eller å sökandens vägnar av en handläggare via Uthyrningsgränssnittet. Processen kontrollerar att erbjudandet är aktivt, att sökanden fortfarande är hyresgäst och uppfyller områdes- och fastighetsspecifika uthyrningsregler, och skapar därefter kontraktet. Eventuella andra aktiva erbjudanden till samma sökande [nekas](./DOCS_Deny_Offer.md) automatiskt — vilket i sin tur skapar ett nytt erbjudande till nästa sökande på de annonserna.
 
+Tenfast samaviserar bilplatsen med hyresgästens andra avtal om hyresgästerna och aviseringsinställningarna matchar. Det sker redan när bilplatsen skapas, innan den är signerad, men den kommer med på avin först när den har signerats. Se [Samavisering](../../invoicedistribution/DOCS_Co_Invoicing.md).
+
 ## Flödesdiagram
 
 Processens beslutslogik: vilka kontroller som styr om flödet går vidare till nästa steg, och vad som händer vid godkännande, nekande eller fel. System- och integrationsdetaljer är medvetet utelämnade här — se sekvensdiagrammet nedan för det.
@@ -124,7 +126,24 @@ sequenceDiagram
         Core-->User: show error message
     end
 
-    Leasing ->> Tenfast: Create Lease
+    Leasing ->> XPandDB: Get Lease Ids on Rental Object
+    XPandDB -->> Leasing: Lease Ids
+
+    break when the Lease Ids cannot be read from XPand
+        Leasing -->> Core: 500 could-not-get-xpand-lease-ids
+        Core-->User: show error message, no lease created
+    end
+
+    Leasing ->> Tenfast: Search Leases on Rental Object
+    Tenfast -->> Leasing: Leases
+
+    break when Rental Object is not Available from Start Date<br/>(leased then, or a next tenant's lease:<br/>draft, out for signing or signed)
+        Leasing -->> Core: 409 rental-object-not-available
+        Core-->User: 409, offer stays open
+    end
+
+    note over Leasing: Lease id: the highest number among the<br/>XPand and Tenfast leases on the object,<br/>voided ones included, plus 1 (AVTAL-612).
+    Leasing ->> Tenfast: Create Lease with that id
     Tenfast -->> Leasing: Lease
     Leasing -->> Core: Lease
     note over Core: VAT is hardcoded to false here —<br/>must be checked manually before signing.

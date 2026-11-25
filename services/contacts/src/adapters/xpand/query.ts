@@ -3,6 +3,8 @@ import { Pagination } from '@src/adapters'
 import { ContactCode, NationalIdNumber } from '@src/domain'
 import { ContactTypeFilter, ObjectKey } from '@src/domain/contact'
 
+import { nationalIdPrefixes } from '@src/domain/search-term'
+
 import { currentInvoiceAddress } from './address-sql'
 import { DbContactRow } from './db-model'
 
@@ -26,7 +28,6 @@ const wildcard = (column: string, wc: string): [string, string[]] => [
   `${column} COLLATE Latin1_General_100_CI_AI LIKE ?`,
   [`%${wc}%`],
 ]
-
 /**
  * Utility-function that generates the arguments for knex.whereRaw
  * for WHERE-criteria of the type `<column> IN (...)` where both
@@ -226,27 +227,57 @@ export const contactCodeForNationalId = async (
   return row?.contactCode ?? null
 }
 
+// Table key of cmctc in cmlog.keydbtbl
+const CONTACT_TABLE_KEY = '_RXJ0UWYHC'
+
+// cmlog categories (logcat) that record sent messages, not contact changes
+const SKIPPED_CONTACT_CHANGE_LOGCATS = [
+  'SMS har skapats',
+  'E-post skickat',
+  'Skickad via SMS',
+]
+
 /**
- * Retrieves cmlog rows for contact changes recorded since the given timestamp.
+ * Retrieves the contacts changed since the given timestamp, each with the
+ * latest cmlog time for it.
  *
- * Only rows whose logmemo starts with "Kontakt " are returned, as these
- * represent changes to contacts. If no timestamp is provided, returns all
- * matching rows.
+ * A cmlog row counts when it belongs to the contact table, its logmemo starts
+ * with "Kontakt " and it was logged after `since`. The contact is found
+ * through cmlog.keycode = cmctc.keycmctc, so the code is the one the contact
+ * has now, not the one written in logmemo.
+ * Rows whose logcat is a sent-message category are skipped; rows with no
+ * logcat are kept. Ordered by timestamp ascending.
  *
  * @param db - The Knex database connection to use
  * @param since - The timestamp to query changes from, or null for all rows
- * @returns A promise that resolves to an array of cmlog rows
+ * @returns A promise that resolves to contact codes with timestamps
  */
-export const cmlogContactChanges = (
+export const cmlogContactChanges = async (
   db: knex.Knex,
   since: Date | null
-): Promise<Record<string, unknown>[]> => {
-  const base = db
+): Promise<{ contactCode: string; timestamp: Date }[]> => {
+  const query = db
     .from('cmlog')
-    .whereLike('logmemo', 'Kontakt %')
-    .orderBy('logtime', 'asc')
+    .innerJoin('cmctc', 'cmlog.keycode', 'cmctc.keycmctc')
+    .where('cmlog.keydbtbl', CONTACT_TABLE_KEY)
+    .whereLike('cmlog.logmemo', 'Kontakt %')
+    .where((qb) =>
+      qb
+        .whereNull('cmlog.logcat')
+        .orWhereNotIn('cmlog.logcat', SKIPPED_CONTACT_CHANGE_LOGCATS)
+    )
+    .select({ contactCode: db.raw('RTRIM(cmctc.cmctckod)') })
+    .select({ timestamp: db.raw('MAX(cmlog.logtime)') })
+    .groupBy('cmctc.cmctckod')
+    .orderByRaw('MAX(cmlog.logtime) asc, cmctc.cmctckod asc')
 
-  return since ? base.andWhere('logtime', '>', since) : base
+  if (since) query.andWhere('cmlog.logtime', '>', since)
+
+  const rows = await query
+  return rows.map((row) => ({
+    contactCode: String(row.contactCode).trim(),
+    timestamp: row.timestamp as Date,
+  }))
 }
 
 /**
@@ -316,12 +347,11 @@ export const contactsQuery = () => {
 
     Object.keys(wheres).forEach((key) => {
       if (key === NATIONAL_ID_NUMBER) {
-        qb.andWhere((b) => {
-          b.where(key, wheres[key]).orWhereRaw(
-            `REPLACE(TRANSLATE(${NATIONAL_ID_NUMBER}, '0123456789', '##########'), '#', '') = ?`,
-            [wheres[key]]
-          )
-        })
+        const candidates: string[] = wheres[key]
+        qb.andWhereRaw(
+          `${NORMALISED_NATIONAL_ID_SQL} IN (${candidates.map(() => '?').join(', ')})`,
+          candidates
+        )
       } else {
         qb.andWhere(key, wheres[key])
       }
@@ -334,6 +364,10 @@ export const contactsQuery = () => {
    *
    * Queries that use multiple wildcards will call this function
    * once for each wildcard.
+   *
+   * Every word must hit the contact row (code, a name field, or the national
+   * id by prefix when the word is digit-like), or the whole string must hit
+   * an address line.
    */
   const wildcardUnion = (db: knex.Knex, wc: string) => {
     const words = wc.split(/\s+/).filter(Boolean)
@@ -344,13 +378,18 @@ export const contactsQuery = () => {
       .modify(baseFilters)
       .modify((qb) => {
         for (const word of words) {
-          qb.andWhere((b) =>
-            b
-              .whereRaw(...wildcard('cmctckod', word))
+          const nidPrefixes = nationalIdPrefixes(word)
+          qb.andWhere((b) => {
+            b.whereRaw(...wildcard('cmctckod', word))
               .orWhereRaw(...wildcard('fnamn', word))
               .orWhereRaw(...wildcard('enamn', word))
               .orWhereRaw(...wildcard('cmctcben', word))
-          )
+            for (const nidPrefix of nidPrefixes) {
+              b.orWhereRaw(`${NORMALISED_NATIONAL_ID_SQL} LIKE ?`, [
+                `${nidPrefix}%`,
+              ])
+            }
+          })
         }
       })
 
@@ -404,10 +443,11 @@ export const contactsQuery = () => {
     },
 
     /**
-     * Adds a WHERE-criteria for single national ID number.
+     * Adds a WHERE-criteria for a national ID number. Accepts multiple
+     * candidate forms (e.g. ten- and twelve-digit) to match any of them.
      */
-    hasNationalId(nid: NationalIdNumber) {
-      wheres[NATIONAL_ID_NUMBER] = nid
+    hasNationalId(nid: NationalIdNumber | NationalIdNumber[]) {
+      wheres[NATIONAL_ID_NUMBER] = Array.isArray(nid) ? nid : [nid]
       return this
     },
 

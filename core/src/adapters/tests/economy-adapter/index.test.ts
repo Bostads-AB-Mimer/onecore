@@ -4,17 +4,23 @@ import { economy } from '@onecore/types'
 import config from '../../../common/config'
 import * as economyAdapter from '../../economy-adapter'
 
-import { mockedInvoices } from './mocks'
+import { mockedInvoices, mockedMiscellaneousInvoices } from './mocks'
 
 afterEach(() => {
   nock.cleanAll()
 })
 
 describe('economy-adapter', () => {
+  // The contact's own invoices — reference is the paying contact's code.
+  const ownInvoices = mockedInvoices.map((i) => ({
+    ...i,
+    reference: 'P123456',
+  }))
+
   it('returns empty list if no problematic invoices', async () => {
     nock(config.economyService.url)
       .get(/invoices\/bycontactcode/)
-      .reply(200, { content: mockedInvoices })
+      .reply(200, { content: ownInvoices })
 
     const result =
       await economyAdapter.getInvoicesSentToDebtCollection('P123456')
@@ -23,7 +29,7 @@ describe('economy-adapter', () => {
   })
 
   it('returns list of invoices if current problematic invoices', async () => {
-    const mockedProblematicInvoices = mockedInvoices.map((i) => ({
+    const mockedProblematicInvoices = ownInvoices.map((i) => ({
       ...i,
       sentToDebtCollection: i.expirationDate,
     }))
@@ -47,7 +53,28 @@ describe('economy-adapter', () => {
 
     const result = await economyAdapter.getInvoicesByContactCode('P123456')
 
-    expect(result).toEqual({ ok: false, err: 'unknown' })
+    expect(result).toEqual({ ok: false, err: 'unknown', statusCode: 500 })
+  })
+
+  it('returns unavailable when economy responds 503', async () => {
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(503, { error: 'xledger-unavailable' })
+
+    const result = await economyAdapter.getInvoicesByContactCode('P123456')
+
+    expect(result).toEqual({ ok: false, err: 'unavailable', statusCode: 503 })
+  })
+
+  it('passes the error and status code on to the credit check', async () => {
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(503, { error: 'xledger-unavailable' })
+
+    const result =
+      await economyAdapter.getInvoicesSentToDebtCollection('P123456')
+
+    expect(result).toEqual({ ok: false, err: 'unavailable', statusCode: 503 })
   })
 
   describe(economyAdapter.getInvoiceByInvoiceId, () => {
@@ -204,12 +231,51 @@ describe('economy-adapter', () => {
     })
   })
 
+  it('matches the paying contact regardless of casing', async () => {
+    // Contact codes are stored upper-case; a lower-cased lookup must not
+    // silently pass the credit check.
+    const mockedProblematicInvoices = ownInvoices.map((i) => ({
+      ...i,
+      sentToDebtCollection: i.expirationDate,
+    }))
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(200, { content: mockedProblematicInvoices })
+
+    const result =
+      await economyAdapter.getInvoicesSentToDebtCollection('p123456')
+
+    expect(result).toStrictEqual({
+      ok: true,
+      data: JSON.parse(JSON.stringify(mockedProblematicInvoices)),
+    })
+  })
+
+  it('does not count invoices billed to a co-holder against the contact', async () => {
+    // MIM-1160: the endpoint also returns invoices for shared leases where
+    // another contact is the payer (reference = the payer). Those must not
+    // fail this contact's credit check.
+    const householdInvoices = mockedInvoices.map((i) => ({
+      ...i,
+      reference: 'P999999',
+      sentToDebtCollection: i.expirationDate,
+    }))
+    nock(config.economyService.url)
+      .get(/invoices\/bycontactcode/)
+      .reply(200, { content: householdInvoices })
+
+    const result =
+      await economyAdapter.getInvoicesSentToDebtCollection('P123456')
+
+    expect(result).toStrictEqual({ ok: true, data: [] })
+  })
+
   describe(economyAdapter.submitMiscellaneousInvoice, () => {
     const invoice = { contactCode: 'P123456' }
 
     it('returns ok with the created items on success', async () => {
       nock(config.economyService.url)
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .reply(200, { content: [{ node: { dbId: 1 } }] })
 
       const result = await economyAdapter.submitMiscellaneousInvoice(
@@ -225,7 +291,7 @@ describe('economy-adapter', () => {
 
     it('passes through xledger-customer-not-found from economy', async () => {
       nock(config.economyService.url)
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .reply(404, { type: 'xledger-customer-not-found' })
 
       const result = await economyAdapter.submitMiscellaneousInvoice(
@@ -242,7 +308,7 @@ describe('economy-adapter', () => {
 
     it('returns unknown on other errors', async () => {
       nock(config.economyService.url)
-        .post('/invoices/miscellaneous')
+        .post('/miscellaneous-invoices')
         .reply(500, { message: 'boom' })
 
       const result = await economyAdapter.submitMiscellaneousInvoice(
@@ -331,6 +397,122 @@ describe('economy-adapter', () => {
       expect(result).toEqual({
         ok: false,
         err: 'Lookup failed',
+      })
+    })
+  })
+
+  describe(economyAdapter.getMiscellaneousInvoices, () => {
+    it('returns content and pageInfo on success', async () => {
+      nock(config.economyService.url)
+        .get('/miscellaneous-invoices')
+        .query(true)
+        .reply(200, {
+          content: {
+            content: mockedMiscellaneousInvoices,
+            pageInfo: { hasNextPage: true, endCursor: 'abc' },
+          },
+        })
+
+      const result = await economyAdapter.getMiscellaneousInvoices({})
+
+      expect(result).toStrictEqual({
+        ok: true,
+        data: {
+          content: JSON.parse(JSON.stringify(mockedMiscellaneousInvoices)),
+          pageInfo: { hasNextPage: true, endCursor: 'abc' },
+        },
+      })
+    })
+
+    it('returns unknown on error', async () => {
+      nock(config.economyService.url)
+        .get('/miscellaneous-invoices')
+        .query(true)
+        .reply(500)
+
+      const result = await economyAdapter.getMiscellaneousInvoices({})
+
+      expect(result).toStrictEqual({
+        ok: false,
+        err: 'unknown',
+        statusCode: 500,
+      })
+    })
+  })
+
+  describe('getInvoiceRecipientsMissingAsCustomers', () => {
+    const path = '/accounting/invoice-recipients/001/missing-customers'
+
+    it('returns the parsed body on 200', async () => {
+      nock(config.economyService.url)
+        .get(path)
+        .reply(200, { recipients: 2, missingCustomerCodes: ['P2'] })
+
+      const result =
+        await economyAdapter.getInvoiceRecipientsMissingAsCustomers('001')
+
+      expect(result).toStrictEqual({
+        ok: true,
+        data: { recipients: 2, missingCustomerCodes: ['P2'] },
+      })
+    })
+
+    it('returns unknown-company with the status on 404', async () => {
+      nock(config.economyService.url)
+        .get(path)
+        .reply(404, { error: 'unknown-company', reason: 'No company 001' })
+
+      const result =
+        await economyAdapter.getInvoiceRecipientsMissingAsCustomers('001')
+
+      expect(result).toMatchObject({
+        ok: false,
+        err: 'unknown-company',
+        statusCode: 404,
+      })
+    })
+
+    it('returns xledger-failed on 502', async () => {
+      nock(config.economyService.url)
+        .get(path)
+        .reply(502, { error: 'xledger-failed', reason: 'lookup failed' })
+
+      const result =
+        await economyAdapter.getInvoiceRecipientsMissingAsCustomers('001')
+
+      expect(result).toMatchObject({
+        ok: false,
+        err: 'xledger-failed',
+        statusCode: 502,
+      })
+    })
+
+    it('returns unknown on a network error', async () => {
+      nock(config.economyService.url).get(path).replyWithError('socket hang up')
+
+      const result =
+        await economyAdapter.getInvoiceRecipientsMissingAsCustomers('001')
+
+      expect(result).toStrictEqual({ ok: false, err: 'unknown' })
+    })
+  })
+
+  describe('importInvoices', () => {
+    it('defaults missingCustomerCodes to [] when the economy service leaves it out', async () => {
+      nock(config.economyService.url)
+        .post('/accounting/import-invoices/001')
+        .reply(200, {
+          errors: [],
+          successfulInvoices: ['1'],
+          skippedInvoices: [],
+          markFailures: [],
+        })
+
+      const result = await economyAdapter.importInvoices('001')
+
+      expect(result).toMatchObject({
+        ok: true,
+        data: { successfulInvoices: ['1'], missingCustomerCodes: [] },
       })
     })
   })

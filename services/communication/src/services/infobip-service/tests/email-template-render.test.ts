@@ -1,3 +1,8 @@
+// Silence the warn renderTemplate logs for the deliberate invalid-date case.
+jest.mock('@onecore/utilities', () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+}))
+
 import {
   buildParkingSpacePlaceholders,
   fillTokens,

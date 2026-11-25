@@ -54,6 +54,19 @@ export interface Config {
     projectId: string
     mimerVisibleLabelId: string
   }
+  // Own scheduler for scheduled SMS/email (replaces Infobip-side scheduling).
+  // Wall-clock values are Swedish local time (Europe/Stockholm).
+  scheduledSends: {
+    enabled: boolean // off (default): routes reject sendAt, no worker runs; only turn off when nothing is scheduled
+    blockedFrom: string // 'HH:mm' start of the daily no-send window
+    blockedUntil: string // 'HH:mm' end of the window; before blockedFrom = overnight
+    maxDaysAhead: number
+    stalenessHours: number // unsent this long after its slot -> failed
+    batchSize: number // recipients per provider call
+    claimMinutes: number // claim expiry; must exceed providerTimeoutMs
+    providerTimeoutMs: number // well under Kubernetes' 30 s SIGTERM grace
+    maxAttempts: number // hard cap on provider calls (= copies) per recipient
+  }
 }
 
 const config = configPackage({
@@ -102,6 +115,20 @@ const config = configPackage({
       projectId: '40e6be50-94b0-4426-a164-93a0a044d8d9',
       mimerVisibleLabelId: '278ba88a-5582-4ba0-bb3b-f7c6e7681c99',
     },
+    scheduledSends: {
+      enabled: false,
+      blockedFrom: '21:00',
+      blockedUntil: '07:00',
+      maxDaysAhead: 30,
+      stalenessHours: 3,
+      batchSize: 500,
+      claimMinutes: 5,
+      providerTimeoutMs: 20000,
+      // The original send plus one retry. An unclear provider answer (5xx,
+      // timeout) may still have sent, so every extra attempt can be a
+      // duplicate SMS to every recipient in the batch.
+      maxAttempts: 2,
+    },
   },
 })
 
@@ -112,4 +139,5 @@ export default {
   communicationDatabase: config.get('communicationDatabase'),
   health: config.get('health'),
   linear: config.get('linear'),
+  scheduledSends: config.get('scheduledSends'),
 } as Config

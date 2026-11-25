@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   ChevronDown,
@@ -7,7 +8,15 @@ import {
   User,
 } from 'lucide-react'
 
+import {
+  type MessageTemplate,
+  useMessageTemplates,
+} from '@/entities/message-template'
+
+import { useScheduleField } from '@/shared/hooks/useScheduleField'
+import { shouldConfirmTemplateReplace } from '@/shared/lib/smsTemplates'
 import { cn } from '@/shared/lib/utils'
+import { routes } from '@/shared/routes'
 import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import {
@@ -18,11 +27,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
+import { ScheduleField } from '@/shared/ui/ScheduleField'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/ui/Select'
 import { Textarea } from '@/shared/ui/Textarea'
 
 const MAX_SMS_LENGTH = 1600
 const COST_WARNING_THRESHOLD = 100
 const SMS_COST_SEK = 0.5
+// Radix Select items cannot have an empty value, so "no template" is a sentinel.
+const NO_TEMPLATE = 'none'
 
 function hasPhoneNumber(phone: string | null): boolean {
   return phone !== null && phone.trim().length > 0
@@ -42,7 +61,13 @@ interface SmsModalBaseProps {
 interface SmsModalSingleProps extends SmsModalBaseProps {
   recipientName: string
   phoneNumber: string
-  onSend: (message: string) => Promise<void>
+  // sendAt (ISO instant) is set when the user chose to schedule the send.
+  // templateId is the template the text started from, if any.
+  onSend: (
+    message: string,
+    sendAt?: string,
+    templateId?: string
+  ) => Promise<void>
   recipients?: undefined
   totalSelectedItems?: undefined
 }
@@ -50,7 +75,14 @@ interface SmsModalSingleProps extends SmsModalBaseProps {
 interface SmsModalBulkProps extends SmsModalBaseProps {
   recipients: SmsRecipient[]
   totalSelectedItems?: number
-  onSend?: (message: string, recipients: SmsRecipient[]) => Promise<void>
+  // sendAt (ISO instant) is set when the user chose to schedule the send.
+  // templateId is the template the text started from, if any.
+  onSend?: (
+    message: string,
+    recipients: SmsRecipient[],
+    sendAt?: string,
+    templateId?: string
+  ) => Promise<void>
   recipientName?: undefined
   phoneNumber?: undefined
 }
@@ -65,6 +97,25 @@ export function SmsModal(props: SmsModalProps) {
   const [isSending, setIsSending] = useState(false)
   const [showCostConfirmation, setShowCostConfirmation] = useState(false)
   const [showAllInvalid, setShowAllInvalid] = useState(false)
+  const schedule = useScheduleField()
+
+  // Template link stays set even if the rep rewrites the whole text: the
+  // message still started from it. appliedTemplateBody lets switching
+  // templates skip the confirm while the text is untouched.
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    null
+  )
+  const [appliedTemplateBody, setAppliedTemplateBody] = useState<string | null>(
+    null
+  )
+  const [pendingTemplate, setPendingTemplate] =
+    useState<MessageTemplate | null>(null)
+  const templatesQuery = useMessageTemplates('active', {
+    enabled: open,
+    // "Hantera mallar" opens a new tab; refetch when the rep comes back.
+    refetchOnWindowFocus: 'always',
+  })
+  const templates = templatesQuery.data ?? []
 
   const charactersLeft = MAX_SMS_LENGTH - message.length
 
@@ -85,11 +136,41 @@ export function SmsModal(props: SmsModalProps) {
       ? props.totalSelectedItems - recipients.length
       : 0
 
+  const resetTemplate = useCallback(() => {
+    setSelectedTemplateId(null)
+    setAppliedTemplateBody(null)
+    setPendingTemplate(null)
+  }, [])
+
+  const applyTemplate = useCallback((template: MessageTemplate) => {
+    setMessage(template.body.slice(0, MAX_SMS_LENGTH))
+    setSelectedTemplateId(template.id)
+    setAppliedTemplateBody(template.body)
+    setPendingTemplate(null)
+  }, [])
+
+  const handleTemplateChange = (value: string) => {
+    if (value === NO_TEMPLATE) {
+      // Drop the link but keep whatever text is in the box.
+      resetTemplate()
+      return
+    }
+    const template = templates.find((t) => t.id === value)
+    if (!template) return
+    if (shouldConfirmTemplateReplace(message, appliedTemplateBody)) {
+      setPendingTemplate(template)
+    } else {
+      applyTemplate(template)
+    }
+  }
+
   const handleSend = useCallback(async () => {
     if (!message.trim() || isSending) return
+    const templateId = selectedTemplateId ?? undefined
 
     if (isBulk) {
       if (validRecipients.length === 0 || !props.onSend) return
+      if (schedule.isScheduling && schedule.error) return
 
       if (
         validRecipients.length > COST_WARNING_THRESHOLD &&
@@ -104,19 +185,32 @@ export function SmsModal(props: SmsModalProps) {
         await (
           props.onSend as (
             message: string,
-            recipients: SmsRecipient[]
+            recipients: SmsRecipient[],
+            sendAt?: string,
+            templateId?: string
           ) => Promise<void>
-        )(message, validRecipients)
+        )(message, validRecipients, schedule.sendAtIso(), templateId)
         setMessage('')
         setShowCostConfirmation(false)
+        schedule.reset()
+        resetTemplate()
       } finally {
         setIsSending(false)
       }
     } else {
+      if (schedule.isScheduling && schedule.error) return
       setIsSending(true)
       try {
-        await (props.onSend as (message: string) => Promise<void>)(message)
+        await (
+          props.onSend as (
+            message: string,
+            sendAt?: string,
+            templateId?: string
+          ) => Promise<void>
+        )(message, schedule.sendAtIso(), templateId)
         setMessage('')
+        schedule.reset()
+        resetTemplate()
         onOpenChange(false)
       } finally {
         setIsSending(false)
@@ -128,6 +222,9 @@ export function SmsModal(props: SmsModalProps) {
     isBulk,
     validRecipients,
     showCostConfirmation,
+    schedule,
+    selectedTemplateId,
+    resetTemplate,
     props.onSend,
     onOpenChange,
   ])
@@ -135,15 +232,19 @@ export function SmsModal(props: SmsModalProps) {
   const handleClose = () => {
     setMessage('')
     setShowCostConfirmation(false)
+    schedule.reset()
+    resetTemplate()
     onOpenChange(false)
   }
 
   const description = isBulk
     ? props.totalSelectedItems != null &&
       props.totalSelectedItems !== recipients.length
-      ? `${props.totalSelectedItems} valda hyreskontrakt \u2192 ${recipients.length} unika kontakter`
+      ? `${props.totalSelectedItems} valda hyreskontrakt → ${recipients.length} unika kontakter`
       : `Skicka SMS till ${validRecipients.length} av ${recipients.length} valda kunder`
     : `Till ${props.recipientName} (${props.phoneNumber})`
+
+  const noTemplates = !templatesQuery.isLoading && templates.length === 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -250,6 +351,72 @@ export function SmsModal(props: SmsModalProps) {
 
           <div>
             <div className="flex justify-between items-center mb-2">
+              <label htmlFor="sms-template" className="text-sm font-medium">
+                Mall
+              </label>
+              {/* New tab: navigating in-app would unmount the dialog and lose the draft. */}
+              <Link
+                to={routes.messageTemplates}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary underline-offset-4 hover:underline"
+              >
+                Hantera mallar
+              </Link>
+            </div>
+            <Select
+              value={pendingTemplate?.id ?? selectedTemplateId ?? NO_TEMPLATE}
+              onValueChange={handleTemplateChange}
+              disabled={isSending || noTemplates}
+            >
+              <SelectTrigger id="sms-template">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_TEMPLATE}>Ingen mall</SelectItem>
+                {templates.map((template) => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {noTemplates && !templatesQuery.isError && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Inga mallar ännu.
+              </p>
+            )}
+            {templatesQuery.isError && (
+              <p className="mt-1 text-xs text-destructive">
+                Mallarna kunde inte hämtas. Du kan fortfarande skriva fritt.
+              </p>
+            )}
+            {pendingTemplate && (
+              <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-800">
+                <span className="text-sm flex-1">
+                  Ersätt texten med mallen &quot;{pendingTemplate.name}&quot;?
+                </span>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPendingTemplate(null)}
+                  >
+                    Behåll texten
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => applyTemplate(pendingTemplate)}
+                  >
+                    Ersätt
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-2">
               <label className="text-sm font-medium">Meddelande</label>
               <span
                 className={cn(
@@ -271,6 +438,8 @@ export function SmsModal(props: SmsModalProps) {
               className="min-h-[120px] resize-none"
             />
           </div>
+
+          <ScheduleField id="sms-schedule" field={schedule} />
         </div>
 
         {showCostConfirmation ? (
@@ -300,7 +469,13 @@ export function SmsModal(props: SmsModalProps) {
                 Avbryt
               </Button>
               <Button onClick={handleSend} disabled={isSending}>
-                {isSending ? 'Skickar...' : 'Ja, skicka SMS'}
+                {isSending
+                  ? schedule.isScheduling
+                    ? 'Schemalägger...'
+                    : 'Skickar...'
+                  : schedule.isScheduling
+                    ? 'Ja, schemalägg SMS'
+                    : 'Ja, skicka SMS'}
               </Button>
             </DialogFooter>
           </div>
@@ -318,14 +493,21 @@ export function SmsModal(props: SmsModalProps) {
               disabled={
                 !message.trim() ||
                 (isBulk && validRecipients.length === 0) ||
+                (schedule.isScheduling && !!schedule.error) ||
                 isSending
               }
             >
               {isSending
-                ? 'Skickar...'
+                ? schedule.isScheduling
+                  ? 'Schemalägger...'
+                  : 'Skickar...'
                 : isBulk
-                  ? `Skicka till ${validRecipients.length} mottagare`
-                  : 'Skicka SMS'}
+                  ? schedule.isScheduling
+                    ? `Schemalägg till ${validRecipients.length} mottagare`
+                    : `Skicka till ${validRecipients.length} mottagare`
+                  : schedule.isScheduling
+                    ? 'Schemalägg SMS'
+                    : 'Skicka SMS'}
             </Button>
           </DialogFooter>
         )}

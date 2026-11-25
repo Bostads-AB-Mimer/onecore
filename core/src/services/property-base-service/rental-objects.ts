@@ -27,6 +27,8 @@ const RentalObjectScopeShape = {
   kvvAreaIds: repeatable,
   marketAreaCodes: repeatable,
   propertyCodes: repeatable,
+  // `<kvvAreaId>:<propertyCode>` — one area's share of a split property.
+  propertyShares: repeatable,
   buildingCodes: repeatable,
   staircaseCodes: repeatable,
   parkingAreaCodes: repeatable,
@@ -49,7 +51,7 @@ const GetRentalObjectDetailsQuerySchema = z
   .object(RentalObjectScopeShape)
   .refine(hasAnyScope, { message: 'Provide at least one scope.' })
 
-const SearchRentalObjectsQuerySchema = z
+export const SearchRentalObjectsQuerySchema = z
   .object({
     ...RentalObjectScopeShape,
     types: z
@@ -169,6 +171,7 @@ export const routes = (router: KoaRouter) => {
    *       - { in: query, name: kvvAreaIds, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: marketAreaCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: propertyCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: propertyShares, schema: { type: array, items: { type: string } }, description: 'One KVV-area''s share of a split property, as kvvAreaId:propertyCode' }
    *       - { in: query, name: buildingCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: staircaseCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: parkingAreaCodes, schema: { type: array, items: { type: string } } }
@@ -241,6 +244,7 @@ export const routes = (router: KoaRouter) => {
    *       - { in: query, name: kvvAreaIds, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: marketAreaCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: propertyCodes, schema: { type: array, items: { type: string } } }
+   *       - { in: query, name: propertyShares, schema: { type: array, items: { type: string } }, description: 'One KVV-area''s share of a split property, as kvvAreaId:propertyCode' }
    *       - { in: query, name: buildingCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: staircaseCodes, schema: { type: array, items: { type: string } } }
    *       - { in: query, name: parkingAreaCodes, schema: { type: array, items: { type: string } } }

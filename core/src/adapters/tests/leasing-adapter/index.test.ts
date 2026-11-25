@@ -303,6 +303,16 @@ describe('leasing-adapter', () => {
       expect(result).toEqual({ ok: false, err: 'contact-not-tenant' })
     })
 
+    it('returns contact-not-tenant when leasing responds with 404 tenfast-tenant-not-found', async () => {
+      nock(config.tenantsLeasesService.url)
+        .get('/contacts/P123456/tenant')
+        .reply(404, { type: 'tenfast-tenant-not-found' })
+
+      const result = await leasingAdapter.getTenantByContactCode('P123456')
+
+      expect(result).toEqual({ ok: false, err: 'contact-not-tenant' })
+    })
+
     it('returns no-valid-housing-contract when leasing responds with 404 no-valid-housing-contract', async () => {
       nock(config.tenantsLeasesService.url)
         .get('/contacts/P123456/tenant')

@@ -7,6 +7,43 @@ import { DbAddress } from '../db-model'
 const STREET_ADDR_REGEX = /^([^0-9]+(\s[^0-9])*)\s?\.?([0-9 ]+)/
 
 /**
+ * Regex for identifying a city or country line
+ */
+const CITY_COUNTRY_LINE_REGEX = /^[\s\p{P}]*\p{L}/u
+
+/**
+ * Regex for leading punctuation and whitespace
+ */
+const LEADING_PUNCTUATION_REGEX = /^[\s\p{P}]+/u
+
+/**
+ * Regex for trailing punctuation and whitespace
+ */
+const TRAILING_PUNCTUATION_REGEX = /[\s\p{P}]+$/u
+
+/**
+ * Regex for identifying a line holding a zip code followed by a city
+ */
+const ZIP_CITY_LINE_REGEX = /^\s*([0-9]{3}\s?[0-9]{2}|[0-9]{4})\s+(\p{L}.*)$/u
+
+/**
+ * Regex for identifying a country name found in the city position
+ */
+const COUNTRY_NAME_REGEX = /^(sverige|sweden)$/i
+
+/**
+ * Strips leading punctuation and whitespace, and trailing punctuation
+ * and whitespace unless it closes a bracket opened in the text
+ */
+const stripEdgePunctuation = (text: string): string => {
+  const start = text.replace(LEADING_PUNCTUATION_REGEX, '').trimEnd()
+  const closesBracket =
+    (start.includes('(') && start.endsWith(')')) ||
+    (start.includes('[') && start.endsWith(']'))
+  return closesBracket ? start : start.replace(TRAILING_PUNCTUATION_REGEX, '')
+}
+
+/**
  * Iteration state for parsing c/o addresses
  */
 type CoParseState = {
@@ -78,13 +115,21 @@ export const extractAddress = (
             result.state = 'expect-city'
           }
         } else if (result.state === 'expect-city') {
-          if (line.match(/^[\w\s]+/)) {
-            result.address.city = line.trim()
+          const zipCity = line.match(ZIP_CITY_LINE_REGEX)
+          if (
+            zipCity &&
+            zipCity[1].replace(/\s/g, '') ===
+              result.address.zipCode?.replace(/\s/g, '')
+          ) {
+            result.address.city = stripEdgePunctuation(zipCity[2])
+            result.state = 'expect-country'
+          } else if (line.match(CITY_COUNTRY_LINE_REGEX)) {
+            result.address.city = stripEdgePunctuation(line)
             result.state = 'expect-country'
           }
         } else if (result.state === 'expect-country') {
-          if (line.match(/^[\w\s]+/)) {
-            result.address.country = line.trim()
+          if (line.match(CITY_COUNTRY_LINE_REGEX)) {
+            result.address.country = stripEdgePunctuation(line)
             result.state = 'done'
           }
         }
@@ -107,7 +152,12 @@ export const extractAddress = (
     }
   )
 
-  return address.address as ContactAddress
+  const result = address.address as ContactAddress
+  if (!result.country && COUNTRY_NAME_REGEX.test(result.city ?? '')) {
+    result.country = result.city
+    result.city = ''
+  }
+  return result
 }
 
 /**
@@ -181,5 +231,7 @@ export const parseCareOf = (input: string) => {
 export const toAddresses = (
   addresses: DbAddress[],
   protectedIdentity: boolean
-): ContactAddress[] =>
-  addresses.map(extractAddress).filter((a) => a !== undefined)
+): ContactAddress[] => {
+  if (protectedIdentity) return []
+  return addresses.map(extractAddress).filter((a) => a !== undefined)
+}

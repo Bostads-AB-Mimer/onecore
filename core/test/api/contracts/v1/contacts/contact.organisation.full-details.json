@@ -1,6 +1,7 @@
 {
   "type": "organisation",
   "contactCode": "F020420",
+  "protectedIdentity": false,
   "organisation": {
     "organisationNumber": "040126 662",
     "name": "Julaftonsson Klasse Klodvig"

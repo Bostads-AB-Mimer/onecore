@@ -1,3 +1,5 @@
+import { contactDetailsMode } from '@onecore/utilities'
+
 export const REDACTED = 'redacted'
 
 /**
@@ -17,12 +19,19 @@ export const trimRow = <T extends Record<string, any>>(obj: T): T => {
   ) as T
 }
 
-export const redact = <T, Prop extends keyof T>(
+export const applyContactDetailsMode = <T>(
   details: T[],
-  field: Prop,
-  protectedIdentity: boolean
-) => {
-  return protectedIdentity
-    ? details.map((pn) => ({ ...pn, [field]: REDACTED }))
-    : details
+  protectedIdentity: boolean,
+  toRedacted: (item: T) => T,
+  toPlaceholder: (item: T) => T
+): T[] => {
+  if (protectedIdentity) return []
+  switch (contactDetailsMode()) {
+    case 'real':
+      return details
+    case 'placeholder':
+      return details.map(toPlaceholder)
+    case 'redacted':
+      return details.map(toRedacted)
+  }
 }

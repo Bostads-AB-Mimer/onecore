@@ -140,7 +140,12 @@ export const routes = (
       tags: ['Contacts'],
       query: {
         q: {
-          description: 'Wildcard search string',
+          description:
+            'Search string. Every word must match the contact code or a name ' +
+            'field (substring), or the whole string must match an ' +
+            'invoice address line. A word of six or more digits also matches ' +
+            'the national id by prefix, in ten- or twelve-digit form. ' +
+            'Repeat the parameter to require several strings to match.',
           schema: z.optional(z.array(z.string())),
         },
         type: {
@@ -334,6 +339,15 @@ export const routes = (
             'fakturamottagare, both directions) in the response.',
           schema: z.optional(z.boolean()),
         },
+        verifiedTenants: {
+          description:
+            'The caller has verified that every requested contact is a ' +
+            'tenant on a lease in Tenfast (current, upcoming, or recently ' +
+            'ended). Protected identities are then returned unredacted — ' +
+            'their data in Xpand is already anonymised. Only core sets this, ' +
+            'after checking Tenfast.',
+          schema: z.optional(z.boolean()),
+        },
       },
       response: {
         200: GetContactsResponseBodySchema,
@@ -362,6 +376,7 @@ export const routes = (
         includeEmail: isTrue(ctx.query.includeEmail),
         includeAddress: isTrue(ctx.query.includeAddress),
         includeRelations: isTrue(ctx.query.includeRelations),
+        verifiedTenants: isTrue(ctx.query.verifiedTenants),
       })
 
       ctx.status = 200

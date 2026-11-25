@@ -94,7 +94,7 @@ const applyForListing = async (
       res.status != HttpStatusCode.Created
     ) {
       logger.error(
-        { status: res.status, data: res.data },
+        { status: res.status },
         'Error applying for listing:' + applicantData.listingId
       )
       return { ok: false, err: 'unknown' }
@@ -234,7 +234,6 @@ const getListings = async (
       logger.error(
         {
           status: response.status,
-          data: response.data,
           query: queryParams.toString(),
         },
         `Error getting listings from leasing`
@@ -270,7 +269,7 @@ const createMultipleListings = async (
       logger.warn(
         {
           listingsCount: listingsData.length,
-          responseData: response.data,
+          status: response.status,
         },
         'Partial success when creating multiple listings'
       )
@@ -280,7 +279,6 @@ const createMultipleListings = async (
     logger.error(
       {
         status: response.status,
-        data: response.data,
         listingsCount: listingsData.length,
       },
       'Unexpected response when creating multiple listings'

@@ -70,10 +70,19 @@ async function searchContacts(query: string): Promise<ContactSearchResult[]> {
 
 async function sendBulkSms(
   recipients: { contactCode: string; phoneNumber: string }[],
-  text: string
+  text: string,
+  // ISO 8601 instant; schedules the send at Infobip, omit for immediate.
+  sendAt?: string,
+  // Template the text started from; stored on the dispatch for the log.
+  templateId?: string
 ): Promise<{ content: BulkSmsResult; warnings?: string[] }> {
   const { data, error } = await POST('/sendBulkSms', {
-    body: { recipients, text },
+    body: {
+      recipients,
+      text,
+      ...(sendAt && { sendAt }),
+      ...(templateId && { logMeta: { templateId } }),
+    },
   })
 
   if (error) throw error
@@ -87,10 +96,12 @@ async function sendBulkSms(
 async function sendBulkEmail(
   recipients: { contactCode: string; emailAddress: string }[],
   subject: string,
-  text: string
+  text: string,
+  // ISO 8601 instant; schedules the send at Infobip, omit for immediate.
+  sendAt?: string
 ): Promise<{ content: BulkEmailResult; warnings?: string[] }> {
   const { data, error } = await POST('/sendBulkEmail', {
-    body: { recipients, subject, text },
+    body: { recipients, subject, text, ...(sendAt && { sendAt }) },
   })
 
   if (error) throw error

@@ -17,6 +17,7 @@ const makePaymentEvent = (
     text: string | null
     transactionSourceCode: string
     slTransactionType: string | null
+    cursor: string
   }>
 ) => ({
   type: 'OCR',
@@ -27,6 +28,7 @@ const makePaymentEvent = (
   text: 'Hyra',
   transactionSourceCode: 'OCR',
   slTransactionType: null,
+  cursor: 'cursor-abc',
   ...overrides,
 })
 
@@ -82,7 +84,7 @@ describe('economy-adapter.getPaymentsSince', () => {
     })
   })
 
-  it('satisfies InvoicePaymentEventSchema for each event', async () => {
+  it('satisfies PaymentSyncEventSchema for each event', async () => {
     nock(config.economyService.url)
       .get('/payments/since')
       .query(true)
@@ -92,7 +94,7 @@ describe('economy-adapter.getPaymentsSince', () => {
 
     assert(result.ok)
     expect(() =>
-      schemas.v1.InvoicePaymentEventSchema.array().parse(result.data.events)
+      schemas.v1.PaymentSyncEventSchema.array().parse(result.data.events)
     ).not.toThrow()
   })
 

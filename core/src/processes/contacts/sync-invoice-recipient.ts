@@ -1,5 +1,6 @@
 import { logger } from '@onecore/utilities'
 import type { Contact } from '@onecore/contacts/domain'
+import type { SyncContactToEconomyUndo } from '@onecore/types'
 import { syncContactToEconomy } from '../../adapters/economy-adapter'
 import { toSyncPayload } from '../../scripts/sync-contacts/payload'
 import { AdapterResult } from '../../adapters/types'
@@ -28,7 +29,12 @@ export type ContactLookup = {
 export const syncInvoiceRecipientToEconomy = async (
   contacts: ContactLookup,
   contactCode: string
-): Promise<AdapterResult<null, 'contact-not-found' | 'sync-failed'>> => {
+): Promise<
+  AdapterResult<
+    { undo: SyncContactToEconomyUndo | null } | null,
+    'contact-not-found' | 'sync-failed'
+  >
+> => {
   // The contacts adapter does not catch request exceptions on reads, so a
   // network failure rejects rather than returning a result — and would reach
   // the caseworker as an unstructured 500.
@@ -78,5 +84,11 @@ export const syncInvoiceRecipientToEconomy = async (
     return { ok: false, err: 'sync-failed', detail: syncResult.err }
   }
 
-  return { ok: true, data: null }
+  return {
+    ok: true,
+    data:
+      syncResult.data.undo === undefined
+        ? null
+        : { undo: syncResult.data.undo },
+  }
 }

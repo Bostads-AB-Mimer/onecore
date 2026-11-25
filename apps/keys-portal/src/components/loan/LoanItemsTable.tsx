@@ -68,7 +68,7 @@ export function LoanItemsTable({
           colSpan={columnCount}
           className="text-center py-4 text-muted-foreground pl-12"
         >
-          Inga nycklar eller droppar i detta lån
+          Inga nycklar eller taggar i detta lån
         </TableCell>
       </TableRow>
     )

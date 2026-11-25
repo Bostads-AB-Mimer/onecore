@@ -1,7 +1,10 @@
+import { LeaseStatus } from '@onecore/types'
+
 import {
   isListingInAreaWithSpecificRentalRules,
   isHousingContractsOfApplicantInSameAreaAsListing,
   doesApplicantHaveParkingSpaceContractsInSameAreaAsListing,
+  getParkingSpaceContractsCountedByRentalRules,
 } from '../residential-area-rental-rules-validator'
 import * as factory from './factories'
 
@@ -152,5 +155,47 @@ describe(doesApplicantHaveParkingSpaceContractsInSameAreaAsListing, () => {
     )
 
     expect(result).toBe(true)
+  })
+
+  it('should return false if the parking space in same area as listing is under notice', () => {
+    const detailedApplicant = factory.detailedApplicant.build({
+      parkingSpaceContracts: [
+        factory.lease.build({
+          residentialArea: { code: 'ABC' },
+          status: LeaseStatus.AboutToEnd,
+        }),
+      ],
+    })
+
+    const result = doesApplicantHaveParkingSpaceContractsInSameAreaAsListing(
+      'ABC',
+      detailedApplicant
+    )
+
+    expect(result).toBe(false)
+  })
+})
+
+describe(getParkingSpaceContractsCountedByRentalRules, () => {
+  it('leaves out parking space leases under notice, given notice on or ended', () => {
+    const counted = [
+      LeaseStatus.Current,
+      LeaseStatus.Upcoming,
+      LeaseStatus.PendingSignature,
+      LeaseStatus.NotSent,
+    ].map((status) => factory.lease.build({ status }))
+    const notCounted = [
+      LeaseStatus.PreliminaryTerminated,
+      LeaseStatus.AboutToEnd,
+      LeaseStatus.Ended,
+    ].map((status) => factory.lease.build({ status }))
+
+    expect(
+      getParkingSpaceContractsCountedByRentalRules([...counted, ...notCounted])
+    ).toEqual(counted)
+  })
+
+  it('returns an empty list when there are no parking space leases', () => {
+    expect(getParkingSpaceContractsCountedByRentalRules(undefined)).toEqual([])
   })
 })

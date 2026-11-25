@@ -44,6 +44,14 @@ export async function syncKeycloakEntraIdAttributes(
     }
   }
 
+  // Maps every Keycloak user's UPN (== username) to their Keycloak id, so a Graph
+  // manager UPN can be resolved to the manager's Keycloak id with no extra calls.
+  const kcIdByUpn = new Map<string, string>()
+  for (const u of kcResult.data) {
+    const upn = (u.username || u.email || '').toLowerCase()
+    if (upn) kcIdByUpn.set(upn, u.id)
+  }
+
   const report: SyncReport = {
     total: kcResult.data.length,
     updated: 0,
@@ -62,6 +70,10 @@ export async function syncKeycloakEntraIdAttributes(
     'jobTitle',
     'officeLocation',
   ] as const
+
+  // Derived from the Graph `manager` relationship rather than a flat property, so
+  // handled separately from SYNCED_ATTRIBUTES. Listed here for dry-run reporting.
+  const MANAGER_ATTRIBUTES = ['managerUpn', 'managerId'] as const
 
   for (const kcUser of kcResult.data) {
     const key = (kcUser.username || kcUser.email || '').toLowerCase()
@@ -82,6 +94,21 @@ export async function syncKeycloakEntraIdAttributes(
       mergedAttributes[attr] = [graphValue]
       hasChanges = true
     }
+    // manager is a Graph relationship, not a flat attribute. Store the manager's
+    // UPN (readable) and their resolved Keycloak id (downstream apps match it to the
+    // manager's token `sub`). Same policy as scalars: never clear on a null value.
+    const managerUpn = match.managerUpn
+    if (managerUpn) {
+      if (kcUser.attributes?.managerUpn?.[0] !== managerUpn) {
+        mergedAttributes.managerUpn = [managerUpn]
+        hasChanges = true
+      }
+      const managerId = kcIdByUpn.get(managerUpn.toLowerCase())
+      if (managerId && kcUser.attributes?.managerId?.[0] !== managerId) {
+        mergedAttributes.managerId = [managerId]
+        hasChanges = true
+      }
+    }
     if (!hasChanges) {
       report.skipped += 1
       continue
@@ -91,7 +118,7 @@ export async function syncKeycloakEntraIdAttributes(
       attributes: mergedAttributes,
     }
     if (deps.dryRun) {
-      const changedAttrs = SYNCED_ATTRIBUTES.filter(
+      const changedAttrs = [...SYNCED_ATTRIBUTES, ...MANAGER_ATTRIBUTES].filter(
         (attr) => mergedAttributes[attr]?.[0] !== kcUser.attributes?.[attr]?.[0]
       )
       logger.info(

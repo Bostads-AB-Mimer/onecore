@@ -27,6 +27,7 @@ type ReplyToOfferError =
   | ReplyToOfferErrorCodes.Unknown
   | ReplyToOfferErrorCodes.ApplicantNotTenant
   | ReplyToOfferErrorCodes.NotEligibleToRent
+  | ReplyToOfferErrorCodes.RentalObjectNotAvailable
 
 // PROCESS Part 3 - Accept Offer for Scored Parking Space
 // See DOCS_Accept_Offer.md for the full flow.
@@ -172,6 +173,19 @@ export const acceptOffer = async (
         '001',
         includeVAT
       )
+
+      if (
+        !createLeaseResult.ok &&
+        createLeaseResult.err ===
+          ReplyToOfferErrorCodes.RentalObjectNotAvailable
+      ) {
+        return endFailingProcess(
+          log,
+          ReplyToOfferErrorCodes.RentalObjectNotAvailable,
+          409,
+          `Bilplats ${listingWithoutRentalObject.rentalObjectCode} är inte ledig från startdatumet. Den är uthyrd då, eller så finns redan ett kontrakt på den (utkast, skickat för påskrift eller signerat), kanske för samma sökande om ett tidigare försök skapade kontraktet. Inget nytt kontrakt skapades.`
+        )
+      }
 
       if (!createLeaseResult.ok) {
         log.push(
@@ -382,7 +396,14 @@ export const denyOffer = async (
     )
 
     if (createOffer.processStatus === ProcessStatus.failed) {
-      logger.info(createOffer, 'Could not create new offer for this listing.')
+      logger.info(
+        {
+          listingId: offer.listingId,
+          httpStatus: createOffer.httpStatus,
+          error: createOffer.error,
+        },
+        'Could not create new offer for this listing.'
+      )
       log.push(
         `Could not create new offer for this listing: ${createOffer.error}`
       )
@@ -436,7 +457,7 @@ const endFailingProcess = (
   if (error) log.push(error)
 
   logger.debug(log)
-  logger.error(error ?? processErrorCode, details)
+  logger.error({ err: error, errorCode: processErrorCode }, details)
 
   communicationAdapter.sendNotificationToRole(
     'dev',

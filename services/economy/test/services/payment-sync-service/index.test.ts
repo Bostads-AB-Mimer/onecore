@@ -56,7 +56,7 @@ describe('Payment Sync Service', () => {
 
   describe('GET /payments/since', () => {
     it('responds with payment events and lastCursor', async () => {
-      const events = factory.invoicePaymentEvent.buildList(2)
+      const events = factory.paymentSyncEvent.buildList(2)
       jest.spyOn(xledgerAdapter, 'getPaymentsSince').mockResolvedValueOnce({
         events,
         lastCursor: 'cursor-abc',
@@ -180,7 +180,7 @@ describe('Payment Sync Service', () => {
 
   describe('Xledger to Tenfast payment amount conversion', () => {
     it('records a positive amount in Tenfast when the payment from Xledger is negative', async () => {
-      const xledgerPayment = factory.invoicePaymentEvent.build({
+      const xledgerPayment = factory.paymentSyncEvent.build({
         invoiceId: '55123456',
         amount: -2500,
         paymentDate: new Date('2026-04-02T10:00:00.000Z'),

@@ -55,6 +55,18 @@ export const RentalObjectScopeParamsSchema = z.object({
   kvvAreaIds: repeatable(z.string().uuid()),
   marketAreaCodes: repeatable(z.string().min(1)),
   propertyCodes: repeatable(z.string().min(1)),
+  // One KVV-area's share of a split property, as `<kvvAreaId>:<propertyCode>`:
+  // the property minus its excepted buildings, or just the buildings excepted
+  // into that area. A whole property is `propertyCodes`.
+  propertyShares: repeatable(
+    z
+      .string()
+      .regex(/^[^:]+:[^:]+$/)
+      // Refined here so a bad id is a 400, not a uniqueidentifier error (500).
+      .refine((v) => z.string().uuid().safeParse(v.split(':')[0]).success, {
+        message: 'propertyShares must be <kvvAreaId uuid>:<propertyCode>',
+      })
+  ),
   buildingCodes: repeatable(z.string().min(1)),
   staircaseCodes: repeatable(z.string().min(1)),
   parkingAreaCodes: repeatable(z.string().min(1)),
@@ -70,6 +82,22 @@ export const RentalObjectScopeParamsSchema = z.object({
 export type RentalObjectScopeParams = z.infer<
   typeof RentalObjectScopeParamsSchema
 >
+
+/**
+ * Grouping scopes resolved to what babuf can match on. Split properties
+ * (building-level KVV-area exceptions) make this more than property codes: a
+ * default-side share is its property MINUS the excepted buildings, an inbound
+ * share is bare building codes. A property named whole anywhere wins over its
+ * partial form.
+ */
+export type ResolvedScope = {
+  propertyCodes: string[]
+  partialProperties: Array<{
+    propertyCode: string
+    excludedBuildingCodes: string[]
+  }>
+  buildingCodes: string[]
+}
 
 const SCOPE_KEYS = Object.keys(
   RentalObjectScopeParamsSchema.shape

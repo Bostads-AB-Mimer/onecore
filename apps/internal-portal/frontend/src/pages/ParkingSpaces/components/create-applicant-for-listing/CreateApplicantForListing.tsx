@@ -14,7 +14,12 @@ import {
   RadioGroup,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import { CreateNoteOfInterestErrorCodes, Listing, Tenant } from '@onecore/types'
+import {
+  CreateNoteOfInterestErrorCodes,
+  leasing,
+  Listing,
+  Tenant,
+} from '@onecore/types'
 import { toast } from 'react-toastify'
 import { LoadingButton, TabContext, TabPanel } from '@mui/lab'
 
@@ -94,8 +99,9 @@ export const CreateApplicantForListing = (props: Props) => {
 
   const onCreateNonScoredLease = (params: CreateNonScoredLeaseParams) => {
     createNonScoredLease.mutate(params, {
-      onSuccess: () => {
-        // Show success toast with navigation option
+      onSuccess: ({ vat }) => {
+        // Show success toast with navigation option. The VAT decision is
+        // shown so staff can check it before sending the lease for signing.
         const toastId = toast.success(
           <div
             style={{
@@ -105,7 +111,15 @@ export const CreateApplicantForListing = (props: Props) => {
               wordBreak: 'keep-all',
             }}
           >
-            <span>Bilplatskontrakt skapat och tilldelat</span>
+            <span>
+              Bilplatskontrakt skapat och tilldelat
+              {vat && (
+                <>
+                  <br />
+                  {leasing.v1.ParkingSpaceVatDecisionLabel[vat.reason]}
+                </>
+              )}
+            </span>
             <Button
               size="small"
               variant="dark"
@@ -118,7 +132,9 @@ export const CreateApplicantForListing = (props: Props) => {
             </Button>
           </div>,
           {
-            autoClose: 8000,
+            // A lease with VAT stays on screen until closed, so the VAT is
+            // not missed before the lease is sent for signing.
+            autoClose: vat?.includeVAT ? false : 8000,
             hideProgressBar: false,
           }
         )
@@ -274,9 +290,8 @@ export const CreateApplicantForListing = (props: Props) => {
                         {tenantQuery.isLoading && <ContactInfoLoading />}
                         {renderTenantQueryError(tenantQuery.error)}
                         {tenantQuery.data &&
-                          tenantQuery.data.validationResult == 'ok' &&
                           tenantQuery.data.tenant.isAboutToLeave && (
-                            <ValidLeaseMissingError />
+                            <HousingContractUnderNoticeError />
                           )}
                         <Box>
                           <Divider />
@@ -380,6 +395,9 @@ export const CreateApplicantForListing = (props: Props) => {
                   <LoadingButton
                     disabled={
                       tenantQuery.data.validationResult === 'no-contract' ||
+                      // Core refuses the application: the only housing
+                      // contract is under notice and none is upcoming.
+                      tenantQuery.data.tenant.isAboutToLeave ||
                       !tenantHasValidContractForTheDiscrict(
                         tenantQuery.data.tenant,
                         props.listing
@@ -485,6 +503,13 @@ const ValidLeaseMissingError = () => (
   <Typography color="error">
     Kunden saknar giltigt bostadskontrakt. Det går endast att söka bilplats med
     gällande och kommande bostadskontrakt
+  </Typography>
+)
+
+const HousingContractUnderNoticeError = () => (
+  <Typography color="error">
+    Kunden har sagt upp sitt bostadskontrakt och har inget kommande. Kunden kan
+    inte söka poängsatt bilplats.
   </Typography>
 )
 

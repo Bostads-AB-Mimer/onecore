@@ -25,6 +25,10 @@ import type { DashboardCard } from './types'
 
 const leasingModule = modules.find((m) => m.id === 'leasing')
 
+export const isThirdPartyCard = (
+  card: Pick<DashboardCard, 'isExternal' | 'isOnecoreApp'>
+) => card.isExternal && !card.isOnecoreApp
+
 export const dashboardCards: DashboardCard[] = [
   {
     id: 'properties',
@@ -57,10 +61,14 @@ export const dashboardCards: DashboardCard[] = [
     id: 'rental',
     title: 'Uthyrning',
     icon: Home,
-    description: 'Hantera uthyrning av lägenheter',
-    // The leasing module replaces the internal portal link when it is bundled.
+    // The leasing module (apartments) replaces the internal portal link
+    // (parking spaces) when it is bundled.
+    description: leasingModule
+      ? 'Hantera uthyrning av lägenheter'
+      : 'Hantera uthyrning av bilplatser',
     path: leasingModule?.basePath ?? resolve('VITE_INTERNAL_PORTAL', ''),
     isExternal: !leasingModule,
+    isOnecoreApp: true,
     isDisabled: false,
   },
   {
@@ -79,6 +87,7 @@ export const dashboardCards: DashboardCard[] = [
     description: 'Hantera ärenden och support',
     path: resolve('VITE_ODOO_URL', ''),
     isExternal: true,
+    isOnecoreApp: true,
     isDisabled: false,
   },
   {
@@ -124,6 +133,7 @@ export const dashboardCards: DashboardCard[] = [
     description: 'Nyckelhantering',
     path: resolve('VITE_KEYS_URL', ''),
     isExternal: true,
+    isOnecoreApp: true,
     isDisabled: false,
   },
   {
@@ -164,12 +174,12 @@ export const dashboardCards: DashboardCard[] = [
   },
   {
     id: 'tenfast',
-    title: 'Hyresadministration & avtal',
+    title: 'Avtal- & Hyresadministration',
     icon: FileText,
     description: 'Hyreshantering och administration',
     path: resolve('VITE_TENFAST_URL', ''),
     isExternal: true,
-    isDisabled: true,
+    isDisabled: false,
   },
   {
     id: 'stray-invoice',
@@ -185,4 +195,9 @@ export const dashboardCards: DashboardCard[] = [
     ...card,
     isDisabled: card.isDisabled || !card.path,
   }))
-  .sort((a, b) => Number(a.isDisabled) - Number(b.isDisabled))
+  // Disabled cards last; among the rest, OneCore before third-party systems
+  .sort(
+    (a, b) =>
+      Number(a.isDisabled) - Number(b.isDisabled) ||
+      Number(isThirdPartyCard(a)) - Number(isThirdPartyCard(b))
+  )

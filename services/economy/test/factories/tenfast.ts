@@ -133,6 +133,7 @@ export const TenfastLeaseFactory = Factory.define<TenfastLease>(
     hyresgaster: [
       {
         _id: `tenant-${sequence}`,
+        externalId: `P${sequence}`,
         name: {
           first: 'Test',
           last: 'Persson',

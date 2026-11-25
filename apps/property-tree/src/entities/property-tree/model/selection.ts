@@ -35,6 +35,12 @@ export interface PropertyTreeNode {
   // ids, so they carry the backing id; elsewhere `value` is already the code.
   id?: string
   selectable?: boolean // false = display-only (inherits state, not togglable)
+  // Set on a split property's node: the one group's share of it. Scopes as
+  // propertyShares (key), never as the whole property.
+  share?: {
+    key: string // `<kvvAreaId>:<fstcode>`
+    kind: property.PropertyShareKind // main or exception side
+  }
 }
 
 export type PropertyTreeSelection = ReadonlyMap<string, PropertyTreeNode>

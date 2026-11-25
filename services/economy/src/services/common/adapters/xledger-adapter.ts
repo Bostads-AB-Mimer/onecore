@@ -8,8 +8,11 @@ import {
   Invoice,
   InvoicePaymentEvent,
   InvoiceTransactionType,
+  MiscellaneousInvoice,
   MiscellaneousInvoiceArticle,
+  MiscellaneousInvoiceBaseItem,
   PaymentStatus,
+  PaymentSyncEvent,
   SubmitMiscellaneousInvoiceErrorCodes,
   XledgerContact,
   XledgerProject,
@@ -19,6 +22,7 @@ import { match, P } from 'ts-pattern'
 
 import config from '../../../common/config'
 import { AdapterResult, InvoiceDataRow } from '../../../common/types'
+import { InvoiceWithAccounting } from '@src/common/types/typesv2'
 
 const XledgerAuthHeader = {
   Authorization: 'token ' + config.xledger.apiToken,
@@ -59,32 +63,164 @@ const getCallerFromError = (error: Error) => {
 const stringifyGraphQlQuery = (query: XledgerGraphQlQuery) =>
   `Query: ${query.query}${query.variables ? `\nVariables: ${JSON.stringify(query.variables, null, 2)}` : ''}`
 
+// Bounds retry storms. Capped attempts, jittered backoff, a request timeout and a concurrency cap.
+export const xledgerRequestPolicy = { ...config.xledger.requestPolicy }
+
+// Test-only override; production values come from config.
+export const setXledgerRequestPolicy = (
+  policy: Partial<typeof xledgerRequestPolicy>
+) => Object.assign(xledgerRequestPolicy, policy)
+
+// Exponential backoff capped at maxDelayMs, then scaled by a random factor
+// in [0.5, 1.5) so the effective ceiling is 1.5 * maxDelayMs.
+export const retryDelayMs = (attempt: number, random = Math.random) => {
+  const { baseDelayMs, maxDelayMs } = xledgerRequestPolicy
+  const exponential = Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1))
+  return Math.round(exponential * (0.5 + random()))
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Thrown when Xledger could not be reached or answered that it is down, so
+ * callers can tell "try again later" apart from other failures.
+ */
+export class XledgerUnavailableError extends Error {
+  constructor(readonly status?: number) {
+    super(`Xledger unavailable${status ? ` (status ${status})` : ''}`)
+    this.name = 'XledgerUnavailableError'
+  }
+}
+
+const RETRY_ERROR_CODES = new Set([
+  'BAD_REQUEST.BURST_RATE_LIMIT_REACHED',
+  'BAD_REQUEST.BURST_LIMIT_REACHED',
+  'BAD_REQUEST.CONCURRENCY_LIMIT_REACHED',
+])
+
+// Xledger is down or the request never reached it. 504 is left out since it
+// may also mean a slow query, and retrying that only adds load.
+const UNAVAILABLE_STATUSES = new Set([502, 503])
+const UNAVAILABLE_CODES = new Set(['ECONNREFUSED', 'ECONNRESET'])
+
+const getUnavailableStatus = (
+  err: unknown
+): { status?: number } | undefined => {
+  if (!axios.isAxiosError(err)) return undefined
+  const status = err.response?.status
+  if (status !== undefined) {
+    return UNAVAILABLE_STATUSES.has(status) ? { status } : undefined
+  }
+  return err.code && UNAVAILABLE_CODES.has(err.code) ? {} : undefined
+}
+
+// Only reads are retried. A write may already have been applied when Xledger
+// (or a gateway in front of it) answers with an error, so a retry could, for
+// example, create a miscellaneous invoice twice. Every write in this adapter
+// is a GraphQL mutation or a file upload.
+const isRead = (query: XledgerGraphQlQuery, attachment?: unknown) =>
+  !attachment && !/^\s*mutation\b/.test(query.query)
+
+let inFlight = 0
+const waiting: Array<() => void> = []
+
+const acquireSlot = async () => {
+  if (inFlight < xledgerRequestPolicy.maxConcurrency) {
+    inFlight++
+    return
+  }
+  await new Promise<void>((resolve) => waiting.push(resolve))
+}
+
+// Hands the slot straight to the next waiter so inFlight never overshoots.
+const releaseSlot = () => {
+  const next = waiting.shift()
+  if (next) next()
+  else inFlight--
+}
+
 const makeXledgerRequest = async (
   query: XledgerGraphQlQuery,
   attachment?: any // TODO formidable file PersistentFileStorage
 ): Promise<any> => {
-  function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms))
-  }
+  const { maxAttempts, unavailableMaxAttempts } = xledgerRequestPolicy
+  let unavailableAttempts = 0
 
-  const result = await makeXledgerHttpRequest(query, attachment)
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    await acquireSlot()
+    let result: XledgerResponse | undefined
+    try {
+      result = await makeXledgerHttpRequest(query, attachment)
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.code === 'ECONNABORTED') {
+        logger.warn(
+          { attempt, timeoutMs: xledgerRequestPolicy.timeoutMs, inFlight },
+          `Xledger request timed out\n${stringifyGraphQlQuery(query)}`
+        )
+      }
+      const unavailable = getUnavailableStatus(err)
+      if (!unavailable) throw err
 
-  if (result.status === 'ok') {
-    return result.data
-  } else if (result.status === 'retry') {
-    logger.warn('Rate limit exceeded, waiting and retrying')
-    await sleep(3000)
-    return await makeXledgerRequest(query, attachment)
-  } else {
+      unavailableAttempts++
+      const retryable = isRead(query, attachment)
+      const isLast =
+        !retryable ||
+        unavailableAttempts >= unavailableMaxAttempts ||
+        attempt === maxAttempts
+      logger.warn(
+        {
+          attempt: unavailableAttempts,
+          maxAttempts: unavailableMaxAttempts,
+          status: unavailable.status,
+          code: axios.isAxiosError(err) ? err.code : undefined,
+          retryable,
+        },
+        !retryable
+          ? 'Xledger unavailable, not retrying a write since it may have been applied'
+          : isLast
+            ? 'Xledger unavailable, giving up'
+            : 'Xledger unavailable, waiting and retrying'
+      )
+      // A write may have been applied, so it must not look like "try again later".
+      if (!retryable) throw err
+      if (isLast) throw new XledgerUnavailableError(unavailable.status)
+    } finally {
+      releaseSlot()
+    }
+
+    // No result means Xledger was unavailable and we try again.
+    if (!result) {
+      await sleep(retryDelayMs(unavailableAttempts))
+      continue
+    }
+
+    if (result.status === 'ok') {
+      return result.data
+    }
+
+    if (result.status === 'retry') {
+      const isLast = attempt === maxAttempts
+      logger.warn(
+        { attempt, maxAttempts, inFlight, queueLength: waiting.length },
+        isLast
+          ? 'Xledger rate limit exceeded, giving up'
+          : 'Xledger rate limit exceeded, waiting and retrying'
+      )
+      if (!isLast) await sleep(retryDelayMs(attempt))
+      continue
+    }
+
     const error = new Error(
       result.data.map((error: any) => error.message).join('\n')
     )
     logger.error(
-      result.data,
+      { err: error },
       `Error making Xledger request\n${stringifyGraphQlQuery(query)}\n(${getCallerFromError(error)})`
     )
     throw error
   }
+
+  throw new Error(`Xledger rate limit exceeded after ${maxAttempts} attempts`)
 }
 
 const makeXledgerHttpRequest = async (
@@ -94,13 +230,11 @@ const makeXledgerHttpRequest = async (
   let result: axios.AxiosResponse
 
   if (attachment) {
-    // eslint-disable-next-line n/no-unsupported-features/node-builtins
     const formData = new FormData()
 
     const fileBuffer = fs.readFileSync(attachment.filepath)
     formData.append(
       attachment.originalFilename,
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins
       new Blob([fileBuffer]),
       attachment.originalFilename
     )
@@ -110,19 +244,19 @@ const makeXledgerHttpRequest = async (
       headers: {
         ...XledgerAuthHeader,
       },
+      timeout: xledgerRequestPolicy.timeoutMs,
     })
   } else {
     result = await axios(`${config.xledger.url}`, {
       data: query,
       ...axiosOptions,
+      timeout: xledgerRequestPolicy.timeoutMs,
     })
   }
 
   if (result.status === 200) {
     if (result.data && result.data.errors) {
-      if (
-        result.data.errors[0].code === 'BAD_REQUEST.BURST_RATE_LIMIT_REACHED'
-      ) {
+      if (RETRY_ERROR_CODES.has(result.data.errors[0].code)) {
         return { status: 'retry', data: {} }
       } else {
         return { status: 'error', data: result.data.errors, query: query.query }
@@ -365,7 +499,7 @@ export const getCustomer = async (contactCode: string) => {
   const result = await makeXledgerRequest(query)
 
   if (result.data?.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   return result.data?.customers?.edges?.[0]?.node ?? null
@@ -516,7 +650,7 @@ const getCustomerDbId = async (contactCode: string): Promise<string | null> => {
 
   const result = await makeXledgerRequest(query)
 
-  return result.data?.customers?.edges?.[0].node.dbId ?? null
+  return result.data?.customers?.edges?.[0]?.node?.dbId ?? null
 }
 
 export const getCustomers = async (
@@ -561,7 +695,7 @@ export const getCustomers = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const customers = result.data.customers.edges.map((e: any) =>
@@ -575,6 +709,59 @@ export const getCustomers = async (
   }
 
   return customers
+}
+
+const CUSTOMER_CODE_CHUNK_SIZE = 100
+
+export const getExistingCustomerCodes = async (
+  contactCodes: string[]
+): Promise<string[]> => {
+  const query = gql`
+    query ($first: Int!, $filter: Customer_Filter, $after: String) {
+      customers(first: $first, filter: $filter, after: $after) {
+        edges {
+          cursor
+          node {
+            code
+          }
+        }
+        pageInfo {
+          hasNextPage
+        }
+      }
+    }
+  `
+  const existing: string[] = []
+
+  for (let i = 0; i < contactCodes.length; i += CUSTOMER_CODE_CHUNK_SIZE) {
+    const chunk = contactCodes.slice(i, i + CUSTOMER_CODE_CHUNK_SIZE)
+    let after: string | undefined
+
+    for (;;) {
+      const result = await makeXledgerRequest({
+        query,
+        variables: {
+          first: CUSTOMER_CODE_CHUNK_SIZE,
+          filter: { code_in: chunk },
+          after,
+        },
+      })
+
+      const {
+        edges,
+        pageInfo,
+      }: {
+        edges: { cursor: string; node: { code: string } }[]
+        pageInfo: { hasNextPage: boolean }
+      } = result.data.customers
+      existing.push(...edges.map((edge) => String(edge.node.code).trim()))
+
+      if (!pageInfo.hasNextPage || edges.length === 0) break
+      after = edges[edges.length - 1].cursor
+    }
+  }
+
+  return existing
 }
 
 export const getProjects = async (
@@ -606,7 +793,7 @@ export const getProjects = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const projects = result.data.projects.edges.map((e: any) =>
@@ -655,7 +842,7 @@ export const getContacts = async (
   const result = await makeXledgerRequest(query)
 
   if (!result.data && result.data.errors) {
-    logger.error(result.data.errors[0], 'Error querying Xledger')
+    logger.error({ error: result.data.errors[0] }, 'Error querying Xledger')
   }
 
   const contacts = result.data.contacts.edges.map((e: any) =>
@@ -850,7 +1037,7 @@ export async function getLatestPaymentCursor(): Promise<string | null> {
 }
 
 export interface PaymentsSinceResult {
-  events: InvoicePaymentEvent[]
+  events: PaymentSyncEvent[]
   lastCursor: string | null
 }
 
@@ -924,10 +1111,8 @@ async function fetchPaymentsPage(params: {
     edges.length > 0 ? edges.at(-1).cursor : null
 
   const events = edges
-    .map((e: any) => mapToPaymentSyncEvent(e.node))
-    .filter(
-      (e: InvoicePaymentEvent | null): e is InvoicePaymentEvent => e !== null
-    )
+    .map((e: any) => mapToPaymentSyncEvent(e.node, e.cursor))
+    .filter((e: PaymentSyncEvent | null): e is PaymentSyncEvent => e !== null)
 
   if (result.data.arTransactions.pageInfo.hasNextPage && lastCursor) {
     const next = await fetchPaymentsPage({ after: lastCursor })
@@ -963,7 +1148,10 @@ function resolvePaymentSyncInvoiceId(event: any): string | null {
   return event.invoiceNumber ?? event.extIdentifier ?? null
 }
 
-function mapToPaymentSyncEvent(event: any): InvoicePaymentEvent | null {
+function mapToPaymentSyncEvent(
+  event: any,
+  cursor: string
+): PaymentSyncEvent | null {
   const invoiceId = resolvePaymentSyncInvoiceId(event)
   if (!invoiceId) {
     logger.info(
@@ -987,6 +1175,7 @@ function mapToPaymentSyncEvent(event: any): InvoicePaymentEvent | null {
       : new Date(event.paymentDate),
     text: event.text,
     transactionSourceCode: event.transactionHeader.transactionSource.code,
+    cursor,
   }
 }
 
@@ -1030,6 +1219,78 @@ export const getInvoicesByContactCode = async (
   const result = await makeXledgerRequest(query)
 
   return result.data?.arTransactions?.edges?.map(transformToInvoice) ?? []
+}
+
+/*
+ * Fetches invoices by invoice number, regardless of which customer they are
+ * billed to. Used to enrich invoices that were found via a shared lease in
+ * Xpand (MIM-1160) — those belong to another paying contact, so the
+ * contact-scoped lookup above cannot reach them. The headerTransactionSourceDbId
+ * filter is required: without it the same invoice number also matches payment
+ * and credit transaction rows.
+ */
+export const getInvoicesByInvoiceNumbers = async (
+  invoiceNumbers: string[]
+): Promise<ParsedXledgerInvoice[]> => {
+  const CHUNK_SIZE = 50
+  // One invoice number can match several transaction rows (e.g. a regular row
+  // plus a loss row on account 1529), so the page size must be well above the
+  // chunk size — Xledger truncates at `first` without reporting it.
+  const PAGE_SIZE = 10000
+  const invoices: ParsedXledgerInvoice[] = []
+
+  for (let i = 0; i < invoiceNumbers.length; i += CHUNK_SIZE) {
+    const chunk = invoiceNumbers.slice(i, i + CHUNK_SIZE)
+
+    // Invoice numbers are passed as GraphQL variables, never interpolated
+    // into the query document.
+    const query = {
+      query: gql`
+        query($filter: ARTransaction_Filter, $first: Int) {
+          arTransactions(first: $first, filter: $filter) {
+            edges {
+              node {
+                ${invoiceNodeFragment}
+              }
+            }
+          }
+        }
+      `,
+      variables: {
+        first: PAGE_SIZE,
+        filter: {
+          invoiceNumber_in: chunk,
+          headerTransactionSourceDbId_in: [
+            TransactionSourceDbId.SO,
+            TransactionSourceDbId.AR,
+            TransactionSourceDbId.OS,
+          ],
+        },
+      },
+    }
+
+    try {
+      const result = await makeXledgerRequest(query)
+      const edges = result.data?.arTransactions?.edges ?? []
+
+      if (edges.length >= PAGE_SIZE) {
+        logger.warn(
+          { invoiceNumbers: chunk.length, returnedRows: edges.length },
+          'Xledger invoice-number lookup hit the page size, results may be truncated'
+        )
+      }
+
+      invoices.push(...edges.map(transformToInvoice))
+    } catch (err: unknown) {
+      logger.error(
+        { err, invoiceNumbers: chunk.length },
+        'adapter.getInvoicesByInvoiceNumbers'
+      )
+      throw err
+    }
+  }
+
+  return invoices
 }
 
 export const getInvoices = async (from?: Date, to?: Date) => {
@@ -1183,6 +1444,51 @@ export async function getInvoiceByInvoiceNumber(
   }
 }
 
+/*
+ * Downloads the PDF Xledger keeps for an invoice (e.g. a miscellaneous
+ * invoice). invoiceFile.url is a link Xledger hands out that opens without an
+ * Xledger login, so no auth header is sent with it.
+ */
+export async function getInvoiceFile(
+  invoiceNumber: string
+): Promise<
+  AdapterResult<Buffer, 'invoice-not-found' | 'file-not-found' | 'unknown'>
+> {
+  let parsed: ParsedXledgerInvoice | null
+  try {
+    parsed = await getInvoiceByInvoiceNumber(invoiceNumber)
+  } catch {
+    // getInvoiceByInvoiceNumber has already logged the failure.
+    return { ok: false, err: 'unknown' }
+  }
+  if (!parsed) return { ok: false, err: 'invoice-not-found' }
+
+  const fileUrl = parsed.invoice.invoiceFileUrl
+  if (!fileUrl) return { ok: false, err: 'file-not-found' }
+
+  try {
+    const response = await axios.get(fileUrl, {
+      responseType: 'arraybuffer',
+      timeout: xledgerRequestPolicy.timeoutMs,
+      validateStatus: () => true,
+    })
+
+    if (response.status === 404) return { ok: false, err: 'file-not-found' }
+    if (response.status !== 200) {
+      logger.error(
+        { invoiceNumber, status: response.status },
+        'xledger-adapter.getInvoiceFile'
+      )
+      return { ok: false, err: 'unknown' }
+    }
+
+    return { ok: true, data: Buffer.from(response.data) }
+  } catch (err: unknown) {
+    logger.error({ err, invoiceNumber }, 'xledger-adapter.getInvoiceFile')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
 export async function getInvoiceMatchId(invoiceNumber: string) {
   const q = {
     query: gql`
@@ -1226,6 +1532,135 @@ export async function getInvoiceMatchId(invoiceNumber: string) {
   }
 }
 
+export const getMiscellaneousInvoices = async ({
+  from,
+  to,
+  after,
+  pageSize = 100,
+}: {
+  from?: Date
+  to?: Date
+  after?: string
+  pageSize?: number
+}): Promise<
+  AdapterResult<
+    {
+      content: MiscellaneousInvoice[]
+      pageInfo: { hasNextPage: boolean; endCursor?: string }
+    },
+    'unknown'
+  >
+> => {
+  try {
+    const query = {
+      query: gql`
+        query (
+          $after: String
+          $first: Int
+          $filter: SalesOrder_Filter
+          $orderDirection: OrderDirection = DESC
+        ) {
+          salesOrders(
+            first: $first
+            after: $after
+            filter: $filter
+            orderBy: { field: CREATED_AT, direction: $orderDirection }
+          ) {
+            edges {
+              cursor
+              node {
+                invoiceDate
+                invoiceNumber
+                ourRef {
+                  name
+                }
+                subledger {
+                  code
+                }
+                invoiceAmount
+                headerInfo
+                invoiceFile {
+                  url
+                }
+                invoiceBaseItems(first: 100) {
+                  edges {
+                    node {
+                      text
+                      amount
+                      quantity
+                      unitPrice
+                      glObject1 {
+                        code
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            pageInfo {
+              hasNextPage
+            }
+          }
+        }
+      `,
+      variables: {
+        after: after ?? null,
+        first: pageSize,
+        filter: {
+          invoiceDate_gte: from ? dateToGraphQlDateString(from) : undefined,
+          invoiceDate_lte: to ? dateToGraphQlDateString(to) : undefined,
+        },
+      },
+    }
+
+    const result = await makeXledgerRequest(query)
+
+    if (!result.data?.salesOrders?.edges) {
+      return { ok: false, err: 'unknown' }
+    }
+
+    const content = result.data.salesOrders.edges.map((e: any) =>
+      transformToMiscellaneousInvoice(e.node)
+    )
+    const lastEdge = result.data.salesOrders.edges.at(-1)
+    const pageInfo = {
+      hasNextPage: result.data.salesOrders.pageInfo.hasNextPage,
+      endCursor: lastEdge?.cursor,
+    }
+
+    return { ok: true, data: { content, pageInfo } }
+  } catch (err) {
+    logger.error(err, 'Error getting sales orders from Xledger')
+    return { ok: false, err: 'unknown' }
+  }
+}
+
+const transformToMiscellaneousInvoice = (node: any): MiscellaneousInvoice => {
+  return {
+    invoiceId: node.invoiceNumber,
+    amount: node.invoiceAmount,
+    invoiceBaseItems: node.invoiceBaseItems?.edges?.map((e: any) =>
+      transformToMiscellaneousInvoiceBaseItem(e.node)
+    ),
+    invoiceDate: new Date(node.invoiceDate),
+    reference: node.subledger.code,
+    ourReference: node.ourRef?.name,
+    description: node.headerInfo,
+    invoiceFileUrl: node.invoiceFile?.url,
+  }
+}
+
+const transformToMiscellaneousInvoiceBaseItem = (
+  node: any
+): MiscellaneousInvoiceBaseItem => {
+  return {
+    text: node.text,
+    amount: node.amount,
+    quantity: node.quantity,
+    unitPrice: node.unitPrice,
+    costCentre: node.glObject1?.code ?? null,
+  }
+}
 export const createCustomerLedgerRow = (
   invoiceDataRows: InvoiceDataRow[],
   batchId: string,
@@ -1283,33 +1718,45 @@ export const transformContact = (contact: InvoiceDataRow): InvoiceDataRow => {
   }
 }
 
-const getTaxRule = (totalAmount: number, totalVat: number, account: string) => {
-  const vatRate = Math.round((totalVat * 100) / (totalAmount - totalVat))
+const getTaxRuleFromPercentage = (vatPercentage: number, account: string) => {
   const accounts208 = ['3012', '3014', '3016']
 
-  switch (vatRate) {
-    case 25:
-      return accounts208.includes(account) ? '208' : '2'
-    case 12:
-      return '21'
-    case 6:
-      return '22'
+  switch (vatPercentage) {
+    case 0.25:
+      return accounts208.includes(account) ? '208N' : '2N'
+    case 0.12:
+      return '21N'
+    case 0.06:
+      return '22N'
     default:
       return ''
   }
 }
 
-export const getPeriodInformation = (
-  invoiceDate: Date | null,
-  fromDate: Date,
-  toDate: Date
+export const setInvoiceRowsTaxRule = (invoice: InvoiceWithAccounting) => {
+  invoice.invoiceRows.forEach((row) => {
+    if (row.vat && row.vat !== 0) {
+      row.taxRule = getTaxRuleFromPercentage(row.vat, row.account ?? '')
+    }
+  })
+}
+
+export const getPeriodInformationFromDateStrings = (
+  invoiceDate: string | null,
+  fromDate: string,
+  toDate: string
 ): { periodStart: string; periods: string } => {
   if (!invoiceDate) {
     invoiceDate = fromDate
   }
 
-  const toStart = fromDate.getMonth() - invoiceDate.getMonth()
-  const invoiceInterval = toDate.getMonth() - fromDate.getMonth()
+  // Months since year 0 for a "YYYY-MM-DD" string, so differences stay
+  // correct across New Year.
+  const monthIndex = (date: string) =>
+    parseInt(date.substring(0, 4)) * 12 + parseInt(date.substring(5, 7))
+
+  const toStart = monthIndex(fromDate) - monthIndex(invoiceDate)
+  const invoiceInterval = monthIndex(toDate) - monthIndex(fromDate)
 
   const periodInformation = {
     periodStart: toStart == 0 ? '' : toStart.toString(),
@@ -1322,54 +1769,12 @@ export const getPeriodInformation = (
   return periodInformation
 }
 
-export const transformAggregatedInvoiceRow = (
-  invoiceRow: InvoiceDataRow,
-  chunkNumber: number
-): InvoiceDataRow => {
-  const periodInformation = getPeriodInformation(
-    null,
-    dateFromXledgerDateString(invoiceRow.InvoiceFromDate as string),
-    dateFromXledgerDateString(invoiceRow.InvoiceToDate as string)
-  )
-
-  const transformedRow = {
-    voucherType: 'AR',
-    voucherNo:
-      '1' +
-      invoiceRow.BatchId.toString().padStart(5, '0') +
-      chunkNumber.toString().padStart(3, '0'),
-    voucherDate: invoiceRow.InvoiceFromDate,
-    account: invoiceRow.Account,
-    posting1: invoiceRow.CostCode,
-    posting2: invoiceRow.ProjectCode,
-    posting3: invoiceRow.Property,
-    posting4: invoiceRow.FreeCode,
-    posting5: invoiceRow.CounterPart,
-    periodStart: periodInformation.periodStart,
-    noOfPeriods: periodInformation.periods,
-    subledgerNo: '',
-    invoiceDate: '',
-    invoiceNo: '',
-    ocr: '',
-    dueDate: '',
-    text: '',
-    taxRule: getTaxRule(
-      invoiceRow.totalAmount as number,
-      invoiceRow.totalVat as number,
-      invoiceRow.Account as string
-    ).toString(),
-    amount: -invoiceRow.totalAmount,
-    totalAccount: invoiceRow.TotalAccount,
-  }
-
-  return transformedRow
-}
-
 export const uploadFile = async (filename: string, csvFile: string) => {
   const sftpConfig: SftpClient.ConnectOptions = {
     host: config.xledger.sftp.host,
     username: config.xledger.sftp.username,
     password: config.xledger.sftp.password,
+    port: config.xledger.sftp.port,
   }
 
   if (config.xledger.sftp.useSshDss) {
@@ -1401,6 +1806,7 @@ export const uploadFile = async (filename: string, csvFile: string) => {
     await sftp.connect(sftpConfig)
     await sftp.put(stream, remoteDir + '/' + filename)
   } catch (err) {
+    logger.error({ err }, 'SFTP Error')
     throw new Error('SFTP : ' + JSON.stringify(err))
   } finally {
     await sftp.end()

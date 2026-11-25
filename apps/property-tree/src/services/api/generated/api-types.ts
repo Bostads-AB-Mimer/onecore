@@ -1203,6 +1203,50 @@ export interface paths {
       }
     }
   }
+  '/residences/rental-id/{rentalId}/media': {
+    /**
+     * Get published photos and energy declaration for a residence.
+     * @description Finds the files published on the public media host. A residence
+     * without files returns 200 with an empty list, since this searches for
+     * files rather than looking up one resource.
+     */
+    get: {
+      parameters: {
+        path: {
+          /** @description The rental id of the residence. */
+          rentalId: string
+        }
+      }
+      responses: {
+        /** @description The published media, empty when nothing is published. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['ResidenceMedia']
+            }
+          }
+        }
+        /** @description The rental id does not have the residence code format. */
+        400: {
+          content: {
+            'application/json': {
+              /** @example invalid-rental-id */
+              reason?: string
+            }
+          }
+        }
+        /** @description The public media host could not be reached. */
+        503: {
+          content: {
+            'application/json': {
+              /** @example media-unavailable */
+              reason?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/residences/rental-id/{rentalId}/rental-blocks': {
     /**
      * Get rental blocks by rental ID
@@ -1367,6 +1411,38 @@ export interface paths {
               }[]
             }
           }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/residences/rental-blocks/rental-ids': {
+    /**
+     * Rental ids carrying a matching rental block
+     * @description Lean companion to /residences/rental-blocks/search. Returns only the distinct rental ids, with no pagination, rent data or district enrichment - for consumers that need to answer "is this object blocked" in bulk.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Filter by block reason caption (supports multiple values) */
+          blockReason?: string[]
+          /** @description true = not yet ended (toDate >= today or null), false = already ended (toDate < today). If omitted, all blocks. */
+          active?: boolean
+        }
+      }
+      responses: {
+        /** @description Successfully retrieved rental ids */
+        200: {
+          content: {
+            'application/json': components['schemas']['GetRentalIdsWithBlockResponse']
+          }
+        }
+        /** @description Invalid query parameters. */
+        400: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -1709,10 +1785,15 @@ export interface paths {
   '/properties/{code}/kvv-area': {
     /**
      * Get the KVV-area (förvaltningsområde) and cost center of a property
+     * @deprecated
      * @description Reverse lookup from a property code to the KVV-area it is linked to in
      * `onecore_property_kvv_area`, the cost center (distrikt) that area
      * belongs to, and the responsible kvartersvärd (as a Keycloak user id).
      * Returns 404 when the property has no KVV-area link.
+     *
+     * **Deprecated.** Answers the property default only and ignores
+     * building-level exceptions on split properties. Use
+     * `GET /kvv-areas/resolve` instead. Kept until Odoo has moved over.
      */
     get: {
       parameters: {
@@ -2523,6 +2604,55 @@ export interface paths {
       }
     }
   }
+  '/kvv-areas/resolve': {
+    /**
+     * Resolve the KVV-area (förvaltningsområde) and cost center of a location
+     * @description Location-level lookup that honours split properties: if the
+     * location's building carries a row in `onecore_kvv_area_exception`,
+     * that area wins; otherwise the property's `onecore_property_kvv_area`
+     * link applies. The location is given as exactly one of `rentalId`
+     * (lägenhet, bilplats, lokal), `buildingCode` (facilities and
+     * building-level errands) or `propertyCode` (markyta objects and
+     * property-level errands). Rental ids and building codes are resolved
+     * to their property via Xpand. Send the most specific key you have;
+     * the keys are not combined since they may disagree. Returns 404 when
+     * the location is unknown or nothing resolves.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Rental object id (Xpand `hyresid`). */
+          rentalId?: string
+          /** @description Building code (Xpand `bygcode`). */
+          buildingCode?: string
+          /** @description Property code (Xpand `Property.code`). */
+          propertyCode?: string
+        }
+      }
+      responses: {
+        /** @description The location's KVV-area, cost center and responsible. */
+        200: {
+          content: {
+            'application/json': {
+              content?: components['schemas']['PropertyKvvAreaLookup']
+            }
+          }
+        }
+        /** @description Not exactly one of rentalId, buildingCode or propertyCode was given. */
+        400: {
+          content: never
+        }
+        /** @description Unknown location, or no KVV-area resolves for it. */
+        404: {
+          content: never
+        }
+        /** @description Internal server error. */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/kvv-areas/{id}/responsible': {
     /**
      * Update the responsible kvartersvärd for a KVV area
@@ -2641,7 +2771,9 @@ export interface paths {
      * are paginated.
      *
      * Cost centres and marknadsområden are resolved to property codes
-     * first, since the structure table carries neither.
+     * first, since the structure table carries neither. A split property
+     * (building-level KVV-area exception) resolves to only the side the
+     * scope covers.
      */
     get: {
       parameters: {
@@ -2650,6 +2782,8 @@ export interface paths {
           kvvAreaIds?: string[]
           marketAreaCodes?: string[]
           propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
           buildingCodes?: string[]
           /** @description Composite buildingCode-staircaseCode */
           staircaseCodes?: string[]
@@ -2710,6 +2844,8 @@ export interface paths {
           kvvAreaIds?: string[]
           marketAreaCodes?: string[]
           propertyCodes?: string[]
+          /** @description One KVV-area's share of a split property, as kvvAreaId:propertyCode */
+          propertyShares?: string[]
           buildingCodes?: string[]
           /** @description Composite buildingCode-staircaseCode */
           staircaseCodes?: string[]
@@ -3109,6 +3245,13 @@ export interface components {
       } | null
       areaSize: number | null
       malarEnergiFacilityId: string | null
+    }
+    ResidenceMedia: {
+      images: string[]
+      /** @enum {string|null} */
+      imageLevel: 'residence' | 'shared' | null
+      /** Format: uri */
+      energyDeclarationUrl: string | null
     }
     ResidenceSearchResult: {
       id: string
@@ -3988,6 +4131,18 @@ export interface components {
       id: string
       caption: string
     }
+    GetRentalIdsWithBlockResponse: {
+      content: string[]
+      _links: {
+        self: {
+          href: string
+        }
+        link: {
+          href: string
+          templated: boolean
+        }
+      }
+    }
     ComponentCategory: {
       /** Format: uuid */
       id: string
@@ -4561,6 +4716,8 @@ export interface components {
             facilityCount: number
             otherCount: number
           }
+          /** @enum {string} */
+          share?: 'default' | 'exception'
         }[]
       }[]
     }
@@ -4672,6 +4829,8 @@ export interface components {
               }[]
             }[]
           }[]
+          /** @enum {string} */
+          share?: 'default' | 'exception'
         }[]
       }[]
     }

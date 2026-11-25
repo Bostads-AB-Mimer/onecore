@@ -11,6 +11,7 @@ import {
 import { routes } from '../index'
 import * as tenantLeaseAdapter from '../../../adapters/leasing-adapter'
 import * as propertyManagementAdapter from '../../../adapters/property-management-adapter'
+import { contactsAdapter } from '../../../adapters/contacts-adapter'
 import * as replyToOffer from '../../../processes/parkingspaces/internal/reply-to-offer'
 import * as externalParkingSpaceProcess from '../../../processes/parkingspaces/external'
 
@@ -58,6 +59,212 @@ describe('lease-service', () => {
       expect(res.status).toBe(200)
       expect(getContactSpy).toHaveBeenCalled()
       expect(JSON.stringify(res.body.content)).toEqual(JSON.stringify(contact))
+    })
+  })
+
+  describe('GET /contacts/from-lease-search', () => {
+    it('resolves a personnummer in q to a contact code before calling leasing', async () => {
+      jest.spyOn(contactsAdapter, 'getByNationalId').mockResolvedValue({
+        ok: true,
+        data: factory.contactsServiceContact.build({ contactCode: 'P158770' }),
+      })
+      const filtersSpy = jest
+        .spyOn(tenantLeaseAdapter, 'getContactsByFilters')
+        .mockResolvedValue({ ok: true, data: [] })
+
+      const res = await request(app.callback()).get(
+        '/contacts/from-lease-search?q=198001011234'
+      )
+
+      expect(res.status).toBe(200)
+      expect(filtersSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'P158770' })
+      )
+    })
+
+    const leaseContact = (
+      contactCode: string,
+      overrides: { email?: string | null; phone?: string | null } = {}
+    ) => ({
+      name: `Tenant ${contactCode}`,
+      contactCode,
+      email: null,
+      phone: null,
+      contactType: 'tenant' as const,
+      ...overrides,
+    })
+
+    it('fills in phone and e-mail from the contacts service', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'getContactsByFilters').mockResolvedValue({
+        ok: true,
+        data: [leaseContact('P000001')],
+      })
+      const batchSpy = jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({
+          ok: true,
+          data: [
+            factory.contactsServiceContact.build({
+              contactCode: 'P000001',
+              communication: {
+                phoneNumbers: [
+                  {
+                    phoneNumber: '0701234567',
+                    type: 'mobile',
+                    isPrimary: true,
+                  },
+                ],
+                emailAddresses: [
+                  {
+                    emailAddress: 'anna@example.com',
+                    type: 'private',
+                    isPrimary: true,
+                  },
+                ],
+              },
+            }),
+          ],
+        })
+
+      const res = await request(app.callback()).get(
+        '/contacts/from-lease-search?status=current'
+      )
+
+      expect(res.status).toBe(200)
+      expect(batchSpy).toHaveBeenCalledWith(['P000001'], {
+        includePhone: true,
+        includeEmail: true,
+      })
+      expect(res.body.content).toEqual([
+        leaseContact('P000001', {
+          email: 'anna@example.com',
+          phone: '0701234567',
+        }),
+      ])
+    })
+
+    it('returns a protected contact without phone or e-mail', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'getContactsByFilters').mockResolvedValue({
+        ok: true,
+        data: [
+          leaseContact('P000002', {
+            email: 'from-leasing@example.com',
+            phone: '0700000000',
+          }),
+        ],
+      })
+      jest.spyOn(contactsAdapter, 'getByContactCodeBatch').mockResolvedValue({
+        ok: true,
+        data: [
+          factory.contactsServiceContact.build({
+            contactCode: 'P000002',
+            protectedIdentity: true,
+            communication: { phoneNumbers: [], emailAddresses: [] },
+          }),
+        ],
+      })
+
+      const res = await request(app.callback()).get(
+        '/contacts/from-lease-search'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([leaseContact('P000002')])
+    })
+
+    it('drops phone and e-mail from leasing for a contact the contacts service has no record of', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'getContactsByFilters').mockResolvedValue({
+        ok: true,
+        data: [
+          leaseContact('P000004', {
+            email: 'from-tenfast@example.com',
+            phone: '0700000000',
+          }),
+        ],
+      })
+      jest
+        .spyOn(contactsAdapter, 'getByContactCodeBatch')
+        .mockResolvedValue({ ok: true, data: [] })
+
+      const res = await request(app.callback()).get(
+        '/contacts/from-lease-search'
+      )
+
+      expect(res.status).toBe(200)
+      expect(res.body.content).toEqual([leaseContact('P000004')])
+    })
+
+    it.each([
+      ['answers with an error', { ok: false, err: 'unknown' } as const],
+      ['throws', new Error('connect ECONNREFUSED')],
+    ])(
+      'responds with 502 and no contacts when the contacts service %s',
+      async (_case, outcome) => {
+        jest
+          .spyOn(tenantLeaseAdapter, 'getContactsByFilters')
+          .mockResolvedValue({
+            ok: true,
+            data: [
+              leaseContact('P000003', {
+                email: 'from-leasing@example.com',
+                phone: '0700000000',
+              }),
+            ],
+          })
+        const batchSpy = jest.spyOn(contactsAdapter, 'getByContactCodeBatch')
+        if (outcome instanceof Error) batchSpy.mockRejectedValue(outcome)
+        else batchSpy.mockResolvedValue(outcome)
+
+        const res = await request(app.callback()).get(
+          '/contacts/from-lease-search'
+        )
+
+        expect(res.status).toBe(502)
+        expect(res.body.error).toBe('contacts-lookup-failed')
+        expect(res.body.content).toBeUndefined()
+      }
+    )
+
+    it('responds with 503 when the lease service is warming up', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'getContactsByFilters').mockResolvedValue({
+        ok: false,
+        err: 'service-unavailable',
+        statusCode: 503,
+      })
+
+      const res = await request(app.callback()).get(
+        '/contacts/from-lease-search'
+      )
+
+      expect(res.status).toBe(503)
+      expect(res.body.content).toBeUndefined()
+    })
+
+    it('responds with 400 when the lease service rejects the query', async () => {
+      jest.spyOn(tenantLeaseAdapter, 'getContactsByFilters').mockResolvedValue({
+        ok: false,
+        err: 'invalid-request',
+        statusCode: 400,
+      })
+
+      const res = await request(app.callback()).get(
+        '/contacts/from-lease-search?page=abc'
+      )
+
+      expect(res.status).toBe(400)
+    })
+
+    it('responds with 500 when the lease service fails', async () => {
+      jest
+        .spyOn(tenantLeaseAdapter, 'getContactsByFilters')
+        .mockResolvedValue({ ok: false, err: 'unknown' })
+
+      const res = await request(app.callback()).get(
+        '/contacts/from-lease-search'
+      )
+
+      expect(res.status).toBe(500)
+      expect(res.body.content).toBeUndefined()
     })
   })
 
