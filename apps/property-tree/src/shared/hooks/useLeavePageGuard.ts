@@ -46,6 +46,13 @@ export function useLeavePageGuard(when: boolean) {
     })
   })
 
+  // react-router keeps a blocked navigation blocked even when `when` turns
+  // false. Release it so the dialog doesn't linger with outdated text over
+  // what the page now shows (e.g. a receipt that arrived meanwhile).
+  useEffect(() => {
+    if (!when && blocker.state === 'blocked') blocker.reset()
+  }, [when, blocker])
+
   useEffect(() => {
     if (!when) return
     // The browser shows its own generic confirmation; the text can't be set.
