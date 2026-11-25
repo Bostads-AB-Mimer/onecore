@@ -22,11 +22,18 @@ describe('formatDateForExcel', () => {
     expect(formatDateForExcel(undefined)).toBe('')
   })
 
-  it('should handle Date near midnight UTC', () => {
-    const date = new Date('2024-12-25T23:59:59.999Z')
-    // Result depends on local timezone — verify it matches JS locale formatting
-    const expected = new Date(date).toLocaleDateString('sv-SE')
-    expect(formatDateForExcel(date)).toBe(expected)
+  it('should use the Swedish day for a time after Swedish midnight', () => {
+    // 23:30 UTC is 00:30 the next day in Sweden (CET, UTC+1)
+    expect(formatDateForExcel(new Date('2026-11-18T23:30:00Z'))).toBe(
+      '2026-11-19'
+    )
+  })
+
+  it('should use the Swedish day in summer time', () => {
+    // 22:30 UTC is 00:30 the next day in Sweden (CEST, UTC+2)
+    expect(formatDateForExcel(new Date('2026-06-30T22:30:00Z'))).toBe(
+      '2026-07-01'
+    )
   })
 })
 

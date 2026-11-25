@@ -56,15 +56,9 @@ export const LeaseSearchQueryParamsSchema = z.object({
   endDateFrom: z.string().optional(),
   endDateTo: z.string().optional(),
   // When the lease was created, compared by Swedish calendar day.
-  // YYYY-MM-DD only, since the filter compares days as strings.
-  createdDateFrom: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  createdDateTo: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  // A real YYYY-MM-DD date only, since the filter compares days as strings.
+  createdDateFrom: z.string().date().optional(),
+  createdDateTo: z.string().date().optional(),
 
   // Property/Building/Area filters
   property: z

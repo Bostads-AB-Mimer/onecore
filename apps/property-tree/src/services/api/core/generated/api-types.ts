@@ -3503,10 +3503,6 @@ export interface paths {
             }
           }
         }
-        /** @description The applicant may not rent a scored parking space. errorCode applicant-not-tenant when they have no current or upcoming lease, or housing-contract-terminated when they have given notice on their only housing contract and have no upcoming one. */
-        403: {
-          content: never
-        }
         /** @description Internal server error */
         500: {
           content: {
