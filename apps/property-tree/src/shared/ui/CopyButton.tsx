@@ -1,7 +1,7 @@
 import { Check, Copy } from 'lucide-react'
 
 import { useClipboardCopy } from '@/shared/hooks/useClipboardCopy'
-import { useToast } from '@/shared/hooks/useToast'
+import { useToast } from '@onecore/ui'
 import { Button } from '@/shared/ui/Button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/Tooltip'
 

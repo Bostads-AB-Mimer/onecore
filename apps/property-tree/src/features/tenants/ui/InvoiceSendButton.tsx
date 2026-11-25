@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Invoice } from '@onecore/types'
 import { Mail } from 'lucide-react'
 
-import { useToast } from '@/shared/hooks/useToast'
+import { useToast } from '@onecore/ui'
 import { Button } from '@/shared/ui/Button'
 import {
   Dialog,

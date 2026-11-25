@@ -3,6 +3,7 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import * as xpandAdapter from '../adapters/xpand/rental-object-adapter'
 
 import * as tenfastAdapter from '../adapters/tenfast/tenfast-adapter'
+import z from 'zod'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
 import { leasing, RentalObjectAvailabilityInfo } from '@onecore/types'
 import {

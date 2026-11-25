@@ -243,12 +243,7 @@ function SidebarNavigationContent() {
           icon={Settings}
           label="Administrera Komponenter"
         />
-        <SidebarNavLink
-          to={routes.guides}
-          icon={BookOpen}
-          label="Guider"
-          matchPrefix
-        />
+        <SidebarNavLink to={routes.guides} icon={BookOpen} label="Guider" />
         <SidebarNavLink
           to={routes.propertyAreas}
           icon={LayoutGrid}

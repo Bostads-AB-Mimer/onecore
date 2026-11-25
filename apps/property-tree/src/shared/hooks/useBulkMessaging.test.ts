@@ -40,7 +40,7 @@ const page2: Lease[] = [
 
 let container: HTMLDivElement
 let root: Root
-let result: UseBulkMessagingReturn
+let result: UseBulkMessagingReturn<Lease>
 const fetchAllContacts = vi.fn<() => Promise<Contact[]>>()
 
 function Harness({ items }: { items: Lease[] }) {
@@ -66,6 +66,10 @@ function showPage(items: Lease[]) {
 
 const smsCodes = () => result.smsRecipients.map((r) => r.id).sort()
 const emailCodes = () => result.emailRecipients.map((r) => r.id).sort()
+const selectedIds = () =>
+  result.selection.target.mode === 'include'
+    ? result.selection.target.ids
+    : []
 
 beforeEach(() => {
   container = document.createElement('div')
@@ -82,23 +86,23 @@ afterEach(() => {
 describe('useBulkMessaging selection across pages', () => {
   it('keeps the recipients of leases selected on another page', () => {
     showPage(page1)
-    act(() => result.toggleSelection('L1'))
-    act(() => result.toggleSelection('L2'))
+    act(() => result.selection.toggle('L1'))
+    act(() => result.selection.toggle('L2'))
 
     showPage(page2)
-    act(() => result.toggleSelection('L4'))
+    act(() => result.selection.toggle('L4'))
 
     expect(result.selectedCount).toBe(3)
-    expect(result.selectedIds).toEqual(['L1', 'L2', 'L4'])
+    expect(selectedIds()).toEqual(['L1', 'L2', 'L4'])
     expect(smsCodes()).toEqual(['P1', 'P2', 'P3'])
     expect(emailCodes()).toEqual(['P1', 'P2', 'P3'])
   })
 
   it('sends to a contact with leases on two pages once', () => {
     showPage(page1)
-    act(() => result.toggleSelection('L2'))
+    act(() => result.selection.toggle('L2'))
     showPage(page2)
-    act(() => result.toggleSelection('L5'))
+    act(() => result.selection.toggle('L5'))
 
     expect(result.selectedCount).toBe(2)
     expect(smsCodes()).toEqual(['P2'])
@@ -106,33 +110,33 @@ describe('useBulkMessaging selection across pages', () => {
 
   it('drops the recipients of a lease deselected after paging back', () => {
     showPage(page1)
-    act(() => result.toggleSelection('L1'))
+    act(() => result.selection.toggle('L1'))
     showPage(page2)
-    act(() => result.toggleSelection('L4'))
+    act(() => result.selection.toggle('L4'))
     showPage(page1)
-    act(() => result.toggleSelection('L1'))
+    act(() => result.selection.toggle('L1'))
 
-    expect(result.selectedIds).toEqual(['L4'])
-    expect(result.isSelected('L1')).toBe(false)
+    expect(selectedIds()).toEqual(['L4'])
+    expect(result.selection.isSelected('L1')).toBe(false)
     expect(smsCodes()).toEqual(['P3'])
     expect(emailCodes()).toEqual(['P3'])
   })
 
   it('keeps a shift-click range from another page', () => {
     showPage(page1)
-    act(() => result.toggleSelection('L1'))
-    act(() => result.selectRange('L3'))
+    act(() => result.selection.toggle('L1'))
+    act(() => result.selection.toggleRange('L3'))
     showPage(page2)
 
-    expect(result.selectedIds).toEqual(['L1', 'L2', 'L3'])
+    expect(selectedIds()).toEqual(['L1', 'L2', 'L3'])
     expect(smsCodes()).toEqual(['P1', 'P2'])
   })
 
   it('clears the recipients of every page', () => {
     showPage(page1)
-    act(() => result.toggleSelection('L1'))
+    act(() => result.selection.toggle('L1'))
     showPage(page2)
-    act(() => result.toggleSelection('L4'))
+    act(() => result.selection.toggle('L4'))
 
     act(() => result.clearSelection())
 
@@ -143,7 +147,7 @@ describe('useBulkMessaging selection across pages', () => {
 
   it('deselects selections from other pages with the select-all checkbox', () => {
     showPage(page1)
-    act(() => result.toggleSelection('L1'))
+    act(() => result.selection.toggle('L1'))
     showPage(page2)
 
     act(() => result.toggleSelectAll())
