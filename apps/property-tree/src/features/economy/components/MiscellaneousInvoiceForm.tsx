@@ -20,12 +20,14 @@ import { useUser } from '@/entities/user'
 import { Lease as CoreLease } from '@/services/api/core'
 import { economyService } from '@/services/api/core/economyService'
 
+import { useLeavePageGuard } from '@/shared/hooks/useLeavePageGuard'
 import { useToast } from '@/shared/hooks/useToast'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import { Calendar } from '@/shared/ui/Calendar'
 import { Card } from '@/shared/ui/Card'
 import { Label } from '@/shared/ui/Label'
+import { LeavePageDialog } from '@/shared/ui/LeavePageDialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/Popover'
 import { SearchableSelect } from '@/shared/ui/SearchableSelect'
 import { Separator } from '@/shared/ui/Separator'
@@ -115,6 +117,19 @@ export function MiscellaneousInvoiceForm() {
       queryClient.invalidateQueries({ queryKey: miscellaneousInvoicesQueryKey })
     },
   })
+
+  // isSubmitting already covers merging the attachments, before the mutation starts
+  const isSending = isSubmitting || submitInvoiceMutation.isPending
+  // Leaving mid-send loses the receipt or unknown-outcome warning even though
+  // the invoice may still be created, which leads to duplicate invoices
+  const { blocker } = useLeavePageGuard(isSending)
+  const leavePageDialog = (
+    <LeavePageDialog
+      blocker={blocker}
+      title="Underlaget skickas"
+      description="Om du lämnar sidan nu ser du inte om underlaget gick iväg. Fakturan kan skapas ändå."
+    />
+  )
 
   const { data: contacts, isLoading: isLoadingContacts } = useXledgerContacts()
   const { data: projects, isLoading: isLoadingProjects } = useXledgerProjects()
@@ -388,11 +403,16 @@ export function MiscellaneousInvoiceForm() {
   }
 
   if (receipt) {
+    // The receipt renders in onSuccess, while the mutation is still pending,
+    // so the dialog must exist here too or a blocked navigation would hang
     return (
-      <MiscellaneousInvoiceReceipt
-        receipt={receipt}
-        onCreateNew={handleReset}
-      />
+      <>
+        <MiscellaneousInvoiceReceipt
+          receipt={receipt}
+          onCreateNew={handleReset}
+        />
+        {leavePageDialog}
+      </>
     )
   }
 
@@ -548,20 +568,14 @@ export function MiscellaneousInvoiceForm() {
             </Button>
             <Button
               type="submit"
-              disabled={
-                isSubmitting ||
-                submitInvoiceMutation.isPending ||
-                !selectedTenant ||
-                !leaseId
-              }
+              disabled={isSending || !selectedTenant || !leaseId}
             >
-              {isSubmitting || submitInvoiceMutation.isPending
-                ? 'Skickar...'
-                : 'Skicka underlag'}
+              {isSending ? 'Skickar...' : 'Skicka underlag'}
             </Button>
           </div>
         </div>
       </Card>
+      {leavePageDialog}
     </form>
   )
 }
