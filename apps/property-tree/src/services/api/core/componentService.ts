@@ -1,4 +1,4 @@
-import { Component, ComponentSubtype } from '../../types'
+import { Component, ComponentEvent, ComponentSubtype } from '../../types'
 import { GET, POST, PUT, toApiError } from './baseApi'
 import type { components } from './generated/api-types'
 
@@ -206,6 +206,16 @@ export const componentService = {
       throw new Error('Failed to update component instance')
 
     return updated.content as Component
+  },
+
+  async getEvents(componentId: string): Promise<ComponentEvent[]> {
+    const { data, error, response } = await GET('/components/{id}/events', {
+      params: { path: { id: componentId } },
+    })
+
+    // A failed response without a body (e.g. a 502) leaves error empty
+    if (error || !response.ok) throw toApiError(error, response)
+    return data?.content ?? []
   },
 
   async getSurfaceSubtypes(): Promise<ComponentSubtype[]> {

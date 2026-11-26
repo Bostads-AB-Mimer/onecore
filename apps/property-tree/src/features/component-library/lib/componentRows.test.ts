@@ -4,6 +4,7 @@ import type { Component } from '@/services/types'
 
 import {
   describeStructure,
+  formatComponentCondition,
   formatComponentCount,
   formatComponentPlace,
   formatComponentQuantity,
@@ -236,6 +237,24 @@ describe('formatComponentQuantity', () => {
 
   it('shows a dash without a quantity', () => {
     expect(formatComponentQuantity(component({ quantity: null }))).toBe('-')
+  })
+})
+
+describe('formatComponentCondition', () => {
+  it.each([
+    ['NEW', 'Nyskick'],
+    ['GOOD', 'Gott skick'],
+    ['FAIR', 'Godtagbart skick'],
+    ['POOR', 'Dåligt skick'],
+    ['DAMAGED', 'Skadat'],
+  ])('labels %s as %s', (condition, label) => {
+    expect(formatComponentCondition(condition)).toBe(label)
+  })
+
+  it('shows a dash for a missing or unknown condition', () => {
+    expect(formatComponentCondition(null)).toBe('-')
+    expect(formatComponentCondition(undefined)).toBe('-')
+    expect(formatComponentCondition('UNKNOWN')).toBe('-')
   })
 })
 

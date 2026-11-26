@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('./baseApi', () => ({ GET: vi.fn(), POST: vi.fn(), PUT: vi.fn() }))
+// Keeps the real toApiError so a failed call throws the error callers see
+vi.mock('./baseApi', async () => ({
+  GET: vi.fn(),
+  POST: vi.fn(),
+  PUT: vi.fn(),
+  toApiError: (await vi.importActual<typeof import('./apiError')>('./apiError'))
+    .toApiError,
+}))
 
 import { GET } from './baseApi'
 import { componentService, toComponentBody } from './componentService'
@@ -74,6 +81,63 @@ describe('toComponentBody', () => {
       condition: 'GOOD',
       quantity: 2,
     })
+  })
+})
+
+describe('getEvents', () => {
+  const componentId = '00000000-0000-0000-0001-000000000001'
+
+  it('asks for the component events and returns the content', async () => {
+    // The mock returns only the fields getEvents reads
+    vi.mocked(GET).mockResolvedValueOnce({
+      data: { content: [{ id: 'e1' }] },
+      error: undefined,
+      response: { ok: true, status: 200 },
+    } as never)
+
+    await expect(componentService.getEvents(componentId)).resolves.toEqual([
+      { id: 'e1' },
+    ])
+    expect(GET).toHaveBeenCalledWith('/components/{id}/events', {
+      params: { path: { id: componentId } },
+    })
+  })
+
+  it('returns an empty list when content is missing', async () => {
+    // The mock returns only the fields getEvents reads
+    vi.mocked(GET).mockResolvedValueOnce({
+      data: {},
+      error: undefined,
+      response: { ok: true, status: 200 },
+    } as never)
+
+    await expect(componentService.getEvents(componentId)).resolves.toEqual([])
+  })
+
+  it('throws with the status when the request fails', async () => {
+    // The mock returns only the fields getEvents reads
+    vi.mocked(GET).mockResolvedValueOnce({
+      data: undefined,
+      error: { error: 'Component not found' },
+      response: { ok: false, status: 404 },
+    } as never)
+
+    await expect(componentService.getEvents(componentId)).rejects.toMatchObject(
+      { name: 'ApiError', status: 404, message: 'Component not found' }
+    )
+  })
+
+  it('throws, not an empty list, when a failed response has no body', async () => {
+    // openapi-fetch leaves error unset when a non-ok response has no body
+    vi.mocked(GET).mockResolvedValueOnce({
+      data: undefined,
+      error: undefined,
+      response: { ok: false, status: 502 },
+    } as never)
+
+    await expect(componentService.getEvents(componentId)).rejects.toMatchObject(
+      { name: 'ApiError', status: 502 }
+    )
   })
 })
 

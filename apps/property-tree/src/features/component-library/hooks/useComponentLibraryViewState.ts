@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { property } from '@onecore/types'
-import { useQuery } from '@tanstack/react-query'
 
 import {
-  QUERY_KEY_ROOTS,
   useComponentEntity,
+  useComponentInstance,
   useSubtypeComponents,
 } from '@/entities/component'
 
-import { componentLibraryService } from '@/services/api/core/componentLibraryService'
 import type {
   Component,
   ComponentCategory,
@@ -285,11 +283,7 @@ export const useComponentLibraryViewState = () => {
     subtypeState?.tab === 'components'
       ? (searchParams.get('componentId') ?? undefined)
       : undefined
-  const markedComponent = useQuery({
-    queryKey: [QUERY_KEY_ROOTS.instance, 'by-id', markedComponentId],
-    queryFn: () => componentLibraryService.getInstanceById(markedComponentId!),
-    enabled: markedComponentId !== undefined,
-  })
+  const markedComponent = useComponentInstance(markedComponentId)
 
   const unmarkComponent = () => {
     updateUrlParams({ componentId: undefined }, { replace: true })

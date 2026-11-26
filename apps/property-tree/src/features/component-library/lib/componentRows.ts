@@ -122,6 +122,25 @@ export const formatInstallationDate = (
     ? 'Okänt'
     : formatISODate(isoDate)
 
+export const formatComponentCondition = (
+  condition: string | null | undefined
+): string => {
+  switch (condition) {
+    case 'NEW':
+      return 'Nyskick'
+    case 'GOOD':
+      return 'Gott skick'
+    case 'FAIR':
+      return 'Godtagbart skick'
+    case 'POOR':
+      return 'Dåligt skick'
+    case 'DAMAGED':
+      return 'Skadat'
+    default:
+      return '-'
+  }
+}
+
 // The imports write 0 for unknown prices and lifespans; they sort as blanks.
 export const knownNumber = (value: number) => value || null
 
