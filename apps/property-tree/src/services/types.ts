@@ -49,6 +49,9 @@ export type {
 }
 
 // Extract types from the generated schemas
+export type ContactPhoneNumber = NonNullable<
+  components['schemas']['Contact']['phoneNumbers']
+>[number]
 export type Company = components['schemas']['Company']
 export type CompanyDetails = components['schemas']['CompanyDetails']
 export type CostCenterSummary = components['schemas']['CostCenterSummary']
@@ -258,11 +261,7 @@ export interface Tenant {
   nationalRegistrationNumber: string
   birthDate: string
   address: Address
-  phoneNumbers: Array<{
-    phoneNumber: string
-    type: string
-    isMainNumber: number
-  }>
+  phoneNumbers: ContactPhoneNumber[]
   emailAddress: string
   isTenant: boolean
   parkingSpaceWaitingList: WaitingListResponse

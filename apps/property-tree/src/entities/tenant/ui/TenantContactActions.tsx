@@ -1,11 +1,16 @@
 import { Mail, MessageSquare, Phone } from 'lucide-react'
 
+import type { ContactPhoneNumber } from '@/services/types'
+
+import { Badge } from '@/shared/ui/Badge'
 import { Button } from '@/shared/ui/Button'
 import { CopyButton } from '@/shared/ui/CopyButton'
 import { TooltipProvider } from '@/shared/ui/Tooltip'
 
+import { sortMainNumberFirst } from '../lib/phoneNumbers'
+
 interface TenantContactActionsProps {
-  phoneNumbers?: Array<{ phoneNumber: string }>
+  phoneNumbers?: ContactPhoneNumber[]
   email?: string
   onSendSms?: (phoneNumber: string) => void
   onSendEmail?: (emailAddress: string) => void
@@ -21,6 +26,8 @@ export function TenantContactActions({
   onSendSms,
   onSendEmail,
 }: TenantContactActionsProps) {
+  const hasSeveralNumbers = (phoneNumbers?.length ?? 0) > 1
+
   const handleCall = (phoneNumber: string) => {
     window.location.href = `tel:${cleanPhoneNumber(phoneNumber)}`
   }
@@ -68,7 +75,8 @@ export function TenantContactActions({
           <p className="text-sm text-muted-foreground">Telefon</p>
           {phoneNumbers && phoneNumbers.length > 0 ? (
             <div className="space-y-3">
-              {phoneNumbers.map((phone, i) => (
+              {sortMainNumberFirst(phoneNumbers).map((phone, i) => (
+                // Index key: numbers can be identical when contact details are masked outside production
                 <div key={i} className="flex items-center gap-2">
                   <p className="font-medium">{phone.phoneNumber}</p>
                   <CopyButton
@@ -93,6 +101,16 @@ export function TenantContactActions({
                       <MessageSquare className="h-4 w-4" />
                     </Button>
                   </div>
+                  {/* The marker only helps choose between numbers, so skip it when there is just one */}
+                  {hasSeveralNumbers && phone.isMainNumber && (
+                    <Badge
+                      variant="secondary"
+                      className="px-2 py-0.5"
+                      title="Standardnummer i Xpand – används för SMS"
+                    >
+                      Standard
+                    </Badge>
+                  )}
                 </div>
               ))}
             </div>

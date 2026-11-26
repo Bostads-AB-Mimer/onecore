@@ -9,6 +9,7 @@ import { paths } from '@/shared/routes'
 import { Button } from '@/shared/ui/Button'
 
 import { getLeaseContactTitle } from '../lib/leaseContacts'
+import { findMainPhoneNumber } from '../lib/phoneNumbers'
 
 type LeaseTenant = NonNullable<Lease['tenants']>[number]
 
@@ -23,9 +24,7 @@ export function TenantLeaseCard({
   onSendSms,
   onSendEmail,
 }: TenantLeaseCardProps) {
-  const phone = tenant.phoneNumbers?.find(
-    (v: { isMainNumber: boolean }) => v.isMainNumber
-  )
+  const phone = findMainPhoneNumber(tenant.phoneNumbers)
 
   return (
     <div className="space-y-4">
