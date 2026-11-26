@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, Filter, Loader2, X } from 'lucide-react'
 
 import { useDebounce } from '@/shared/hooks/useDebounce'
+import { useSelectedOptionLabels } from '@/shared/hooks/useSelectedOptionLabels'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
@@ -38,15 +39,6 @@ interface MultiSelectSearchFilterDropdownProps {
   className?: string
 }
 
-/** Lookup state of a selected value that has no label yet */
-type LabelStatus = 'loading' | 'notFound' | 'failed'
-
-const LABEL_STATUS_TEXT: Record<LabelStatus, string> = {
-  loading: 'Laddar…',
-  notFound: 'Okänt namn',
-  failed: 'Kunde inte hämta namn',
-}
-
 /**
  * A multi-select filter dropdown with search functionality.
  * Searches via API when user types, allows multiple selections.
@@ -70,15 +62,10 @@ export function MultiSelectSearchFilterDropdown({
   const [resultsQuery, setResultsQuery] = useState<string | null>(null)
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState(false)
-  // Store labels for selected values (so we can display them)
-  const [selectedLabels, setSelectedLabels] = useState<Map<string, string>>(
-    new Map()
+  const { getDisplayLabel, remember, forget, clear } = useSelectedOptionLabels(
+    selectedValues,
+    resolveLabels
   )
-  const [labelStatuses, setLabelStatuses] = useState<Map<string, LabelStatus>>(
-    new Map()
-  )
-  // Values whose label is known or has been requested; each is looked up once per mount
-  const requestedLabelsRef = useRef<Set<string>>(new Set())
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -130,66 +117,6 @@ export function MultiSelectSearchFilterDropdown({
     }
   }, [open, debouncedSearch, minSearchLength, searchFn])
 
-  // Look up labels for selected values that have none (e.g. from a saved link)
-  useEffect(() => {
-    if (!resolveLabels) return
-    const requested = requestedLabelsRef.current
-    const values = selectedValues.filter((v) => !requested.has(v))
-    if (values.length === 0) return
-
-    values.forEach((v) => requested.add(v))
-    setLabelStatuses((prev) => {
-      const next = new Map(prev)
-      values.forEach((v) => next.set(v, 'loading'))
-      return next
-    })
-
-    let ignore = false
-    let settled = false
-
-    const lookup = async () => {
-      try {
-        const options = await resolveLabels(values)
-        if (ignore) return
-        setSelectedLabels((prev) => {
-          const next = new Map(prev)
-          options.forEach((o) => next.set(o.value, o.label))
-          return next
-        })
-        const found = new Set(options.map((o) => o.value))
-        setLabelStatuses((prev) => {
-          const next = new Map(prev)
-          values.forEach((v) => {
-            if (found.has(v)) next.delete(v)
-            else next.set(v, 'notFound')
-          })
-          return next
-        })
-      } catch (err: unknown) {
-        console.error(
-          'MultiSelectSearchFilterDropdown: Label lookup failed',
-          err
-        )
-        if (ignore) return
-        setLabelStatuses((prev) => {
-          const next = new Map(prev)
-          values.forEach((v) => next.set(v, 'failed'))
-          return next
-        })
-      } finally {
-        settled = true
-      }
-    }
-
-    lookup()
-
-    return () => {
-      ignore = true
-      // Let the next run ask again for values whose answer is now dropped
-      if (!settled) values.forEach((v) => requested.delete(v))
-    }
-  }, [selectedValues, resolveLabels])
-
   // Focus input when dropdown opens
   useEffect(() => {
     if (open) {
@@ -238,29 +165,19 @@ export function MultiSelectSearchFilterDropdown({
     if (isSelected) {
       handleRemoveSelected(option.value)
     } else {
-      // Label is known from the search result, so no lookup is needed
-      requestedLabelsRef.current.add(option.value)
       onSelectionChange([...selectedValues, option.value])
-      // Add to labels map
-      setSelectedLabels((prev) => new Map(prev).set(option.value, option.label))
+      remember(option.value, option.label)
     }
   }
 
   const handleRemoveSelected = (value: string) => {
     onSelectionChange(selectedValues.filter((v) => v !== value))
-    setSelectedLabels((prev) => {
-      const next = new Map(prev)
-      next.delete(value)
-      return next
-    })
-    // Look the label up again if the value comes back (e.g. browser back)
-    requestedLabelsRef.current.delete(value)
+    forget(value)
   }
 
   const handleClear = () => {
     onSelectionChange([])
-    setSelectedLabels(new Map())
-    requestedLabelsRef.current.clear()
+    clear()
   }
 
   const showResults = debouncedSearch.length >= minSearchLength
@@ -268,15 +185,6 @@ export function MultiSelectSearchFilterDropdown({
   const resultsAreCurrent = resultsQuery === searchInput
   const showSpinner = isSearching || (showResults && !resultsAreCurrent)
   const showCurrent = showResults && resultsAreCurrent && !isSearching
-
-  const getDisplayLabel = (value: string) => {
-    const label = selectedLabels.get(value)
-    if (label !== undefined) return label
-    const status = labelStatuses.get(value)
-    if (status) return LABEL_STATUS_TEXT[status]
-    // Before the lookup effect has run, show loading rather than the raw value
-    return resolveLabels ? LABEL_STATUS_TEXT.loading : value
-  }
 
   // Get button text
   const getButtonText = () => {
