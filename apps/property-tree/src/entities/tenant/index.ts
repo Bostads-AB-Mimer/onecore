@@ -16,6 +16,9 @@ export {
   sortLeaseContacts,
 } from './lib/leaseContacts'
 
+// Phone number utilities
+export { findMainPhoneNumber, sortMainNumberFirst } from './lib/phoneNumbers'
+
 // Classification utilities
 export { getTenantRoles, isOrganization } from './lib/classification'
 export {
