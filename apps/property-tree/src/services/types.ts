@@ -83,6 +83,7 @@ export interface RentalBlocksSearchParams {
 export type Room = components['schemas']['Room']
 export type MaintenanceUnit = components['schemas']['MaintenanceUnit']
 export type Component = components['schemas']['Component']
+export type ComponentEvent = components['schemas']['ComponentEvent']
 
 // Component Library entity types
 export type ComponentCategory = components['schemas']['ComponentCategory']

@@ -25,40 +25,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/Dialog'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/ui/Table'
 
 import {
-  describeStructure,
+  formatComponentCondition,
   formatComponentQuantity,
-  formatInstallationDate,
   formatSek,
   formatWithUnit,
-  type PlaceLabel,
 } from '../lib/componentRows'
+import { ComponentHistorySection } from '../ui/ComponentHistorySection'
 
 interface InstanceDetailsDialogProps {
   isOpen: boolean
   onClose: () => void
   instance: Component
 }
-
-interface PlaceCellProps {
-  place: PlaceLabel
-}
-
-const PlaceCell = ({ place }: PlaceCellProps) => (
-  <span className="flex flex-col leading-snug">
-    {place.address && <span>{place.address}</span>}
-    <span className="text-muted-foreground">{place.detail}</span>
-  </span>
-)
 
 export const InstanceDetailsDialog = ({
   isOpen,
@@ -234,23 +214,6 @@ export const InstanceDetailsDialog = ({
     }
   }
 
-  const getConditionLabel = (condition: string | null | undefined): string => {
-    switch (condition) {
-      case 'NEW':
-        return 'Nyskick'
-      case 'GOOD':
-        return 'Gott skick'
-      case 'FAIR':
-        return 'Godtagbart skick'
-      case 'POOR':
-        return 'Dåligt skick'
-      case 'DAMAGED':
-        return 'Skadat'
-      default:
-        return '-'
-    }
-  }
-
   const getConditionVariant = (
     condition: string | null | undefined
   ): 'default' | 'secondary' | 'outline' | 'destructive' => {
@@ -298,7 +261,7 @@ export const InstanceDetailsDialog = ({
                 <dd>
                   {instance.condition ? (
                     <Badge variant={getConditionVariant(instance.condition)}>
-                      {getConditionLabel(instance.condition)}
+                      {formatComponentCondition(instance.condition)}
                     </Badge>
                   ) : (
                     <span className="text-sm font-medium">-</span>
@@ -378,55 +341,7 @@ export const InstanceDetailsDialog = ({
             </div>
           )}
 
-          {/* Installation History */}
-          <div>
-            <h3 className="font-semibold mb-3">Installationshistorik</h3>
-            {instance.componentInstallations &&
-            instance.componentInstallations.length > 0 ? (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Installationsdatum</TableHead>
-                      <TableHead>Avinstallationsdatum</TableHead>
-                      <TableHead>Plats</TableHead>
-                      <TableHead>Kostnad</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {instance.componentInstallations.map((install) => (
-                      <TableRow key={install.id}>
-                        <TableCell className="whitespace-nowrap tabular-nums">
-                          {formatInstallationDate(install.installationDate)}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap tabular-nums">
-                          {install.deinstallationDate ? (
-                            formatISODate(install.deinstallationDate)
-                          ) : (
-                            <Badge variant="default">Nuvarande</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <PlaceCell
-                            place={describeStructure(
-                              install.propertyObject?.propertyStructures?.[0]
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell className="tabular-nums">
-                          {formatSek(install.cost)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground py-4 text-center border rounded-md">
-                Inga installationer ännu
-              </p>
-            )}
-          </div>
+          <ComponentHistorySection component={instance} />
 
           {/* Documents Section */}
           <div>

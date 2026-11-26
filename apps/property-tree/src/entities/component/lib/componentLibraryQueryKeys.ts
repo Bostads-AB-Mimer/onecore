@@ -12,6 +12,15 @@ export const QUERY_KEY_ROOTS: Record<EntityType, string> = {
   instance: 'component-instances',
 }
 
+/** One component loaded by id, with all its installations. Under the instance
+ * root, so invalidating component instances refreshes it too. */
+export const componentInstanceQueryKey = (componentId: string | undefined) =>
+  [QUERY_KEY_ROOTS.instance, 'by-id', componentId] as const
+
+/** One component's event history, newest first */
+export const componentEventsQueryKey = (componentId: string | undefined) =>
+  ['component-events', componentId] as const
+
 /**
  * Builds a query key for React Query cache operations
  *

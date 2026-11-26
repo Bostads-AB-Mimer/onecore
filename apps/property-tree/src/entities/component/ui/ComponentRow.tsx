@@ -25,6 +25,7 @@ import {
   isKnownInstallationDate,
   knownLifespan,
 } from '../lib/componentCalculations'
+import { isSurfaceComponent } from '../lib/componentCategory'
 
 interface ComponentRowProps {
   component: Component
@@ -65,8 +66,7 @@ export const ComponentRow = ({
   const economicLifespan = componentEconomicLifespan(component)
   const status = getComponentStatusConfig(component.status)
   const isPastLifespan = lifespan !== null && lifespan.percentage >= 100
-  const isSurface =
-    component.subtype?.componentType?.category?.type === 'SURFACE'
+  const isSurface = isSurfaceComponent(component)
 
   const typeName = component.subtype?.componentType?.typeName
   const subtypeName = component.subtype?.subTypeName
