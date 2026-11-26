@@ -4,6 +4,8 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { authService } from '@/services/api/core/authService'
+
 import { LEASE_TYPE_FILTER_OPTIONS } from '../lib/leaseType'
 import { useLeaseFilters } from './useLeaseFilters'
 
@@ -196,6 +198,87 @@ describe('useLeaseFilters contract type (Kontraktstyp)', () => {
 
     expect(location.has('leaseType')).toBe(false)
     expect(searchedLeaseTypes()).toBeUndefined()
+  })
+})
+
+describe('useLeaseFilters building manager (Kvartersvärd)', () => {
+  const getUsersByRole = vi.mocked(authService.getUsersByRole)
+
+  const anna = {
+    id: 'u1',
+    username: 'anna.s',
+    firstName: 'Anna',
+    lastName: 'Svensson',
+    attributes: { employeeId: ['E1'] },
+  }
+
+  beforeEach(() => {
+    getUsersByRole.mockReset()
+  })
+
+  it('names the chosen ids it finds and leaves out the ones it does not', async () => {
+    getUsersByRole.mockResolvedValue([anna])
+    render('/leases')
+
+    await expect(
+      result.resolveBuildingManagerLabels(['u1', 'gone'])
+    ).resolves.toEqual([
+      { value: 'u1', label: 'Anna Svensson', description: 'E1' },
+    ])
+    expect(getUsersByRole).toHaveBeenCalledWith('property-manager')
+  })
+
+  it('shares one request between naming and searching at the same time', async () => {
+    getUsersByRole.mockResolvedValue([anna])
+    render('/leases')
+
+    const [labels, options] = await Promise.all([
+      result.resolveBuildingManagerLabels(['u1']),
+      result.searchBuildingManagers(''),
+    ])
+
+    expect(getUsersByRole).toHaveBeenCalledTimes(1)
+    expect(labels).toEqual([
+      { value: 'u1', label: 'Anna Svensson', description: 'E1' },
+    ])
+    expect(options).toEqual([
+      { value: 'u1', label: 'Anna Svensson', description: 'E1' },
+    ])
+  })
+
+  it('asks again after a failed request instead of keeping the failure', async () => {
+    getUsersByRole
+      .mockRejectedValueOnce(new Error('Keycloak down'))
+      .mockResolvedValueOnce([anna])
+    render('/leases')
+
+    await expect(result.resolveBuildingManagerLabels(['u1'])).rejects.toThrow(
+      'Keycloak down'
+    )
+    await expect(result.resolveBuildingManagerLabels(['u1'])).resolves.toEqual([
+      { value: 'u1', label: 'Anna Svensson', description: 'E1' },
+    ])
+    expect(getUsersByRole).toHaveBeenCalledTimes(2)
+  })
+
+  // Guard: this already passes; it keeps search behaviour while the request
+  // caching is reworked.
+  it('searches by name and sorts the matches in Swedish order', async () => {
+    getUsersByRole.mockResolvedValue([
+      { id: 'u3', username: 'osten', firstName: 'Östen', lastName: 'Anner' },
+      { id: 'u4', username: 'bo', firstName: 'Bo', lastName: 'Ek' },
+      { id: 'u2', username: 'zannie', firstName: 'Zannie', lastName: 'Berg' },
+      anna,
+    ])
+    render('/leases')
+
+    const options = await result.searchBuildingManagers('ann')
+
+    expect(options.map((o) => o.label)).toEqual([
+      'Anna Svensson',
+      'Zannie Berg',
+      'Östen Anner',
+    ])
   })
 })
 
