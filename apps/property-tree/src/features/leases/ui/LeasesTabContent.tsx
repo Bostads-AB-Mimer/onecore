@@ -9,7 +9,7 @@ import {
   LeaseStatusBadge,
 } from '@/entities/lease'
 import { useLeasesByRentalProperty } from '@/entities/lease/hooks/useLeasesByRentalProperty'
-import { isSubletTenant } from '@/entities/tenant'
+import { findMainPhoneNumber, isSubletTenant } from '@/entities/tenant'
 
 import type { Lease } from '@/services/api/core/leaseService'
 
@@ -105,7 +105,7 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
     return (
       <div className="space-y-2">
         {lease.tenants.map((tenant) => {
-          const phone = tenant.phoneNumbers?.find((p) => p.isMainNumber)
+          const phone = findMainPhoneNumber(tenant.phoneNumbers)
           return (
             <div key={tenant.contactCode} className="text-sm">
               {tenant.emailAddress && <div>{tenant.emailAddress}</div>}
@@ -177,7 +177,7 @@ export function LeasesTabContent({ rentalPropertyId }: LeasesTabContentProps) {
               const isValidContact =
                 tenant.contactCode.startsWith('P') ||
                 tenant.contactCode.startsWith('F')
-              const phone = tenant.phoneNumbers?.find((p) => p.isMainNumber)
+              const phone = findMainPhoneNumber(tenant.phoneNumbers)
 
               return (
                 <div key={tenant.contactCode} className="space-y-1">

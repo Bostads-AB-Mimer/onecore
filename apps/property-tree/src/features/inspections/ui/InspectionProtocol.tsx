@@ -10,6 +10,8 @@ import {
   User,
 } from 'lucide-react'
 
+import { findMainPhoneNumber } from '@/entities/tenant'
+
 import { components } from '@/services/api/core/generated/api-types'
 import { inspectionService } from '@/services/api/core/inspectionService'
 
@@ -279,15 +281,15 @@ export function InspectionProtocol({
                 {inspection?.lease?.tenants?.[0]?.nationalRegistrationNumber ||
                   '-'}
               </div>
-              {inspection?.lease?.tenants?.[0]?.phoneNumbers?.find(
-                (number) => number.isMainNumber
+              {findMainPhoneNumber(
+                inspection?.lease?.tenants?.[0]?.phoneNumbers
               )?.phoneNumber && (
                 <div className="flex items-center gap-2">
                   <Phone className="h-3 w-3 text-muted-foreground" />
                   <span>
                     {
-                      inspection?.lease?.tenants?.[0]?.phoneNumbers?.find(
-                        (number) => number.isMainNumber
+                      findMainPhoneNumber(
+                        inspection?.lease?.tenants?.[0]?.phoneNumbers
                       )?.phoneNumber
                     }
                   </span>
