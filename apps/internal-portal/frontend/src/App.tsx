@@ -14,6 +14,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 
 import Home from './pages/Home/Home'
 import SiteHeader from './components/SiteHeader'
+import PageTitle from './components/PageTitle'
 import Login from './pages/Login/Login'
 import MaterialChoiceDetails from './pages/MaterialChoiceDetails/MaterialChoiceDetails'
 import ParkingSpaces from './pages/ParkingSpaces'
@@ -63,6 +64,7 @@ function App() {
           <Grid container sx={{ marginBottom: 2, marginTop: 0 }}>
             <Grid item xs={0.5} />
             <Grid item xs={11}>
+              <PageTitle />
               <SiteHeader />
               <Routes>
                 <Route element={<PageBase />}>

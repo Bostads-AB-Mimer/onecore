@@ -41,12 +41,15 @@ export function Navigation({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2">
-          <a href={getPropertyTreeBaseUrl()} title="Gå till Property Tree">
-            <img src={onecoreLogo} alt="ONECore" className="h-6 w-6" />
-          </a>
+        {/* Logo and title together link to the ONECore start page in Property Tree */}
+        <a
+          href={getPropertyTreeBaseUrl()}
+          title="Gå till startsidan"
+          className="flex items-center gap-2 px-2"
+        >
+          <img src={onecoreLogo} alt="ONECore" className="h-6 w-6" />
           <h1 className="text-lg font-bold">Nyckelportalen</h1>
-        </div>
+        </a>
       </SidebarHeader>
       <SidebarContent className="gap-0">
         <SidebarGroup>
