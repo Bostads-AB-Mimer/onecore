@@ -8,6 +8,8 @@
 import type { ReactNode } from 'react'
 import { Eye, Loader2, Play, PlayCircle } from 'lucide-react'
 
+import { findMainPhoneNumber } from '@/entities/tenant'
+
 import { components } from '@/services/api/core/generated/api-types'
 
 import { formatISODate } from '@/shared/lib/formatters'
@@ -50,9 +52,8 @@ export interface InspectionTableColumn {
  */
 function getMainPhoneNumber(inspection: Inspection): string {
   return (
-    inspection.lease?.tenants?.[0]?.phoneNumbers?.find(
-      (number) => number.isMainNumber
-    )?.phoneNumber || 'N/A'
+    findMainPhoneNumber(inspection.lease?.tenants?.[0]?.phoneNumbers)
+      ?.phoneNumber || 'N/A'
   )
 }
 
