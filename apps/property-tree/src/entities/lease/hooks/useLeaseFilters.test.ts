@@ -236,3 +236,24 @@ describe('useLeaseFilters object type / parking space type', () => {
     expect(location.has('parkingSpaceType')).toBe(false)
   })
 })
+
+describe('useLeaseFilters property / district / building manager', () => {
+  /** The search params the last search was made with */
+  const searched = () => useLeaseSearchMock.mock.lastCall?.[0]
+
+  it.each([
+    ['property', 'property'],
+    ['district', 'districtNames'],
+    ['buildingManager', 'buildingManager'],
+  ] as const)(
+    'keeps every chosen %s and searches on all of them',
+    (urlKey, searchKey) => {
+      render(`/leases?${urlKey}=first`)
+
+      act(() => result.setFilterValues(urlKey, ['first', 'second']))
+
+      expect(location.getAll(urlKey)).toEqual(['first', 'second'])
+      expect(searched()?.[searchKey]).toEqual(['first', 'second'])
+    }
+  )
+})

@@ -60,13 +60,6 @@ const LEASE_STATUS_VALUES: LeaseStatusFilter[] = [
 const isLeaseStatusFilter = (v: string): v is LeaseStatusFilter =>
   (LEASE_STATUS_VALUES as string[]).includes(v)
 
-// These filters only allow a single value at a time
-const SINGLE_SELECT_FILTERS = [
-  'property',
-  'district',
-  'buildingManager',
-] as const
-
 export function useLeaseFilters() {
   const filters = useUrlFilters({
     filterKeys: FILTER_KEYS,
@@ -86,30 +79,6 @@ export function useLeaseFilters() {
       })
     },
     [updateUrlParams]
-  )
-
-  // Wrap setFilterValues to enforce single-select for certain filters
-  const setFilterValues = useCallback(
-    (key: string, values: string[]) => {
-      if (
-        SINGLE_SELECT_FILTERS.includes(
-          key as (typeof SINGLE_SELECT_FILTERS)[number]
-        )
-      ) {
-        // Single-select: keep only the newest value
-        const current = urlSearchParams.getAll(key)
-        const newValue = values.find((v) => !current.includes(v))
-        const singleValue = newValue ?? values[values.length - 1]
-
-        filters.setFilterValues(
-          key,
-          singleValue && values.length > 0 ? [singleValue] : []
-        )
-      } else {
-        filters.setFilterValues(key, values)
-      }
-    },
-    [urlSearchParams, filters]
   )
 
   // objectType and parkingSpaceType are mutually exclusive ("Bilplats" vs a
@@ -287,7 +256,6 @@ export function useLeaseFilters() {
 
   return {
     ...filters,
-    setFilterValues, // Override with exclusive-filter-aware version
     setObjectAndParkingSpaceType,
     pageSize,
     setPageSize,
