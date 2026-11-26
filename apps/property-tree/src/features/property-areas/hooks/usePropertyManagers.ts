@@ -1,10 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { authService } from '@/services/api/core'
+import { propertyManagersQueryOptions } from '@/entities/user'
 
 export function usePropertyManagers() {
-  return useQuery({
-    queryKey: ['propertyManagers', 'property-manager'],
-    queryFn: () => authService.getUsersByRole('property-manager'),
-  })
+  return useQuery(propertyManagersQueryOptions)
 }

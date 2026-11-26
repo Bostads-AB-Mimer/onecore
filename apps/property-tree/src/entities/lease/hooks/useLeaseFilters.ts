@@ -1,4 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+
+import { propertyManagersQueryOptions } from '@/entities/user'
 
 import { authService } from '@/services/api/core/authService'
 import {
@@ -8,7 +11,7 @@ import {
 } from '@/services/api/core/leaseSearchService'
 
 import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
-import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFilterDropdown'
+import type { SearchFilterOption } from '@/shared/ui/filters/types'
 
 import { isLeaseTypeFilter } from '../lib/leaseType'
 import { DEFAULT_PAGE_SIZE, parsePageSize } from '../lib/pageSize'
@@ -17,6 +20,15 @@ import { useLeaseSearch } from './useLeaseSearch'
 type PropertyManager = Awaited<
   ReturnType<typeof authService.getUsersByRole>
 >[number]
+
+const toBuildingManagerOption = (
+  user: PropertyManager
+): SearchFilterOption => ({
+  label:
+    `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.username,
+  value: user.id,
+  description: user.attributes?.employeeId?.[0],
+})
 
 const FILTER_KEYS = [
   'objectType',
@@ -244,33 +256,41 @@ export function useLeaseFilters() {
     [updateUrlParams]
   )
 
-  // Building manager filter: fetch once from Keycloak (property-manager role), filter client-side
-  const propertyManagersRef = useRef<PropertyManager[] | null>(null)
+  // Building manager filter: one cached list from Keycloak (property-manager role), filtered client-side.
+  // The query cache shares one request between concurrent callers and does not keep a failure.
+  const queryClient = useQueryClient()
+  const loadPropertyManagers = useCallback(
+    () => queryClient.ensureQueryData(propertyManagersQueryOptions),
+    [queryClient]
+  )
 
   const searchBuildingManagers = useCallback(
     async (query: string): Promise<SearchFilterOption[]> => {
-      if (!propertyManagersRef.current) {
-        propertyManagersRef.current =
-          await authService.getUsersByRole('property-manager')
-      }
+      const propertyManagers = await loadPropertyManagers()
 
       const q = query.toLowerCase()
-      return propertyManagersRef.current
+      return propertyManagers
         .filter((u) => {
           const fullName =
             `${u.firstName ?? ''} ${u.lastName ?? ''}`.toLowerCase()
           const employeeId = (u.attributes?.employeeId?.[0] ?? '').toLowerCase()
           return fullName.includes(q) || employeeId.includes(q)
         })
-        .map((u) => ({
-          label:
-            `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.username,
-          value: u.id,
-          description: u.attributes?.employeeId?.[0],
-        }))
+        .map(toBuildingManagerOption)
         .sort((a, b) => a.label.localeCompare(b.label, 'sv'))
     },
-    []
+    [loadPropertyManagers]
+  )
+
+  // Names chosen building manager ids (e.g. from a saved link); ids not found are left out
+  const resolveBuildingManagerLabels = useCallback(
+    async (values: string[]): Promise<SearchFilterOption[]> => {
+      const propertyManagers = await loadPropertyManagers()
+      return propertyManagers
+        .filter((u) => values.includes(u.id))
+        .map(toBuildingManagerOption)
+    },
+    [loadPropertyManagers]
   )
 
   // Parking space types: fetch once on first request, cache result
@@ -313,6 +333,7 @@ export function useLeaseFilters() {
 
     // Search function for async filter dropdown
     searchBuildingManagers,
+    resolveBuildingManagerLabels,
 
     // Parking space type loader for hierarchical objekttyp filter
     loadParkingSpaceTypes,

@@ -1,16 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, Filter, Loader2, X } from 'lucide-react'
 
-import { useDebounce } from '@/shared/hooks/useDebounce'
+import { useOptionSearch } from '@/shared/hooks/useOptionSearch'
+import { useSelectedOptionLabels } from '@/shared/hooks/useSelectedOptionLabels'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 
-export interface SearchFilterOption {
-  label: string
-  value: string
-  description?: string
-}
+import type { SearchFilterOption } from './types'
+
+export type { SearchFilterOption }
 
 interface MultiSelectSearchFilterDropdownProps {
   /** Function to search for options (called with debounced query) */
@@ -29,6 +28,12 @@ interface MultiSelectSearchFilterDropdownProps {
   emptyMessage?: string
   /** Debounce delay in ms */
   debounceMs?: number
+  /**
+   * Looks up labels for selected values that have none yet (e.g. from a
+   * saved link). Returns options only for values it finds. Callers must pass
+   * a stable function. Without it, a selected value is shown as is.
+   */
+  resolveLabels?: (values: string[]) => Promise<SearchFilterOption[]>
   className?: string
 }
 
@@ -46,54 +51,48 @@ export function MultiSelectSearchFilterDropdown({
   emptyMessage = 'Inga resultat',
   debounceMs = 300,
   className,
+  resolveLabels,
 }: MultiSelectSearchFilterDropdownProps) {
   const [open, setOpen] = useState(false)
-  const [searchInput, setSearchInput] = useState('')
-  const [results, setResults] = useState<SearchFilterOption[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  // Store labels for selected values (so we can display them)
-  const [selectedLabels, setSelectedLabels] = useState<Map<string, string>>(
-    new Map()
-  )
+  const {
+    searchInput,
+    setSearchInput,
+    reset: resetSearch,
+    results,
+    showSpinner,
+    showHint,
+    showError,
+    showEmpty,
+    showOptions,
+  } = useOptionSearch({ open, searchFn, minSearchLength, debounceMs })
+  const { getDisplayLabel, remember, forget, clear, retryFailed } =
+    useSelectedOptionLabels(selectedValues, resolveLabels)
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const debouncedSearch = useDebounce(searchInput, debounceMs)
   const hasActiveFilter = selectedValues.length > 0
-
-  // Search when dropdown opens or debounced value changes
-  useEffect(() => {
-    if (!open) return
-    if (debouncedSearch.length < minSearchLength) {
-      setResults([])
-      return
-    }
-
-    const search = async () => {
-      setIsSearching(true)
-      try {
-        const searchResults = await searchFn(debouncedSearch)
-        setResults(searchResults)
-      } catch (error) {
-        console.error('MultiSelectSearchFilterDropdown: Search failed', error)
-        setResults([])
-      } finally {
-        setIsSearching(false)
-      }
-    }
-
-    search()
-  }, [open, debouncedSearch, minSearchLength, searchFn])
 
   // Focus input when dropdown opens
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 0)
-    } else {
-      setSearchInput('')
-      setResults([])
     }
   }, [open])
+
+  const close = useCallback(() => {
+    setOpen(false)
+    resetSearch()
+  }, [resetSearch])
+
+  const handleTriggerClick = () => {
+    if (open) {
+      close()
+      return
+    }
+    // Names that failed to load get another try each time the dropdown opens
+    retryFailed()
+    setOpen(true)
+  }
 
   // Close on click outside
   useEffect(() => {
@@ -102,7 +101,7 @@ export function MultiSelectSearchFilterDropdown({
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        setOpen(false)
+        close()
       }
     }
 
@@ -110,13 +109,13 @@ export function MultiSelectSearchFilterDropdown({
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [open])
+  }, [open, close])
 
   // Close on escape
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setOpen(false)
+        close()
       }
     }
 
@@ -124,46 +123,33 @@ export function MultiSelectSearchFilterDropdown({
       document.addEventListener('keydown', handleEscape)
       return () => document.removeEventListener('keydown', handleEscape)
     }
-  }, [open])
+  }, [open, close])
 
   const handleToggle = (option: SearchFilterOption) => {
     const isSelected = selectedValues.includes(option.value)
     if (isSelected) {
-      onSelectionChange(selectedValues.filter((v) => v !== option.value))
-      // Remove from labels map
-      setSelectedLabels((prev) => {
-        const next = new Map(prev)
-        next.delete(option.value)
-        return next
-      })
+      handleRemoveSelected(option.value)
     } else {
       onSelectionChange([...selectedValues, option.value])
-      // Add to labels map
-      setSelectedLabels((prev) => new Map(prev).set(option.value, option.label))
+      remember(option.value, option.label)
     }
   }
 
   const handleRemoveSelected = (value: string) => {
     onSelectionChange(selectedValues.filter((v) => v !== value))
-    setSelectedLabels((prev) => {
-      const next = new Map(prev)
-      next.delete(value)
-      return next
-    })
+    forget(value)
   }
 
   const handleClear = () => {
     onSelectionChange([])
-    setSelectedLabels(new Map())
+    clear()
   }
-
-  const showResults = debouncedSearch.length >= minSearchLength
 
   // Get button text
   const getButtonText = () => {
     if (selectedValues.length === 0) return placeholder
     if (selectedValues.length === 1) {
-      return selectedLabels.get(selectedValues[0]) ?? selectedValues[0]
+      return getDisplayLabel(selectedValues[0])
     }
     return `${placeholder} +${selectedValues.length}`
   }
@@ -175,7 +161,7 @@ export function MultiSelectSearchFilterDropdown({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => setOpen(!open)}
+        onClick={handleTriggerClick}
         className={cn(
           'h-9 min-w-[130px] px-3 font-semibold justify-between',
           hasActiveFilter && 'text-primary border-primary'
@@ -202,7 +188,7 @@ export function MultiSelectSearchFilterDropdown({
               placeholder={searchPlaceholder}
               className="h-8 text-sm pr-8"
             />
-            {isSearching && (
+            {showSpinner && (
               <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
             )}
           </div>
@@ -215,9 +201,7 @@ export function MultiSelectSearchFilterDropdown({
                   key={value}
                   className="flex items-center justify-between w-full px-2 py-1.5 text-sm bg-accent rounded-sm"
                 >
-                  <span className="truncate">
-                    {selectedLabels.get(value) ?? value}
-                  </span>
+                  <span className="truncate">{getDisplayLabel(value)}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveSelected(value)}
@@ -232,19 +216,25 @@ export function MultiSelectSearchFilterDropdown({
 
           {/* Results */}
           <div className="mt-2 max-h-48 overflow-y-auto">
-            {!showResults && (
+            {showHint && (
               <div className="py-4 text-center text-xs text-muted-foreground">
                 Skriv minst {minSearchLength} tecken för att söka
               </div>
             )}
 
-            {showResults && !isSearching && results.length === 0 && (
+            {showError && (
+              <div className="py-4 text-center text-xs text-muted-foreground">
+                Sökningen misslyckades. Försök igen.
+              </div>
+            )}
+
+            {showEmpty && (
               <div className="py-4 text-center text-xs text-muted-foreground">
                 {emptyMessage}
               </div>
             )}
 
-            {showResults && results.length > 0 && (
+            {showOptions && (
               <div className="space-y-0.5">
                 {results.map((option) => {
                   const isSelected = selectedValues.includes(option.value)

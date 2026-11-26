@@ -302,6 +302,7 @@ const LeasesPage = () => {
 
               <MultiSelectSearchFilterDropdown
                 searchFn={filters.searchBuildingManagers}
+                resolveLabels={filters.resolveBuildingManagerLabels}
                 minSearchLength={0}
                 selectedValues={filters.selectedBuildingManagers}
                 onSelectionChange={(vals) =>
