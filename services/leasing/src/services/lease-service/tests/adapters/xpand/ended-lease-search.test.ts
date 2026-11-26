@@ -27,7 +27,7 @@ jest.mock('knex', () => () => {
 })
 
 // Column aliases the adapter must select: leaseId, leaseType, objectTypeCode,
-// startDate, lastDebitDate, address, postalCode, city, rentalObjectCode,
+// startDate, lastDebitDate, createdDate, address, postalCode, city, rentalObjectCode,
 // property, districtName, contactCode, name, protectedIdentity (cmctc.lagsokt).
 const baseRow = {
   leaseId: '123-456-789/01   ',
@@ -35,6 +35,7 @@ const baseRow = {
   objectTypeCode: 'balgh  ',
   startDate: new Date('2015-01-01'),
   lastDebitDate: new Date('2020-06-30'),
+  createdDate: new Date('2014-12-01'),
   address: 'Testgatan 1  ',
   postalCode: '12345 ',
   city: 'Teststad ',
@@ -71,6 +72,7 @@ describe('getAllEndedLeasesForSearch', () => {
       startDate: new Date('2015-01-01'),
       endDate: new Date('2020-06-30'),
       lastDebitDate: new Date('2020-06-30'),
+      createdAt: new Date('2014-12-01'),
     })
     expect(lease.externalUrl).toBeUndefined()
     expect(lease.contacts).toEqual([

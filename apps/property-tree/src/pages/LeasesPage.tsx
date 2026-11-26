@@ -333,6 +333,20 @@ const LeasesPage = () => {
                 }
                 placeholder="Slutdatum"
               />
+
+              <DateRangeFilterDropdown
+                startDate={filters.createdDateFrom || null}
+                endDate={filters.createdDateTo || null}
+                onDateChange={(start, end) =>
+                  filters.setDateRange(
+                    'createdDateFrom',
+                    'createdDateTo',
+                    start,
+                    end
+                  )
+                }
+                placeholder="Skapad"
+              />
             </FilterBar>
           </div>
 

@@ -1030,6 +1030,18 @@ describe('GET /leases/search', () => {
     expect(res.body.error).toBe('Invalid query parameters')
   })
 
+  it.each([['2026-02-31'], ['2026-13-01'], ['19/11/2026']])(
+    'should return 400 when createdDateFrom is %s',
+    async (createdDateFrom) => {
+      const res = await request(app.callback())
+        .get('/leases/search')
+        .query({ createdDateFrom })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid query parameters')
+    }
+  )
+
   it('should return 200 with paginated results', async () => {
     const mockResult = {
       content: [
@@ -1048,6 +1060,7 @@ describe('GET /leases/search', () => {
           endDate: null,
           lastDebitDate: null,
           signedAt: null,
+          createdAt: null,
           status: LeaseStatus.Current,
         },
       ],

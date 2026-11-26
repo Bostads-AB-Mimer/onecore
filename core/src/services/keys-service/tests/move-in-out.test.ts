@@ -355,6 +355,7 @@ describe('GET /keys/move-in-out', () => {
     endDate: null,
     lastDebitDate: lastDebitDate ? d(lastDebitDate) : null,
     signedAt: null,
+    createdAt: null,
     status: LeaseStatus.AboutToEnd,
     rentalObjectCode,
   })

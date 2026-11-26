@@ -463,6 +463,18 @@ export const routes = (router: KoaRouter) => {
    *           format: date
    *         description: Maximum end date (YYYY-MM-DD)
    *       - in: query
+   *         name: createdDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD)
+   *       - in: query
+   *         name: createdDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD)
+   *       - in: query
    *         name: property
    *         schema:
    *           type: array
@@ -1031,6 +1043,18 @@ export const routes = (router: KoaRouter) => {
    *           format: date
    *         description: Maximum end date (YYYY-MM-DD)
    *       - in: query
+   *         name: createdDateFrom
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD)
+   *       - in: query
+   *         name: createdDateTo
+   *         schema:
+   *           type: string
+   *           format: date
+   *         description: Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD)
+   *       - in: query
    *         name: property
    *         schema:
    *           type: array
@@ -1087,6 +1111,8 @@ export const routes = (router: KoaRouter) => {
    *             schema:
    *               type: string
    *               format: binary
+   *       400:
+   *         description: Invalid query parameters
    *       500:
    *         description: Internal server error
    *     security:
@@ -1094,6 +1120,20 @@ export const routes = (router: KoaRouter) => {
    */
   router.get('/leases/export', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
+
+    // Validate here, as /leases/search does: leasing rejects the same params
+    // with 400, which would otherwise surface as a 500 or an empty file.
+    const parsed = leasing.v1.LeaseSearchQueryParamsSchema.safeParse(ctx.query)
+
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'Invalid query parameters',
+        details: parsed.error.issues,
+        ...metadata,
+      }
+      return
+    }
 
     const resolved = await resolveBuildingManagerToKvvAreaCodes(ctx.query)
     if (!resolved.ok) {
@@ -1105,6 +1145,12 @@ export const routes = (router: KoaRouter) => {
     try {
       const exportQuery = await resolvePersonnummerInQuery(resolved.query)
       const result = await leasingAdapter.getLeasesForExport(exportQuery)
+
+      if (!result.ok && result.err === 'invalid-request') {
+        ctx.status = 400
+        ctx.body = { error: 'Invalid query parameters', ...metadata }
+        return
+      }
 
       if (!result.ok) {
         logger.error({ err: result.err, metadata }, 'Lease export failed')
@@ -1135,6 +1181,7 @@ export const routes = (router: KoaRouter) => {
           { header: 'Distrikt', key: 'district', width: 15 },
           { header: 'Startdatum', key: 'startDate', width: 12 },
           { header: 'Slutdatum', key: 'endDate', width: 12 },
+          { header: 'Skapad', key: 'createdAt', width: 12 },
           { header: 'Status', key: 'status', width: 15 },
         ],
         data: enrichedLeases,
@@ -1158,6 +1205,7 @@ export const routes = (router: KoaRouter) => {
           district: lease.districtName || '',
           startDate: formatDateForExcel(lease.startDate),
           endDate: formatDateForExcel(lease.lastDebitDate),
+          createdAt: formatDateForExcel(lease.createdAt),
           status: LeaseStatusLabel[lease.status] ?? String(lease.status),
         }),
       })

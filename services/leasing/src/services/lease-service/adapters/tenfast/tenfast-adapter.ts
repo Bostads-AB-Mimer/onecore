@@ -28,6 +28,7 @@ import config from '../../../../common/config'
 import { AdapterResult } from '../../adapters/types'
 import * as tenfastApi from './tenfast-api'
 import { filterByStatus, GetLeasesFilters } from './filters'
+import { toSwedishDay } from '../../helpers/swedish-day'
 import {
   CLAIMING_STAGES,
   getNextLeaseId,
@@ -1654,12 +1655,6 @@ export const getLeaseByExternalId = async (
     return { ok: false, err: 'unknown' }
   }
 }
-
-// Swedish day, so UTC midnight and Swedish midnight give the same date.
-const toSwedishDay = (date: Date) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Stockholm' }).format(
-    date
-  )
 
 const hasEnded = (endDate: Date | null | undefined, now: Date) =>
   !!endDate && toSwedishDay(endDate) < toSwedishDay(now)

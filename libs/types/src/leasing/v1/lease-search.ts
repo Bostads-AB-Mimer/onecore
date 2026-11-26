@@ -55,6 +55,10 @@ export const LeaseSearchQueryParamsSchema = z.object({
   startDateTo: z.string().optional(),
   endDateFrom: z.string().optional(),
   endDateTo: z.string().optional(),
+  // When the lease was created, compared by Swedish calendar day.
+  // A real YYYY-MM-DD date only, since the filter compares days as strings.
+  createdDateFrom: z.string().date().optional(),
+  createdDateTo: z.string().date().optional(),
 
   // Property/Building/Area filters
   property: z
@@ -153,6 +157,7 @@ export const LeaseSearchResultSchema = z.object({
   endDate: z.date().nullable(),
   lastDebitDate: z.date().nullable(),
   signedAt: z.date().nullable(),
+  createdAt: z.date().nullable(),
   status: z.nativeEnum(LeaseStatus),
 
   // Rental object code (objektnummer) - always included

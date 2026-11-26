@@ -99,8 +99,11 @@ export async function createExcelExport<T>(
 }
 
 /**
- * Format a date value for Excel export using Swedish locale
+ * Format a date value for Excel export as a Swedish calendar day
  * Returns empty string for null/undefined values
+ *
+ * Uses Europe/Stockholm rather than the server's timezone (usually UTC), so a
+ * timestamp shortly after Swedish midnight lands on the same day as in the UI.
  *
  * @param date - Date value (string, Date, or null/undefined)
  * @returns Formatted date string (YYYY-MM-DD) or empty string
@@ -109,7 +112,9 @@ export function formatDateForExcel(
   date: Date | string | null | undefined
 ): string {
   if (!date) return ''
-  return new Date(date).toLocaleDateString('sv-SE')
+  return new Date(date).toLocaleDateString('sv-SE', {
+    timeZone: 'Europe/Stockholm',
+  })
 }
 
 /**

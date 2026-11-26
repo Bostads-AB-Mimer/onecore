@@ -1922,6 +1922,10 @@ export interface paths {
           endDateFrom?: string
           /** @description Maximum end date (YYYY-MM-DD) */
           endDateTo?: string
+          /** @description Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateFrom?: string
+          /** @description Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateTo?: string
           /** @description Property/estate names */
           property?: string[]
           /** @description Building codes */
@@ -2099,6 +2103,10 @@ export interface paths {
           endDateFrom?: string
           /** @description Maximum end date (YYYY-MM-DD) */
           endDateTo?: string
+          /** @description Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateFrom?: string
+          /** @description Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateTo?: string
           /** @description Property/estate names */
           property?: string[]
           /** @description Building codes */
@@ -2128,6 +2136,10 @@ export interface paths {
           content: {
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': string
           }
+        }
+        /** @description Invalid query parameters */
+        400: {
+          content: never
         }
         /** @description Internal server error */
         500: {
@@ -2395,6 +2407,10 @@ export interface paths {
           endDateFrom?: string
           /** @description Maximum end date (YYYY-MM-DD) */
           endDateTo?: string
+          /** @description Minimum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateFrom?: string
+          /** @description Maximum date the lease was created, by Swedish calendar day (YYYY-MM-DD) */
+          createdDateTo?: string
           /** @description Property/estate names */
           property?: string[]
           /** @description Building codes */
@@ -13687,6 +13703,8 @@ export interface components {
       lastDebitDate: string | null
       /** Format: date-time */
       signedAt: string | null
+      /** Format: date-time */
+      createdAt: string | null
       /** @enum {number} */
       status: 0 | 1 | 2 | 3 | 4 | 5 | 6
       rentalObjectCode: string | null

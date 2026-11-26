@@ -6,7 +6,9 @@ export const formatRentalType = (rentalType: string) => {
 export const formatDate = (date: Date | string | null | undefined) => {
   if (!date) return '-'
   const d = typeof date === 'string' ? new Date(date) : date
-  return d.toLocaleDateString('sv-SE')
+  // Swedish calendar day regardless of the browser's timezone, matching the
+  // backend's created-date filter
+  return d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' })
 }
 
 export const formatCurrency = (amount: number, maximumFractionDigits = 0) => {

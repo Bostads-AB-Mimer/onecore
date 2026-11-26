@@ -11,6 +11,7 @@ import * as tenfastAdapter from './tenfast-adapter'
 import * as leaseCache from '../../../../common/lease-cache'
 import * as xpandEndedLeaseCache from '../../../../common/xpand-ended-lease-cache'
 import { mergeTenfastFirst } from '../../helpers/merge-tenfast-first'
+import { toSwedishDay } from '../../helpers/swedish-day'
 import type { DeltaSyncResult } from '../../../../common/lease-cache'
 import {
   mapTenfastTypToLeaseType,
@@ -87,6 +88,7 @@ function mapTenfastLeaseToSearchResult(
     endDate,
     lastDebitDate: endDate,
     signedAt: lease.signedAt ?? null,
+    createdAt: lease.createdAt ?? null,
     status: calculateLeaseStatus(lease),
   }
 }
@@ -608,6 +610,16 @@ function applyCacheFilters(
         params.endDateTo &&
         new Date(lease.lastDebitDate) > new Date(params.endDateTo)
       )
+        return false
+    }
+    // createdAt is a timestamp, so compare by Swedish calendar day to keep both bounds inclusive.
+    // Leases without a created date can't match a created-date filter.
+    if (params.createdDateFrom || params.createdDateTo) {
+      if (!lease.createdAt) return false
+      const createdDay = toSwedishDay(new Date(lease.createdAt))
+      if (params.createdDateFrom && createdDay < params.createdDateFrom)
+        return false
+      if (params.createdDateTo && createdDay > params.createdDateTo)
         return false
     }
 

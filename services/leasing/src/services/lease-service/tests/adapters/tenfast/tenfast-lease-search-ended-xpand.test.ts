@@ -84,6 +84,7 @@ const makeResult = (
   endDate: null,
   lastDebitDate: null,
   signedAt: null,
+  createdAt: null,
   status: LeaseStatus.Current,
   ...overrides,
 })
