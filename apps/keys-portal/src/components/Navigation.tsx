@@ -45,7 +45,7 @@ export function Navigation({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <a
           href={getPropertyTreeBaseUrl()}
           title="Gå till startsidan"
-          className="flex items-center gap-2 rounded-md px-2 hover:opacity-80"
+          className="flex items-center gap-2 px-2"
         >
           <img src={onecoreLogo} alt="ONECore" className="h-6 w-6" />
           <h1 className="text-lg font-bold">Nyckelportalen</h1>
