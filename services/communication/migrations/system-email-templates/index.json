@@ -1,0 +1,52 @@
+[
+  {
+    "systemKey": "parking_space_offer_additional",
+    "name": "Erbjudande bilplats (ytterligare)",
+    "subject": "Du har fått ett erbjudande om en bilplats - vi behöver ditt svar"
+  },
+  {
+    "systemKey": "parking_space_offer_replace",
+    "name": "Erbjudande bilplats (byte)",
+    "subject": "Du har fått ett erbjudande om en bilplats - vi behöver ditt svar"
+  },
+  {
+    "systemKey": "parking_space_accept_offer",
+    "name": "Tackat ja till bilplats",
+    "subject": "Du har tackat ja till en bilplats"
+  },
+  {
+    "systemKey": "non_scored_parking_space_approved",
+    "name": "Godkänd ansökan om bilplats",
+    "subject": "Godkänd ansökan om bilplats"
+  },
+  {
+    "systemKey": "non_scored_parking_space_denied",
+    "name": "Nekad ansökan om bilplats",
+    "subject": "Nekad ansökan om bilplats"
+  },
+  {
+    "systemKey": "work_order",
+    "name": "Meddelande i ärende",
+    "subject": "Du har fått ett meddelande i ditt ärende"
+  },
+  {
+    "systemKey": "work_order_external_contractor",
+    "name": "Meddelande i ärende (entreprenör)",
+    "subject": "Du har fått ett meddelande i ditt ärende"
+  },
+  {
+    "systemKey": "invoice_notification",
+    "name": "Faktura",
+    "subject": "Faktura från Bostads AB Mimer"
+  },
+  {
+    "systemKey": "inspection_protocol",
+    "name": "Besiktningsprotokoll",
+    "subject": "Ditt besiktningsprotokoll"
+  },
+  {
+    "systemKey": "lease_termination_confirmation",
+    "name": "Bekräftelse på uppsägning",
+    "subject": "Bekräftelse på uppsägning av bilplats"
+  }
+]

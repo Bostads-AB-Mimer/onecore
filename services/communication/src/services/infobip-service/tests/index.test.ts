@@ -6,8 +6,18 @@ import { Email, WorkOrderSms, InvoiceNotificationEmail } from '@onecore/types'
 
 import { isMessageEmail, isValidWorkOrderSms, isValidBulkSms } from '../index'
 import * as emailAdapter from '../adapters/email-adapter'
-import * as templateRender from '../adapters/email-template-render'
 import * as smsAdapter from '../adapters/sms-adapter'
+import { ProviderResponseError } from '../adapters/provider-error'
+import {
+  InvalidPlaceholderUrlError,
+  MissingPlaceholderError,
+} from '../../template-service/render/render'
+import {
+  RenderedEmail,
+  SystemTemplateLookupError,
+  SystemTemplateNotFoundError,
+} from '../../template-service/system-templates'
+import { EmailLayoutConfigError } from '../../template-service/render/layout'
 import { routes } from '../'
 import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
 import { getScheduleRules } from '../../scheduled-sends/rules'
@@ -76,6 +86,18 @@ const emailSendResult = (messageId: string) => ({
     },
   ],
 })
+
+// What a system-email adapter resolves with: the provider answer plus the
+// rendered content. The route logs bodyText, the text without the footer.
+const emailSent = (
+  messageId: string,
+  rendered: RenderedEmail = {
+    subject: 'Renderat ämne',
+    html: '<p>x</p>',
+    text: 'Renderad text\n\nSidfot',
+    bodyText: 'Renderad text',
+  }
+) => ({ response: emailSendResult(messageId), rendered })
 
 const app = new Koa()
 const router = new KoaRouter()
@@ -290,7 +312,7 @@ describe('work order tenant message logging', () => {
   it('logs the email with contactCode and messageId', async () => {
     jest
       .spyOn(emailAdapter, 'sendWorkOrderEmail')
-      .mockResolvedValue(emailSendResult('mid-wo-mail'))
+      .mockResolvedValue(emailSent('mid-wo-mail'))
 
     const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
       to: 'tenant@example.com',
@@ -305,6 +327,9 @@ describe('work order tenant message logging', () => {
       expect.objectContaining({
         channel: 'email',
         messageType: 'work_order_tenant_mail',
+        fromAddress: 'Bostads AB Mimer <noreply@mimer.nu>',
+        subject: 'Renderat ämne',
+        body: 'Renderad text',
         recipients: [
           expect.objectContaining({
             contactCode: 'P123456',
@@ -320,7 +345,7 @@ describe('work order tenant message logging', () => {
   it('does not log the email when contactCode is absent (back-compat)', async () => {
     jest
       .spyOn(emailAdapter, 'sendWorkOrderEmail')
-      .mockResolvedValue(emailSendResult('mid-wo-mail'))
+      .mockResolvedValue(emailSent('mid-wo-mail'))
 
     const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
       to: 'tenant@example.com',
@@ -335,7 +360,7 @@ describe('work order tenant message logging', () => {
   it('surfaces a non-blocking warning when email logging throws', async () => {
     jest
       .spyOn(emailAdapter, 'sendWorkOrderEmail')
-      .mockResolvedValue(emailSendResult('mid-wo-mail'))
+      .mockResolvedValue(emailSent('mid-wo-mail'))
     logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
 
     const res = await request(app.callback()).post('/sendWorkOrderEmail').send({
@@ -556,7 +581,10 @@ describe('/send-invoice-notification-email', () => {
   }
 
   it('should return 204 for a valid request without attachments', async () => {
-    sendInvoiceNotificationEmailSpy.mockResolvedValue({ data: {} })
+    sendInvoiceNotificationEmailSpy.mockResolvedValue({
+      response: null,
+      rendered: { subject: 'Faktura', html: '<p>x</p>', text: 'x' },
+    })
 
     const res = await request(app.callback())
       .post('/send-invoice-notification-email')
@@ -567,7 +595,10 @@ describe('/send-invoice-notification-email', () => {
   })
 
   it('should return 204 for a valid request with PDF attachment', async () => {
-    sendInvoiceNotificationEmailSpy.mockResolvedValue({ data: {} })
+    sendInvoiceNotificationEmailSpy.mockResolvedValue({
+      response: null,
+      rendered: { subject: 'Faktura', html: '<p>x</p>', text: 'x' },
+    })
 
     const body = {
       ...validBody,
@@ -1047,23 +1078,11 @@ describe('/sendBulkEmail scheduling', () => {
 describe('parking space offer email logging', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
 
-  // The route builds the templateId + placeholders from the request body (via
-  // parking-space-requests) and renders the log by fetching the Infobip
-  // template. Default to a generic template with the tokens the routes use;
-  // individual tests override it as needed.
-  let getTemplateMock: jest.SpyInstance
-
+  // The adapters render the email and return what they sent; the route logs
+  // exactly that.
   beforeEach(() => {
     logOutboundDispatchMock.mockReset()
     logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
-    getTemplateMock = jest
-      .spyOn(templateRender, 'getEmailTemplate')
-      .mockResolvedValue({
-        subject: 'Standardämne',
-        html:
-          '<p>Hej {{firstName}}!</p><p>Adress: {{address}}</p>' +
-          '<p>Hyra: {{rent}}</p><p>Kontraktsnummer: {{leaseId}}</p>',
-      })
   })
 
   const offerBody = {
@@ -1083,16 +1102,15 @@ describe('parking space offer email logging', () => {
     offerURL: 'https://example.com/offer/42',
   }
 
-  it('logs the offer email with content rendered from the fetched template', async () => {
-    getTemplateMock.mockResolvedValue({
-      subject: 'Du har fått ett erbjudande om en bilplats',
-      html:
-        '<p>Hej {{firstName}}!</p><p>Adress: {{address}}</p>' +
-        '<p>Hyra: {{rent}}</p>',
-    })
-    jest
-      .spyOn(emailAdapter, 'sendParkingSpaceOffer')
-      .mockResolvedValue(emailSendResult('mid-offer'))
+  it('logs the offer email with the content the adapter rendered', async () => {
+    jest.spyOn(emailAdapter, 'sendParkingSpaceOffer').mockResolvedValue(
+      emailSent('mid-offer', {
+        subject: 'Du har fått ett erbjudande om en bilplats',
+        html: '<p>Hej Test!</p>',
+        text: 'Hej Test!\n\nAdress: Testgatan 1\n\nSidfot',
+        bodyText: 'Hej Test!\n\nAdress: Testgatan 1',
+      })
+    )
 
     const res = await request(app.callback())
       .post('/sendParkingSpaceOffer')
@@ -1105,9 +1123,9 @@ describe('parking space offer email logging', () => {
         channel: 'email',
         messageType: 'parking_space_offer',
         triggeredByUser: 'Automatiskt utskick',
-        // Rendered from the fetched Infobip template, not the static label.
+        fromAddress: 'Bostads AB Mimer <noreply@mimer.nu>',
         subject: 'Du har fått ett erbjudande om en bilplats',
-        body: expect.stringContaining('Hej Test!'),
+        body: 'Hej Test!\n\nAdress: Testgatan 1',
         recipients: [
           expect.objectContaining({
             contactCode: 'P123456',
@@ -1118,59 +1136,44 @@ describe('parking space offer email logging', () => {
         ],
       })
     )
-    // The logged body carries the real details, not a repeated title.
-    const loggedBody = logOutboundDispatchMock.mock.calls[0][0].body as string
-    expect(loggedBody).toContain('Adress: Testgatan 1')
-    expect(loggedBody).toContain('Hyra: 500 kr')
   })
 
-  it('falls back to the label when the template cannot be fetched', async () => {
-    getTemplateMock.mockResolvedValue(null)
-    jest
-      .spyOn(emailAdapter, 'sendParkingSpaceOffer')
-      .mockResolvedValue(emailSendResult('mid-offer'))
+  it.each([
+    [new MissingPlaceholderError(['firstName']), 'MISSING_PLACEHOLDER'],
+    [new InvalidPlaceholderUrlError('offerURL'), 'INVALID_PLACEHOLDER_URL'],
+    [
+      new SystemTemplateNotFoundError('parking_space_offer_replace'),
+      'SYSTEM_TEMPLATE_NOT_FOUND',
+    ],
+    [
+      new ProviderResponseError('infobip-email', 400, 'Bad'),
+      'PROVIDER_REJECTED',
+    ],
+    [new EmailLayoutConfigError('phone'), 'EMAIL_CONFIG_MISSING'],
+    [
+      new SystemTemplateLookupError('work_order'),
+      'SYSTEM_TEMPLATE_LOOKUP_FAILED',
+    ],
+    [new Error('socket hang up'), 'SEND_FAILED'],
+  ])(
+    'answers 500 with a typed reason and logs nothing when the send fails (%s)',
+    async (err, reason) => {
+      jest.spyOn(emailAdapter, 'sendParkingSpaceOffer').mockRejectedValue(err)
 
-    const res = await request(app.callback())
-      .post('/sendParkingSpaceOffer')
-      .send(offerBody)
+      const res = await request(app.callback())
+        .post('/sendParkingSpaceOffer')
+        .send(offerBody)
 
-    expect(res.status).toBe(200)
-    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        subject: offerBody.subject,
-        body: offerBody.text,
-      })
-    )
-  })
-
-  it('falls back to the label subject when the fetched template has no subject', async () => {
-    getTemplateMock.mockResolvedValue({
-      subject: '',
-      html: '<p>Hej {{firstName}}!</p>',
-    })
-    jest
-      .spyOn(emailAdapter, 'sendParkingSpaceOffer')
-      .mockResolvedValue(emailSendResult('mid-offer'))
-
-    const res = await request(app.callback())
-      .post('/sendParkingSpaceOffer')
-      .send(offerBody)
-
-    expect(res.status).toBe(200)
-    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        // Empty rendered subject must not overwrite the meaningful label; the
-        // body still renders from the (non-empty) template html.
-        subject: offerBody.subject,
-        body: expect.stringContaining('Hej Test!'),
-      })
-    )
-  })
+      expect(res.status).toBe(500)
+      expect(res.body.reason).toBe(reason)
+      expect(logOutboundDispatchMock).not.toHaveBeenCalled()
+    }
+  )
 
   it('does not fail the send when communication logging throws (strict but non-blocking)', async () => {
     jest
       .spyOn(emailAdapter, 'sendParkingSpaceOffer')
-      .mockResolvedValue(emailSendResult('mid-offer'))
+      .mockResolvedValue(emailSent('mid-offer'))
     logOutboundDispatchMock.mockRejectedValueOnce(new Error('db down'))
 
     const res = await request(app.callback())
@@ -1183,7 +1186,7 @@ describe('parking space offer email logging', () => {
   it('logs the accept-offer email with the right messageType', async () => {
     jest
       .spyOn(emailAdapter, 'sendParkingSpaceAcceptOffer')
-      .mockResolvedValue(emailSendResult('mid-accept'))
+      .mockResolvedValue(emailSent('mid-accept'))
 
     const res = await request(app.callback())
       .post('/sendParkingSpaceAcceptOffer')
@@ -1215,7 +1218,7 @@ describe('parking space offer email logging', () => {
   it('logs the non-scored approved email with the right messageType', async () => {
     jest
       .spyOn(emailAdapter, 'sendNonScoredParkingSpaceApproved')
-      .mockResolvedValue(emailSendResult('mid-appr'))
+      .mockResolvedValue(emailSent('mid-appr'))
 
     const res = await request(app.callback())
       .post('/sendNonScoredParkingSpaceApproved')
@@ -1237,8 +1240,8 @@ describe('parking space offer email logging', () => {
     expect(logOutboundDispatchMock).toHaveBeenCalledWith(
       expect.objectContaining({
         messageType: 'non_scored_parking_space_approved',
-        subject: 'Standardämne',
-        body: expect.stringContaining('Kontraktsnummer: L-1'),
+        subject: 'Renderat ämne',
+        body: 'Renderad text',
       })
     )
   })
@@ -1246,7 +1249,7 @@ describe('parking space offer email logging', () => {
   it('logs the non-scored denied email with the right messageType', async () => {
     jest
       .spyOn(emailAdapter, 'sendNonScoredParkingSpaceDenied')
-      .mockResolvedValue(emailSendResult('mid-deny'))
+      .mockResolvedValue(emailSent('mid-deny'))
 
     const res = await request(app.callback())
       .post('/sendNonScoredParkingSpaceDenied')
@@ -1274,7 +1277,6 @@ describe('parking space offer email logging', () => {
 
 describe('/sendLeaseTerminationConfirmation', () => {
   const logOutboundDispatchMock = logOutboundDispatch as jest.Mock
-  const getTemplateMock = jest.spyOn(templateRender, 'getEmailTemplate')
   let sendSpy: jest.SpyInstance
 
   const terminationBody = {
@@ -1310,17 +1312,9 @@ describe('/sendLeaseTerminationConfirmation', () => {
   beforeEach(() => {
     logOutboundDispatchMock.mockReset()
     logOutboundDispatchMock.mockResolvedValue({ dispatchId: 'test-id' })
-    getTemplateMock.mockReset()
-    getTemplateMock.mockResolvedValue({
-      subject: 'Standardämne',
-      html:
-        '<p>Hej {{firstName}}!</p><p>Sista dag: {{endDate}}</p>' +
-        '<p>Önskad avflytt: {{preferredMoveOutDate}}</p>' +
-        '<p>{{tenant2Name}} {{tenant2BirthDate}}</p>',
-    })
     sendSpy = jest.spyOn(emailAdapter, 'sendLeaseTerminationConfirmation')
     sendSpy.mockReset()
-    sendSpy.mockResolvedValue(emailSendResult('mid-term'))
+    sendSpy.mockResolvedValue(emailSent('mid-term'))
   })
 
   it('returns 204 and logs the confirmation with the termination messageType', async () => {
@@ -1337,10 +1331,8 @@ describe('/sendLeaseTerminationConfirmation', () => {
           correlationId: 'tenfast-evt-1',
           leaseId: '307-002-11-0201/11',
         },
-        subject: 'Standardämne',
-        body: expect.stringMatching(
-          /Hej Anna![\s\S]*Önskad avflytt: 2026-10-15[\s\S]*Bo Berg 1990-07-01/
-        ),
+        subject: 'Renderat ämne',
+        body: 'Renderad text',
         recipients: [
           expect.objectContaining({
             contactCode: 'P123456',
@@ -1349,22 +1341,6 @@ describe('/sendLeaseTerminationConfirmation', () => {
             status: 'pending',
           }),
         ],
-      })
-    )
-  })
-
-  it('falls back to the Swedish label when the template cannot be fetched', async () => {
-    getTemplateMock.mockResolvedValue(null)
-
-    const res = await request(app.callback())
-      .post('/sendLeaseTerminationConfirmation')
-      .send(terminationBody)
-
-    expect(res.status).toBe(204)
-    expect(logOutboundDispatchMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        subject: 'Bekräftelse på uppsägning',
-        body: expect.stringContaining('avtal 307-002-11-0201/11'),
       })
     )
   })

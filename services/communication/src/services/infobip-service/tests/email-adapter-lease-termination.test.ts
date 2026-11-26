@@ -1,27 +1,37 @@
-// fetch is stable in Node.js 20 LTS but eslint-plugin-n still flags it as experimental
-/* eslint-disable n/no-unsupported-features/node-builtins */
 jest.mock('@onecore/utilities', () => ({
   logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
 }))
 
-const TEMPLATE_ID = 205000000099999
-
-jest.mock('../adapters/infobip-template-ids', () => ({
-  ...jest.requireActual('../adapters/infobip-template-ids'),
-  LeaseTerminationConfirmationTemplateId: TEMPLATE_ID,
-}))
-
-jest.mock('../../../common/config', () => ({
-  __esModule: true,
-  default: {
-    infobip: {
-      baseUrl: 'https://infobip.test/',
-      apiKey: 'test-api-key',
+jest.mock('../../../common/config', () => {
+  const actual = jest.requireActual('../../../common/config').default
+  return {
+    __esModule: true,
+    default: {
+      ...actual,
+      infobip: { baseUrl: 'https://infobip.test/', apiKey: 'test-api-key' },
     },
-  },
+  }
+})
+
+jest.mock('../../template-service/adapters/db', () => ({
+  getSystemTemplate: jest.fn().mockResolvedValue({
+    systemKey: 'lease_termination_confirmation',
+    subject: 'Uppsägning {{leaseId}}',
+    body: '{{tenantNames}}, sista dag {{endDate}}',
+  }),
 }))
 
 import { sendLeaseTerminationConfirmation } from '../adapters/email-adapter'
+import { ProviderResponseError } from '../adapters/provider-error'
+
+const tenant = {
+  contactCode: 'P123456',
+  fullName: 'Anna Andersson',
+  birthDate: '1985-03-14',
+  street: 'Storgatan 1',
+  zipCode: '722 11',
+  city: 'Västerås',
+}
 
 const email = {
   to: 'tenant@example.com',
@@ -33,16 +43,7 @@ const email = {
   lastName: 'Andersson',
   preferredMoveOutDate: '2026-10-15',
   rentalObjectAddress: 'Bilvägen 3',
-  tenants: [
-    {
-      contactCode: 'P123456',
-      fullName: 'Anna Andersson',
-      birthDate: '1985-03-14',
-      street: 'Storgatan 1',
-      zipCode: '722 11',
-      city: 'Västerås',
-    },
-  ],
+  tenants: [tenant],
 }
 
 describe('sendLeaseTerminationConfirmation', () => {
@@ -53,13 +54,13 @@ describe('sendLeaseTerminationConfirmation', () => {
     global.fetch = fetchMock
   })
 
-  it('posts to Infobip v4 with formatted placeholders', async () => {
+  it('posts the rendered confirmation to Infobip v4', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ messages: [{ messageId: 'mid-term' }] }),
     })
 
-    await sendLeaseTerminationConfirmation(email)
+    const result = await sendLeaseTerminationConfirmation(email)
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, options] = fetchMock.mock.calls[0] as [
@@ -73,42 +74,39 @@ describe('sendLeaseTerminationConfirmation', () => {
       'Content-Type': 'application/json',
     })
 
-    const body = JSON.parse(options.body as string)
-    expect(body.messages[0].content.templateId).toBe(TEMPLATE_ID)
-    const placeholders = JSON.parse(
-      body.messages[0].destinations[0].to[0].placeholders
+    const message = JSON.parse(options.body as string).messages[0]
+    expect(message.content.subject).toBe('Uppsägning 307-002-11-0201/11')
+    // Lease termination has no footer, so the text is just the body.
+    expect(message.content.text).toBe('Anna Andersson, sista dag 2026-10-31')
+    expect(message.content.html).toContain(
+      'Anna Andersson, sista dag 2026-10-31'
     )
-    expect(placeholders).toEqual({
-      firstName: 'Anna',
-      lastName: 'Andersson',
-      leaseId: '307-002-11-0201/11',
-      endDate: '2026-10-31',
-      preferredMoveOutDate: '2026-10-15',
-      rentalObjectAddress: 'Bilvägen 3',
-      type: 'Bilplats',
-      tenant1Name: 'Anna Andersson',
-      tenant1BirthDate: '1985-03-14',
-      tenant1Address: 'Storgatan 1',
-      tenant1PostalCode: '722 11',
-      tenant1City: 'Västerås',
-      // A single-holder lease still fills the second slot, as empty strings.
-      tenant2Name: '',
-      tenant2BirthDate: '',
-      tenant2Address: '',
-      tenant2PostalCode: '',
-      tenant2City: '',
+    expect(message.destinations[0].to[0]).toEqual({
+      destination: 'tenant@example.com',
     })
+    expect(result.rendered.text).toBe(message.content.text)
   })
 
-  it('throws when Infobip responds with an error status', async () => {
+  it('lists both holders of a two-holder lease', async () => {
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) })
+
+    const result = await sendLeaseTerminationConfirmation({
+      ...email,
+      tenants: [tenant, { ...tenant, contactCode: 'P2', fullName: 'Bo Berg' }],
+    })
+
+    expect(result.rendered.text).toContain('Anna Andersson, Bo Berg')
+  })
+
+  it('throws a ProviderResponseError when Infobip rejects the send', async () => {
     fetchMock.mockResolvedValue({
       ok: false,
       status: 400,
       text: async () => 'Bad Request',
     })
 
-    await expect(sendLeaseTerminationConfirmation(email)).rejects.toThrow(
-      'Infobip Email API error: 400'
-    )
+    await expect(
+      sendLeaseTerminationConfirmation(email)
+    ).rejects.toBeInstanceOf(ProviderResponseError)
   })
 })

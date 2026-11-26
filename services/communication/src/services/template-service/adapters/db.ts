@@ -2,6 +2,12 @@ import { communication } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 import { db } from '../../../common/db'
+import {
+  SystemTemplate,
+  SystemTemplateKey,
+  SystemTemplateLookupError,
+  SystemTemplateNotFoundError,
+} from '../system-templates'
 
 type Template = communication.Template
 type CreateTemplate = communication.CreateTemplate
@@ -10,10 +16,13 @@ type TemplateStatusFilter = communication.TemplateStatusFilter
 
 const TABLE = 'template'
 
-// Raw row: channels/categories are comma-separated NVARCHAR columns.
+// Raw row: channels/categories are comma-separated NVARCHAR columns. A row
+// with a systemKey is a system template; the rep-route queries below skip
+// them with .whereNull('systemKey').
 export type TemplateRow = Omit<Template, 'channels' | 'categories'> & {
   channels: string
   categories: string | null
+  systemKey?: string | null // optional: tests build rows without it
 }
 
 const splitList = (value: string | null): string[] =>
@@ -24,7 +33,8 @@ const splitList = (value: string | null): string[] =>
         .filter((s) => s.length > 0)
     : []
 
-export const toTemplate = (row: TemplateRow): Template => ({
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- drop systemKey from the API shape
+export const toTemplate = ({ systemKey, ...row }: TemplateRow): Template => ({
   ...row,
   // The column holds channel names only; the enum parse guards against drift.
   channels: communication.TemplateSchema.shape.channels.parse(
@@ -34,7 +44,8 @@ export const toTemplate = (row: TemplateRow): Template => ({
 })
 
 // MSSQL duplicate-key errors: 2601 = unique index, 2627 = unique constraint.
-// The only unique index on `template` besides the PK is uq_template_active_name.
+// The rep routes never write systemKey, so the only unique index they can
+// hit is uq_template_active_name.
 const UNIQUE_VIOLATION_NUMBERS: ReadonlySet<number> = new Set([2601, 2627])
 
 export const isUniqueNameViolation = (err: unknown): boolean =>
@@ -48,7 +59,9 @@ export async function listTemplates(
   status: TemplateStatusFilter
 ): Promise<Template[]> {
   try {
-    const query = db<TemplateRow>(TABLE).orderBy('name', 'asc')
+    const query = db<TemplateRow>(TABLE)
+      .whereNull('systemKey')
+      .orderBy('name', 'asc')
     if (status === 'active') query.where('isActive', true)
     if (status === 'archived') query.where('isActive', false)
     const rows = await query
@@ -61,7 +74,10 @@ export async function listTemplates(
 
 export async function getTemplateById(id: string): Promise<Template | null> {
   try {
-    const row = await db<TemplateRow>(TABLE).where('id', id).first()
+    const row = await db<TemplateRow>(TABLE)
+      .where('id', id)
+      .whereNull('systemKey')
+      .first()
     return row ? toTemplate(row) : null
   } catch (err: unknown) {
     logger.error({ err, id }, 'template-adapter.getTemplateById')
@@ -102,6 +118,7 @@ export async function updateTemplate(
   try {
     const [updated] = await db(TABLE)
       .where('id', id)
+      .whereNull('systemKey')
       .update({ ...params, updatedAt: new Date() })
       .returning<TemplateRow[]>('*')
     return updated ? toTemplate(updated) : null
@@ -122,6 +139,7 @@ export async function setTemplateActive(
   try {
     const [updated] = await db(TABLE)
       .where('id', id)
+      .whereNull('systemKey')
       .update({ isActive: active, updatedAt: new Date() })
       .returning<TemplateRow[]>('*')
     return updated ? toTemplate(updated) : null
@@ -131,4 +149,25 @@ export async function setTemplateActive(
     }
     throw err
   }
+}
+
+// System templates are looked up by key; a missing one is a deploy/seed
+// fault, so it throws rather than returning null.
+export async function getSystemTemplate(
+  systemKey: SystemTemplateKey
+): Promise<SystemTemplate> {
+  let row: Pick<TemplateRow, 'subject' | 'body'> | undefined
+  try {
+    row = await db<TemplateRow>(TABLE)
+      .select('subject', 'body')
+      .where('systemKey', systemKey)
+      .first()
+  } catch (err: unknown) {
+    logger.error({ err, systemKey }, 'template-adapter.getSystemTemplate')
+    throw new SystemTemplateLookupError(systemKey, { cause: err })
+  }
+  if (!row || row.subject === null) {
+    throw new SystemTemplateNotFoundError(systemKey)
+  }
+  return { systemKey, subject: row.subject, body: row.body }
 }

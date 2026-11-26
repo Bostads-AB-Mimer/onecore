@@ -9,7 +9,7 @@ export interface EmailV4Message {
   destinations: Array<{
     to: EmailV4Destination[]
   }>
-  content: { subject: string; text: string } | { templateId: number }
+  content: { subject: string; text: string; html?: string }
 }
 
 export interface EmailV4Response {

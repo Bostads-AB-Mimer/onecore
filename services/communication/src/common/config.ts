@@ -54,6 +54,27 @@ export interface Config {
     projectId: string
     mimerVisibleLabelId: string
   }
+  // Shown in the email layout's header and footers, and used as sender name.
+  organisation: {
+    name: string
+    visitingAddress: string
+    phone: string // display form
+    phoneTel: string // E.164, for tel: links
+    email: string
+    website: string
+    privacyPolicyUrl: string
+    logoUrl: string
+    noReplyEmail: string
+    orgNumber: string
+  }
+  // Payment footer lines (invoice and inspection emails). Set via env
+  // (PAYMENT_DETAILS__*); an empty value leaves its line out.
+  paymentDetails: {
+    bankgiro: string
+    bic: string
+    iban: string
+    vatNumber: string
+  }
   // Own scheduler for scheduled SMS/email (replaces Infobip-side scheduling).
   // Wall-clock values are Swedish local time (Europe/Stockholm).
   scheduledSends: {
@@ -115,6 +136,28 @@ const config = configPackage({
       projectId: '40e6be50-94b0-4426-a164-93a0a044d8d9',
       mimerVisibleLabelId: '278ba88a-5582-4ba0-bb3b-f7c6e7681c99',
     },
+    organisation: {
+      name: 'Bostads AB Mimer',
+      visitingAddress: 'Gasverksgatan 7, Västerås',
+      phone: '021-39 70 00',
+      phoneTel: '+4621397000',
+      email: 'post@mimer.nu',
+      website: 'https://www.mimer.nu/',
+      privacyPolicyUrl:
+        'https://www.mimer.nu/om-mimer/dataskydd-och-hantering-av-personuppgifter/',
+      // Temporary: the logo still lives in Infobip's media library (signed
+      // URL, expires 2075). Move to pub.mimer.nu when it is rehosted.
+      logoUrl:
+        'https://d15diuekzm7dk5.cloudfront.net/0E8CE46F-CB8F-4715-9FC1-8C6D4D3D7B17?Expires=3322303677&Signature=LdnRo6IDU6QRActdUgyI3ZdFwB~2R-kSWaFM2-rUIgCSzPMg7kHKtXsk0ZCZY2bJULF~zGERXoVaRD6kw6XDn5fl9ygmyYlKt-gNrbulNyhamCaliVo3ROLnFbkJyMBYfyORbw4s6Zgi~mb2X0stUua5kmwYDA7iUOQAIuF~tpwQ04iqEpv95FYczD4FfHhC8XQ1gWv37TwZG0zmr3COEzsilxiDBjPVX8mdC8mRjccYNCBQ-g-XV1a2jtA0eFVc5O8NltGCfVFHmEOiQHkT9H~BHcd5-Lyu49PfjAMxXU1RTgFeiAAQHs4TgKLERKWSORd9ekR4TtGBX68f7z4Olg__&Key-Pair-Id=APKAJYKFVWTTAQLYS7LA',
+      noReplyEmail: 'noreply@mimer.nu',
+      orgNumber: '556019-3384',
+    },
+    paymentDetails: {
+      bankgiro: '',
+      bic: '',
+      iban: '',
+      vatNumber: '',
+    },
     scheduledSends: {
       enabled: false,
       blockedFrom: '21:00',
@@ -139,5 +182,7 @@ export default {
   communicationDatabase: config.get('communicationDatabase'),
   health: config.get('health'),
   linear: config.get('linear'),
+  organisation: config.get('organisation'),
+  paymentDetails: config.get('paymentDetails'),
   scheduledSends: config.get('scheduledSends'),
 } as Config
