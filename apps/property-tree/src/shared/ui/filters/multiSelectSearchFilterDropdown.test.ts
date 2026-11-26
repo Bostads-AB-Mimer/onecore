@@ -324,6 +324,84 @@ describe('MultiSelectSearchFilterDropdown chosen value names', () => {
     expect(triggerButton().textContent).toBe('Anna Svensson')
   })
 
+  it('looks the name up again when the dropdown is opened after a failed lookup', async () => {
+    const resolveLabels = vi
+      .fn<(values: string[]) => Promise<SearchFilterOption[]>>()
+      .mockRejectedValueOnce(new Error(RAW_ERROR))
+      .mockResolvedValueOnce([{ value: 'u1', label: 'Anna Svensson' }])
+    render({ selectedValues: ['u1'], resolveLabels })
+    await flush()
+    expect(triggerButton().textContent).toBe('Kunde inte hämta namn')
+
+    toggleOpen()
+    await flush()
+
+    expect(resolveLabels).toHaveBeenCalledTimes(2)
+    expect(resolveLabels).toHaveBeenLastCalledWith(['u1'])
+    expect(triggerButton().textContent).toBe('Anna Svensson')
+    expect(container.textContent).not.toContain('Kunde inte hämta namn')
+  })
+
+  // Guard: already passes; a value removed and brought back (e.g. browser
+  // back) must be looked up again, not stay on "Laddar…".
+  it('looks a value up again when it is removed and later brought back', async () => {
+    const resolveLabels = vi.fn(async (_values: string[]) => [
+      { value: 'u1', label: 'Anna Svensson' },
+    ])
+    const onSelectionChange = vi.fn()
+    render({ selectedValues: ['u1'], resolveLabels, onSelectionChange })
+    await flush()
+    toggleOpen()
+
+    // The remove button next to the chosen value is the one inside its row
+    const removeButton =
+      container.querySelector<HTMLButtonElement>('.bg-accent button')
+    if (!removeButton) throw new Error('No remove button')
+    act(() => removeButton.click())
+    expect(onSelectionChange).toHaveBeenCalledWith([])
+    render({ selectedValues: [], resolveLabels, onSelectionChange })
+    await flush()
+    pressEscape()
+
+    render({ selectedValues: ['u1'], resolveLabels, onSelectionChange })
+    await flush()
+
+    expect(resolveLabels).toHaveBeenCalledTimes(2)
+    expect(resolveLabels).toHaveBeenLastCalledWith(['u1'])
+    expect(triggerButton().textContent).toBe('Anna Svensson')
+  })
+
+  // Guard: already passes; an answer dropped because the selection changed
+  // must not leave those values on "Laddar…".
+  it('names the values whose answer was dropped when the selection changed mid-lookup', async () => {
+    const lookups: Deferred<SearchFilterOption[]>[] = []
+    const resolveLabels = vi.fn((_values: string[]) => {
+      const lookup = deferred<SearchFilterOption[]>()
+      lookups.push(lookup)
+      return lookup.promise
+    })
+    render({ selectedValues: ['u1'], resolveLabels })
+    await flush()
+    render({ selectedValues: ['u1', 'u2'], resolveLabels })
+    await flush()
+
+    // The first answer comes after the selection changed and is dropped
+    lookups[0].resolve([{ value: 'u1', label: 'Anna Svensson' }])
+    await flush()
+    const latest = lookups[lookups.length - 1]
+    latest.resolve([
+      { value: 'u1', label: 'Anna Svensson' },
+      { value: 'u2', label: 'Bo Ek' },
+    ])
+    await flush()
+    toggleOpen()
+
+    expect(resolveLabels).toHaveBeenLastCalledWith(['u1', 'u2'])
+    expect(container.textContent).toContain('Anna Svensson')
+    expect(container.textContent).toContain('Bo Ek')
+    expect(container.textContent).not.toContain('Laddar…')
+  })
+
   // Guard: already passes; filters without a resolver keep showing the value.
   it('shows the value itself when there is no name lookup', () => {
     render({ selectedValues: ['ABC 1:2'] })

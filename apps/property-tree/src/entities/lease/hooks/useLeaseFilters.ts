@@ -1,4 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+
+import { propertyManagersQueryOptions } from '@/entities/user'
 
 import { authService } from '@/services/api/core/authService'
 import {
@@ -253,23 +256,13 @@ export function useLeaseFilters() {
     [updateUrlParams]
   )
 
-  // Building manager filter: fetch once from Keycloak (property-manager role), filter client-side.
-  // The ref holds the promise so concurrent callers share one request.
-  const propertyManagersRef = useRef<Promise<PropertyManager[]> | null>(null)
-
-  const loadPropertyManagers = useCallback((): Promise<PropertyManager[]> => {
-    if (!propertyManagersRef.current) {
-      const request = authService.getUsersByRole('property-manager')
-      propertyManagersRef.current = request
-      // Forget a failed request so the next call asks again
-      request.catch(() => {
-        if (propertyManagersRef.current === request) {
-          propertyManagersRef.current = null
-        }
-      })
-    }
-    return propertyManagersRef.current
-  }, [])
+  // Building manager filter: one cached list from Keycloak (property-manager role), filtered client-side.
+  // The query cache shares one request between concurrent callers and does not keep a failure.
+  const queryClient = useQueryClient()
+  const loadPropertyManagers = useCallback(
+    () => queryClient.ensureQueryData(propertyManagersQueryOptions),
+    [queryClient]
+  )
 
   const searchBuildingManagers = useCallback(
     async (query: string): Promise<SearchFilterOption[]> => {

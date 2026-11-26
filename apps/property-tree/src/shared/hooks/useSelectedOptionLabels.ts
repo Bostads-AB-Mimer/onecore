@@ -25,6 +25,8 @@ export function useSelectedOptionLabels(
   const [statuses, setStatuses] = useState<Map<string, LabelStatus>>(new Map())
   // Values whose label is known or has been requested; each is looked up once until forgotten
   const requestedRef = useRef<Set<string>>(new Set())
+  // Bumped by retryFailed so the lookup effect runs again for the values it released
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (!resolveLabels) return
@@ -81,7 +83,7 @@ export function useSelectedOptionLabels(
       // Let the next run ask again for values whose answer is now dropped
       if (!settled) values.forEach((v) => requested.delete(v))
     }
-  }, [selectedValues, resolveLabels])
+  }, [selectedValues, resolveLabels, retryCount])
 
   /** Store the label of a value picked from search results; no lookup needed */
   const remember = useCallback((value: string, label: string) => {
@@ -99,6 +101,14 @@ export function useSelectedOptionLabels(
     })
   }, [])
 
+  /** Look up again the selected values whose lookup failed */
+  const retryFailed = () => {
+    const failed = selectedValues.filter((v) => statuses.get(v) === 'failed')
+    if (failed.length === 0) return
+    failed.forEach((v) => requestedRef.current.delete(v))
+    setRetryCount((n) => n + 1)
+  }
+
   const clear = useCallback(() => {
     requestedRef.current.clear()
     setLabels(new Map())
@@ -113,5 +123,5 @@ export function useSelectedOptionLabels(
     return resolveLabels ? LABEL_STATUS_TEXT.loading : value
   }
 
-  return { getDisplayLabel, remember, forget, clear }
+  return { getDisplayLabel, remember, forget, clear, retryFailed }
 }

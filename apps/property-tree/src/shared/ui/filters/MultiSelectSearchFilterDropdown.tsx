@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, Filter, Loader2, X } from 'lucide-react'
 
-import { useDebounce } from '@/shared/hooks/useDebounce'
+import { useOptionSearch } from '@/shared/hooks/useOptionSearch'
 import { useSelectedOptionLabels } from '@/shared/hooks/useSelectedOptionLabels'
 import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
@@ -56,78 +56,45 @@ export function MultiSelectSearchFilterDropdown({
   resolveLabels,
 }: MultiSelectSearchFilterDropdownProps) {
   const [open, setOpen] = useState(false)
-  const [searchInput, setSearchInput] = useState('')
-  const [results, setResults] = useState<SearchFilterOption[]>([])
-  // Query the current results (or error) came from
-  const [resultsQuery, setResultsQuery] = useState<string | null>(null)
-  const [isSearching, setIsSearching] = useState(false)
-  const [searchError, setSearchError] = useState(false)
-  const { getDisplayLabel, remember, forget, clear } = useSelectedOptionLabels(
-    selectedValues,
-    resolveLabels
-  )
+  const {
+    searchInput,
+    setSearchInput,
+    reset: resetSearch,
+    results,
+    showSpinner,
+    showHint,
+    showError,
+    showEmpty,
+    showOptions,
+  } = useOptionSearch({ open, searchFn, minSearchLength, debounceMs })
+  const { getDisplayLabel, remember, forget, clear, retryFailed } =
+    useSelectedOptionLabels(selectedValues, resolveLabels)
   const containerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const debouncedSearch = useDebounce(searchInput, debounceMs)
   const hasActiveFilter = selectedValues.length > 0
-
-  // Search when dropdown opens or debounced value changes
-  useEffect(() => {
-    // A cancelled search must not leave the spinner or an old error behind
-    if (!open) {
-      setIsSearching(false)
-      setSearchError(false)
-      return
-    }
-    if (debouncedSearch.length < minSearchLength) {
-      setResults([])
-      setResultsQuery(null)
-      setIsSearching(false)
-      setSearchError(false)
-      return
-    }
-
-    // Set by cleanup so a response for an older query or after unmount is dropped
-    let ignore = false
-
-    const search = async () => {
-      setIsSearching(true)
-      setSearchError(false)
-      try {
-        const searchResults = await searchFn(debouncedSearch)
-        if (ignore) return
-        setResults(searchResults)
-        setResultsQuery(debouncedSearch)
-      } catch (err: unknown) {
-        console.error('MultiSelectSearchFilterDropdown: Search failed', err)
-        if (ignore) return
-        setResults([])
-        setResultsQuery(debouncedSearch)
-        setSearchError(true)
-      } finally {
-        if (!ignore) setIsSearching(false)
-      }
-    }
-
-    search()
-
-    return () => {
-      ignore = true
-    }
-  }, [open, debouncedSearch, minSearchLength, searchFn])
 
   // Focus input when dropdown opens
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 0)
-    } else {
-      setSearchInput('')
-      setResults([])
-      setResultsQuery(null)
-      setSearchError(false)
     }
   }, [open])
+
+  const close = useCallback(() => {
+    setOpen(false)
+    resetSearch()
+  }, [resetSearch])
+
+  const handleTriggerClick = () => {
+    if (open) {
+      close()
+      return
+    }
+    // Names that failed to load get another try each time the dropdown opens
+    retryFailed()
+    setOpen(true)
+  }
 
   // Close on click outside
   useEffect(() => {
@@ -136,7 +103,7 @@ export function MultiSelectSearchFilterDropdown({
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
-        setOpen(false)
+        close()
       }
     }
 
@@ -144,13 +111,13 @@ export function MultiSelectSearchFilterDropdown({
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [open])
+  }, [open, close])
 
   // Close on escape
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setOpen(false)
+        close()
       }
     }
 
@@ -158,7 +125,7 @@ export function MultiSelectSearchFilterDropdown({
       document.addEventListener('keydown', handleEscape)
       return () => document.removeEventListener('keydown', handleEscape)
     }
-  }, [open])
+  }, [open, close])
 
   const handleToggle = (option: SearchFilterOption) => {
     const isSelected = selectedValues.includes(option.value)
@@ -180,12 +147,6 @@ export function MultiSelectSearchFilterDropdown({
     clear()
   }
 
-  const showResults = debouncedSearch.length >= minSearchLength
-  // Results (or error) belong to the text now in the field
-  const resultsAreCurrent = resultsQuery === searchInput
-  const showSpinner = isSearching || (showResults && !resultsAreCurrent)
-  const showCurrent = showResults && resultsAreCurrent && !isSearching
-
   // Get button text
   const getButtonText = () => {
     if (selectedValues.length === 0) return placeholder
@@ -202,7 +163,7 @@ export function MultiSelectSearchFilterDropdown({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => setOpen(!open)}
+        onClick={handleTriggerClick}
         className={cn(
           'h-9 min-w-[130px] px-3 font-semibold justify-between',
           hasActiveFilter && 'text-primary border-primary'
@@ -257,25 +218,25 @@ export function MultiSelectSearchFilterDropdown({
 
           {/* Results */}
           <div className="mt-2 max-h-48 overflow-y-auto">
-            {!showResults && (
+            {showHint && (
               <div className="py-4 text-center text-xs text-muted-foreground">
                 Skriv minst {minSearchLength} tecken för att söka
               </div>
             )}
 
-            {showCurrent && searchError && (
+            {showError && (
               <div className="py-4 text-center text-xs text-muted-foreground">
                 Sökningen misslyckades. Försök igen.
               </div>
             )}
 
-            {showCurrent && !searchError && results.length === 0 && (
+            {showEmpty && (
               <div className="py-4 text-center text-xs text-muted-foreground">
                 {emptyMessage}
               </div>
             )}
 
-            {showResults && resultsAreCurrent && results.length > 0 && (
+            {showOptions && (
               <div className="space-y-0.5">
                 {results.map((option) => {
                   const isSelected = selectedValues.includes(option.value)

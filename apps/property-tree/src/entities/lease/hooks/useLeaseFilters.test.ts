@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, useLocation } from 'react-router-dom'
@@ -26,6 +27,7 @@ vi.mock('@/services/api/core/leaseSearchService', () => ({
 
 let container: HTMLDivElement
 let root: Root
+let queryClient: QueryClient
 let result: ReturnType<typeof useLeaseFilters>
 let location: URLSearchParams
 
@@ -39,9 +41,13 @@ function render(url: string) {
   act(() => {
     root.render(
       createElement(
-        MemoryRouter,
-        { initialEntries: [url] },
-        createElement(Harness)
+        QueryClientProvider,
+        { client: queryClient },
+        createElement(
+          MemoryRouter,
+          { initialEntries: [url] },
+          createElement(Harness)
+        )
       )
     )
   })
@@ -51,7 +57,17 @@ function render(url: string) {
 const searchedLimit = () => useLeaseSearchMock.mock.lastCall?.[2]
 const searchedPage = () => useLeaseSearchMock.mock.lastCall?.[1]
 
+/** Unmounts the hook and mounts it again with the same query cache */
+function remount(url: string) {
+  act(() => root.unmount())
+  root = createRoot(container)
+  render(url)
+}
+
 beforeEach(() => {
+  queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -259,6 +275,34 @@ describe('useLeaseFilters building manager (Kvartersvärd)', () => {
       { value: 'u1', label: 'Anna Svensson', description: 'E1' },
     ])
     expect(getUsersByRole).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the list in the query cache, so it is not fetched again after a remount', async () => {
+    getUsersByRole.mockResolvedValue([anna])
+    render('/leases')
+    await expect(result.resolveBuildingManagerLabels(['u1'])).resolves.toEqual([
+      { value: 'u1', label: 'Anna Svensson', description: 'E1' },
+    ])
+
+    remount('/leases')
+
+    await expect(result.resolveBuildingManagerLabels(['u1'])).resolves.toEqual([
+      { value: 'u1', label: 'Anna Svensson', description: 'E1' },
+    ])
+    expect(getUsersByRole).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses the property-manager list already cached by the property areas page', async () => {
+    // Same key as usePropertyManagers, so both share one cached list
+    queryClient.setQueryData(['propertyManagers', 'property-manager'], [anna])
+    // A fresh request would not find Anna
+    getUsersByRole.mockResolvedValue([])
+    render('/leases')
+
+    await expect(result.resolveBuildingManagerLabels(['u1'])).resolves.toEqual([
+      { value: 'u1', label: 'Anna Svensson', description: 'E1' },
+    ])
+    expect(getUsersByRole).not.toHaveBeenCalled()
   })
 
   // Guard: this already passes; it keeps search behaviour while the request
