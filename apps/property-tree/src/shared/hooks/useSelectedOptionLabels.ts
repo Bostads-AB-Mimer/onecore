@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFilterDropdown'
+import type { SearchFilterOption } from '@/shared/ui/filters/types'
 
 /** Lookup state of a selected value that has no label yet */
 type LabelStatus = 'loading' | 'notFound' | 'failed'

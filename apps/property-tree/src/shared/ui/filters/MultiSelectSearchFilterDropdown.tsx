@@ -7,11 +7,9 @@ import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/Button'
 import { Input } from '@/shared/ui/Input'
 
-export interface SearchFilterOption {
-  label: string
-  value: string
-  description?: string
-}
+import type { SearchFilterOption } from './types'
+
+export type { SearchFilterOption }
 
 interface MultiSelectSearchFilterDropdownProps {
   /** Function to search for options (called with debounced query) */

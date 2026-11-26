@@ -11,7 +11,7 @@ import {
 } from '@/services/api/core/leaseSearchService'
 
 import { useUrlFilters } from '@/shared/hooks/useUrlFilters'
-import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFilterDropdown'
+import type { SearchFilterOption } from '@/shared/ui/filters/types'
 
 import { isLeaseTypeFilter } from '../lib/leaseType'
 import { DEFAULT_PAGE_SIZE, parsePageSize } from '../lib/pageSize'

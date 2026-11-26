@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { useDebounce } from '@/shared/hooks/useDebounce'
-import type { SearchFilterOption } from '@/shared/ui/filters/MultiSelectSearchFilterDropdown'
+import type { SearchFilterOption } from '@/shared/ui/filters/types'
 
 interface UseOptionSearchArgs {
   /** Search only runs while this is true */
@@ -10,6 +10,13 @@ interface UseOptionSearchArgs {
   searchFn: (query: string) => Promise<SearchFilterOption[]>
   minSearchLength: number
   debounceMs: number
+}
+
+/** Outcome of the latest finished search, with the query it was made for */
+interface SearchState {
+  query: string
+  results: SearchFilterOption[]
+  error: boolean
 }
 
 /**
@@ -23,21 +30,14 @@ export function useOptionSearch({
   debounceMs,
 }: UseOptionSearchArgs) {
   const [searchInput, setSearchInput] = useState('')
-  const [results, setResults] = useState<SearchFilterOption[]>([])
-  // Query the current results (or error) came from
-  const [resultsQuery, setResultsQuery] = useState<string | null>(null)
-  const [isSearching, setIsSearching] = useState(false)
-  const [searchError, setSearchError] = useState(false)
+  const [state, setState] = useState<SearchState | null>(null)
 
   const debouncedSearch = useDebounce(searchInput, debounceMs)
 
   useEffect(() => {
     if (!open) return
     if (debouncedSearch.length < minSearchLength) {
-      setResults([])
-      setResultsQuery(null)
-      setIsSearching(false)
-      setSearchError(false)
+      setState(null)
       return
     }
 
@@ -45,21 +45,14 @@ export function useOptionSearch({
     let ignore = false
 
     const search = async () => {
-      setIsSearching(true)
-      setSearchError(false)
       try {
-        const searchResults = await searchFn(debouncedSearch)
+        const results = await searchFn(debouncedSearch)
         if (ignore) return
-        setResults(searchResults)
-        setResultsQuery(debouncedSearch)
+        setState({ query: debouncedSearch, results, error: false })
       } catch (err: unknown) {
         console.error('useOptionSearch: Search failed', err)
         if (ignore) return
-        setResults([])
-        setResultsQuery(debouncedSearch)
-        setSearchError(true)
-      } finally {
-        if (!ignore) setIsSearching(false)
+        setState({ query: debouncedSearch, results: [], error: true })
       }
     }
 
@@ -73,28 +66,25 @@ export function useOptionSearch({
   /** Clear the text and results; a cancelled search must not leave the spinner or an old error behind */
   const reset = useCallback(() => {
     setSearchInput('')
-    setResults([])
-    setResultsQuery(null)
-    setIsSearching(false)
-    setSearchError(false)
+    setState(null)
   }, [])
 
   const showResults = debouncedSearch.length >= minSearchLength
-  // Results (or error) belong to the text now in the field
-  const resultsAreCurrent = resultsQuery === searchInput
-  const showSpinner = isSearching || (showResults && !resultsAreCurrent)
-  const showCurrent = showResults && resultsAreCurrent && !isSearching
+  // The shown outcome belongs to the text now in the field; until it does, a
+  // search for that text is pending and only the spinner shows
+  const current = showResults && state?.query === searchInput ? state : null
+  const results = current?.results ?? []
 
   return {
     searchInput,
     setSearchInput,
     reset,
     results,
-    showSpinner,
+    showSpinner: showResults && !current,
     /** Too little text typed to search */
     showHint: !showResults,
-    showError: showCurrent && searchError,
-    showEmpty: showCurrent && !searchError && results.length === 0,
-    showOptions: showResults && resultsAreCurrent && results.length > 0,
+    showError: current?.error ?? false,
+    showEmpty: !!current && !current.error && results.length === 0,
+    showOptions: results.length > 0,
   }
 }

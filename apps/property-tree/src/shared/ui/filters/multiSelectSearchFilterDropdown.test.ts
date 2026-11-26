@@ -216,6 +216,26 @@ describe('MultiSelectSearchFilterDropdown search', () => {
     expect(container.querySelector('.animate-spin')).not.toBeNull()
   })
 
+  it('never shows the spinner next to old results when the text goes back to an earlier search', async () => {
+    render()
+    toggleOpen()
+    type('Ann')
+    waitForDebounce()
+    await resolveSearch('Ann', [annOption])
+
+    // A letter typed and erased again while the search for it still runs
+    type('Anna')
+    waitForDebounce()
+    type('Ann')
+
+    const spinnerShown = container.querySelector('.animate-spin') !== null
+    const oldOptionsShown = container.textContent?.includes('Ann Berg') ?? false
+    expect({ spinnerShown, oldOptionsShown }).not.toEqual({
+      spinnerShown: true,
+      oldOptionsShown: true,
+    })
+  })
+
   // Guard: already passes; ignoring a search that answers after closing must
   // not leave the spinner stuck when the dropdown opens again.
   it('shows no spinner, options or error after reopening when a search answered while closed', async () => {
