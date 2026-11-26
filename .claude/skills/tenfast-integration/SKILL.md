@@ -16,6 +16,13 @@ Tenfast is the parking/lease management REST API integrated via
 several non-obvious behaviors that have caused real bugs — check this before
 writing a new query or debugging a weird result.
 
+## Testing against Tenfast
+
+Tenfast's test environment holds data other teams and Tenfast themselves use.
+Agents only read from it (GET, and batch-get POSTs that only read). Never call
+createLease, import-contact or any other write to try something out — test
+writes with mocks, or ask a person to do it in the Tenfast UI.
+
 ## Pagination is capped and sequential
 
 Every paginated endpoint hard-caps at **100 records per page**, regardless of
