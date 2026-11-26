@@ -252,6 +252,9 @@ export function InspectionProtocol({
   const renderTenantSnapshot = () => {
     const hasTenants =
       inspection?.lease?.tenants && inspection.lease.tenants.length > 0
+    const mainPhoneNumber = findMainPhoneNumber(
+      inspection?.lease?.tenants?.[0]?.phoneNumbers
+    )?.phoneNumber
 
     return (
       <Card className="mb-6">
@@ -281,18 +284,10 @@ export function InspectionProtocol({
                 {inspection?.lease?.tenants?.[0]?.nationalRegistrationNumber ||
                   '-'}
               </div>
-              {findMainPhoneNumber(
-                inspection?.lease?.tenants?.[0]?.phoneNumbers
-              )?.phoneNumber && (
+              {mainPhoneNumber && (
                 <div className="flex items-center gap-2">
                   <Phone className="h-3 w-3 text-muted-foreground" />
-                  <span>
-                    {
-                      findMainPhoneNumber(
-                        inspection?.lease?.tenants?.[0]?.phoneNumbers
-                      )?.phoneNumber
-                    }
-                  </span>
+                  <span>{mainPhoneNumber}</span>
                 </div>
               )}
               {inspection?.lease?.tenants?.[0]?.emailAddress && (
