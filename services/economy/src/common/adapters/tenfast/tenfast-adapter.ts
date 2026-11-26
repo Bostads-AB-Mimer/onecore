@@ -944,22 +944,29 @@ export type MultipleLeaseMatch = {
 
 const BATCH_SIZE = 500
 
-// Stages that represent leases that were never fully activated
-const EXCLUDED_STAGES = new Set(['draft', 'signingInProgress'])
+// Stages that represent leases that never took effect
+const EXCLUDED_STAGES = new Set(['draft', 'signingInProgress', 'voided'])
 
+// Returns every lease in the period when there are several, so the row is
+// left for manual handling: the consumption has to be split between them.
+// A single lease that starts during the period gets the whole row, since no
+// one else held the home then. A single lease that ends during the period
+// matches nothing, as there is no lease to bill the rest of the period on.
 function findMatchingLeases(
   leases: TenfastBatchGetLease[],
   periodStart: Date,
   periodEnd: Date
 ): TenfastBatchGetLease[] {
-  // Only consider leases that cover the entire period — started on or before
-  // periodStart and ends on or after periodEnd (or has no end date).
-  return leases.filter((lease) => {
-    if (EXCLUDED_STAGES.has(lease.stage)) return false
-    if (lease.startDate > periodStart) return false
-    if (lease.endDate !== null && lease.endDate < periodEnd) return false
-    return true
-  })
+  const inPeriod = leases.filter(
+    (lease) =>
+      !EXCLUDED_STAGES.has(lease.stage) &&
+      lease.startDate <= periodEnd &&
+      (lease.endDate === null || lease.endDate >= periodStart)
+  )
+  if (inPeriod.length !== 1) return inPeriod
+
+  const [lease] = inPeriod
+  return lease.endDate === null || lease.endDate >= periodEnd ? inPeriod : []
 }
 
 export const getActiveLeasesByRentalObjectCodes = async (params: {
