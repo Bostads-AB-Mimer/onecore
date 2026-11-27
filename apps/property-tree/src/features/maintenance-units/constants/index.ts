@@ -9,8 +9,8 @@ export const MAINTENANCE_UNIT_TYPES = [
     description: 'Lekplats med gungor och klätterställning',
   },
   {
-    label: 'Rekreationsytor',
-    description: 'Gemensam rekreationsyta för hyresgäster',
+    label: 'Gemensamhetsytor',
+    description: 'Gemensam yta för hyresgäster',
   },
   {
     label: 'Återvinning',
