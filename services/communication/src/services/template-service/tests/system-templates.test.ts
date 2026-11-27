@@ -5,6 +5,8 @@ import path from 'node:path'
 import { renderEmail, SYSTEM_TEMPLATE_KEYS } from '../system-templates'
 import { SYSTEM_EMAIL_FIXTURES } from '../system-email-fixtures'
 import { readSeedTemplates } from '../seed-templates'
+import { systemTemplateRules } from '../system-template-rules'
+import { validateTemplate } from '../validation'
 
 describe('renderEmail', () => {
   it('fills the subject and wraps the body in the template footer', () => {
@@ -18,7 +20,6 @@ describe('renderEmail', () => {
     )
     expect(rendered.subject).toBe('Ärende 42')
     expect(rendered.html).toContain('Hej Åsa')
-    // work_order uses the contact footer.
     expect(rendered.text).toContain(
       'Dataskydd och hantering av personuppgifter'
     )
@@ -26,7 +27,7 @@ describe('renderEmail', () => {
     expect(rendered.bodyText).toBe('Hej Åsa')
   })
 
-  it('adds no footer for lease termination', () => {
+  it('gives every email the same contact footer', () => {
     const rendered = renderEmail(
       {
         systemKey: 'lease_termination_confirmation',
@@ -35,7 +36,11 @@ describe('renderEmail', () => {
       },
       {}
     )
-    expect(rendered.text).toBe('Hej')
+    expect(rendered.text.startsWith('Hej\n\n')).toBe(true)
+    expect(rendered.text).toContain(
+      'Dataskydd och hantering av personuppgifter'
+    )
+    expect(rendered.bodyText).toBe('Hej')
   })
 })
 
@@ -55,6 +60,12 @@ describe('seed templates', () => {
     expect(rendered.subject).not.toBe('')
     expect(rendered.html).not.toContain('{{')
     expect(rendered.text).not.toContain('{{')
+  })
+
+  it.each(SYSTEM_TEMPLATE_KEYS)('%s passes the save validation', (key) => {
+    const seed = seeds.find((s) => s.systemKey === key)
+    if (!seed) throw new Error(`no seed for ${key}`)
+    expect(() => validateTemplate(seed, systemTemplateRules(key))).not.toThrow()
   })
 
   it('rejects a seed index entry without a name', () => {

@@ -76,8 +76,13 @@ describe('sendLeaseTerminationConfirmation', () => {
 
     const message = JSON.parse(options.body as string).messages[0]
     expect(message.content.subject).toBe('Uppsägning 307-002-11-0201/11')
-    // Lease termination has no footer, so the text is just the body.
-    expect(message.content.text).toBe('Anna Andersson, sista dag 2026-10-31')
+    // The body, then the contact footer every email has.
+    expect(
+      message.content.text.startsWith(
+        'Anna Andersson, sista dag 2026-10-31\n\n'
+      )
+    ).toBe(true)
+    expect(message.content.text).toContain('besöksadress')
     expect(message.content.html).toContain(
       'Anna Andersson, sista dag 2026-10-31'
     )

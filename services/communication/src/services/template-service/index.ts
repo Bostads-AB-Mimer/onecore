@@ -10,6 +10,12 @@ import {
   setTemplateActive,
   updateTemplate,
 } from './adapters/db'
+import {
+  runValidation,
+  templateChanged,
+  VALIDATION_DESCRIPTION,
+} from './route-helpers'
+import { REP_TEMPLATE_RULES, validateTemplate } from './validation'
 
 const ErrorResponseSchema = z.object({
   error: z.string(),
@@ -46,6 +52,7 @@ const handleWriteError = (
 // No auth here: core's login gate decides who may manage templates (anyone
 // who can send SMS, until role-based permissions are added). Failures are
 // logged once, in the adapter; these handlers only map them to a status.
+// System templates have their own routes (system-routes.ts).
 export const routes = (router: OkapiRouter) => {
   router.get(
     '/message-templates',
@@ -54,7 +61,8 @@ export const routes = (router: OkapiRouter) => {
       description:
         'Alphabetical by name. status=active (default) hides archived ' +
         'templates; archived lists only those; all lists both. SMS only for ' +
-        'now (channels is always ["sms"]).',
+        'now (channels is always ["sms"]); smsText is the body with the ' +
+        'markdown stripped.',
       tags: TAGS,
       query: {
         status: {
@@ -122,10 +130,12 @@ export const routes = (router: OkapiRouter) => {
     {
       summary: 'Create an SMS template',
       description:
-        'Name must be unique among active templates (case-insensitive): ' +
-        '409 TEMPLATE_NAME_TAKEN otherwise.',
+        'The body is markdown; its SMS text (markdown stripped) may be at ' +
+        'most 1600 characters (400 SMS_TEXT_TOO_LONG). Name must be unique ' +
+        'among active templates (case-insensitive): 409 TEMPLATE_NAME_TAKEN ' +
+        `otherwise. ${VALIDATION_DESCRIPTION}`,
       tags: TAGS,
-      body: communication.CreateTemplateSchema,
+      body: communication.CreateTemplateParamsSchema,
       response: {
         201: communication.TemplateSchema,
         400: ErrorResponseSchema,
@@ -134,7 +144,7 @@ export const routes = (router: OkapiRouter) => {
       },
     },
     async (ctx) => {
-      const parsed = communication.CreateTemplateSchema.safeParse(
+      const parsed = communication.CreateTemplateParamsSchema.safeParse(
         ctx.request.body
       )
       if (!parsed.success) {
@@ -142,6 +152,11 @@ export const routes = (router: OkapiRouter) => {
         ctx.body = { error: 'INVALID_BODY', message: parsed.error.message }
         return
       }
+      const { body } = parsed.data
+      const valid = runValidation(ctx, () =>
+        validateTemplate({ subject: null, body }, REP_TEMPLATE_RULES)
+      )
+      if (!valid) return
       try {
         ctx.status = 201
         ctx.body = await createTemplate(parsed.data)
@@ -156,12 +171,14 @@ export const routes = (router: OkapiRouter) => {
     {
       summary: 'Update a template in place',
       description:
-        'Only the supplied fields change. Past dispatches keep their sent ' +
-        'text; only the "Mall: <name>" label follows a rename. 409 ' +
-        'TEMPLATE_NAME_TAKEN when renaming into an active name.',
+        'Only the supplied name/body change, and only if the template is ' +
+        'still at `revision`: 409 TEMPLATE_CHANGED when someone saved in ' +
+        'between. Past dispatches keep their sent text; only the "Mall: ' +
+        '<name>" label follows a rename. 409 TEMPLATE_NAME_TAKEN when ' +
+        `renaming into an active name. ${VALIDATION_DESCRIPTION}`,
       tags: TAGS,
       params: idParam,
-      body: communication.UpdateTemplateSchema,
+      body: communication.UpdateTemplateParamsSchema,
       response: {
         200: communication.TemplateSchema,
         400: ErrorResponseSchema,
@@ -171,7 +188,7 @@ export const routes = (router: OkapiRouter) => {
       },
     },
     async (ctx) => {
-      const parsed = communication.UpdateTemplateSchema.safeParse(
+      const parsed = communication.UpdateTemplateParamsSchema.safeParse(
         ctx.request.body
       )
       if (!parsed.success) {
@@ -179,23 +196,67 @@ export const routes = (router: OkapiRouter) => {
         ctx.body = { error: 'INVALID_BODY', message: parsed.error.message }
         return
       }
-      if (Object.keys(parsed.data).length === 0) {
+      const { name, body } = parsed.data
+      if (name === undefined && body === undefined) {
         ctx.status = 400
         ctx.body = { error: 'NO_FIELDS', message: 'No fields to update' }
         return
       }
+      if (
+        body !== undefined &&
+        !runValidation(ctx, () =>
+          validateTemplate({ subject: null, body }, REP_TEMPLATE_RULES)
+        )
+      ) {
+        return
+      }
       try {
-        const updated = await updateTemplate(ctx.params.id, parsed.data)
-        if (!updated) {
-          ctx.status = 404
-          ctx.body = notFound
+        const result = await updateTemplate(ctx.params.id, parsed.data)
+        if (!result.ok) {
+          ctx.status = result.reason === 'conflict' ? 409 : 404
+          ctx.body = result.reason === 'conflict' ? templateChanged : notFound
           return
         }
         ctx.status = 200
-        ctx.body = updated
+        ctx.body = result.template
       } catch (error: unknown) {
         handleWriteError(ctx, error)
       }
+    }
+  )
+
+  router.post(
+    '/message-templates/preview',
+    {
+      summary: 'Preview an SMS template',
+      description:
+        'The SMS text of an unsaved body (markdown stripped), for the ' +
+        `editor's preview and length counter. ${VALIDATION_DESCRIPTION} ` +
+        'SMS_TEXT_TOO_LONG is not reported here: the editor shows the length.',
+      tags: TAGS,
+      body: communication.PreviewTemplateSchema,
+      response: {
+        200: communication.TemplatePreviewSchema,
+        400: ErrorResponseSchema,
+      },
+    },
+    async (ctx) => {
+      const parsed = communication.PreviewTemplateSchema.safeParse(
+        ctx.request.body
+      )
+      if (!parsed.success) {
+        ctx.status = 400
+        ctx.body = { error: 'INVALID_BODY', message: parsed.error.message }
+        return
+      }
+      const { body } = parsed.data
+      const rules = { ...REP_TEMPLATE_RULES, smsTextLimit: undefined }
+      const preview = runValidation(ctx, () =>
+        validateTemplate({ subject: null, body }, rules)
+      )
+      if (!preview) return
+      ctx.status = 200
+      ctx.body = { text: preview.text }
     }
   )
 

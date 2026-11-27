@@ -1,6 +1,8 @@
 import {
   fillPlaceholders,
+  inspectMarkdown,
   InvalidPlaceholderUrlError,
+  markdownToText,
   MissingPlaceholderError,
   renderMarkdown,
 } from '../render/render'
@@ -202,5 +204,73 @@ describe('renderMarkdown', () => {
 
   it('separates blocks with a blank line in the text', () => {
     expect(renderMarkdown('Hej\n\n**Då**', {}).text).toBe('Hej\n\nDå')
+  })
+
+  it('keeps list markers in the text, one line per item', () => {
+    const { text } = renderMarkdown(
+      'Ta med:\n\n- legitimation\n- nyckel\n  1. kvitto\n  2. kort\n\n3. tre\n4. fyra\n\nSlut',
+      {}
+    )
+    expect(text).toBe(
+      'Ta med:\n\n- legitimation\n- nyckel\n  1. kvitto\n  2. kort\n\n3. tre\n4. fyra\n\nSlut'
+    )
+  })
+
+  it('styles ## as a heading and ### as a subheading', () => {
+    const { html, text } = renderMarkdown(
+      '## Rubrik\n\n### Underrubrik\nText',
+      {}
+    )
+    expect(html).toContain(`<h2 style="${EMAIL_STYLES.heading}">Rubrik</h2>`)
+    expect(html).toContain(
+      `<h3 style="${EMAIL_STYLES.subheading}">Underrubrik</h3>`
+    )
+    expect(text).toBe('Rubrik\n\nUnderrubrik\n\nText')
+  })
+
+  it('styles lists in the html', () => {
+    const { html } = renderMarkdown('- a\n- b', {})
+    expect(html).toContain(`<ul style="${EMAIL_STYLES.list}">`)
+    expect(html).toContain(`<li style="${EMAIL_STYLES.listItem}">a</li>`)
+  })
+
+  it('keeps an indented code block as text', () => {
+    expect(renderMarkdown('Hej\n\n    indraget', {}).text).toBe(
+      'Hej\n\nindraget'
+    )
+  })
+})
+
+describe('inspectMarkdown', () => {
+  it('lists link and image addresses with tokens as written', () => {
+    const { urls } = inspectMarkdown(
+      '[a](https://a.se) [b]({{offerURL}} "button") ![c]({{img}})'
+    )
+    expect(urls).toEqual([
+      { kind: 'link', href: 'https://a.se' },
+      { kind: 'link', href: '{{offerURL}}' },
+      { kind: 'image', href: '{{img}}' },
+    ])
+  })
+
+  it('counts a token only where it is alone in its paragraph', () => {
+    const { aloneCounts } = inspectMarkdown(
+      '{{message}}\n\nText {{message}}\n\n| | |\n|-|-|\n| {{message}} | x |'
+    )
+    expect(aloneCounts.get('message')).toBe(1)
+  })
+})
+
+describe('markdownToText', () => {
+  it('strips the markdown and leaves tokens as written', () => {
+    expect(markdownToText('**Hej {{firstName}}!** [Läs](https://a.se)')).toBe(
+      'Hej {{firstName}}! Läs (https://a.se)'
+    )
+  })
+
+  it('keeps a placeholder used as an address, since only the send fills it', () => {
+    expect(
+      markdownToText('[Svara]({{offerURL}} "button")\n\n![Bild]({{img}})')
+    ).toBe('Svara ({{offerURL}})')
   })
 })

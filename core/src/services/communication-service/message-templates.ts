@@ -3,13 +3,15 @@ import { generateRouteMetadata } from '@onecore/utilities'
 import { communication } from '@onecore/types'
 
 import * as templatesAdapter from '../../adapters/communication-adapter/message-templates'
+import { getActingUserName } from '../../utils/acting-user'
 import { registerSchema } from '../../utils/openapi'
 
 /**
  * SMS templates (MIM-1838): CRUD + archive/restore proxied to the
  * communication service. No role gate yet — anyone who can send SMS can
  * manage templates (the spec defers role-based permissions); login is still
- * required like every core route.
+ * required like every core route. Bodies are markdown (MIM-2291); `smsText`
+ * is what the SMS dialog pastes. System templates: system-templates.ts.
  *
  * @swagger
  * openapi: 3.0.0
@@ -21,6 +23,8 @@ export const routes = (router: KoaRouter) => {
   registerSchema('MessageTemplate', communication.TemplateSchema)
   registerSchema('CreateMessageTemplate', communication.CreateTemplateSchema)
   registerSchema('UpdateMessageTemplate', communication.UpdateTemplateSchema)
+  registerSchema('PreviewMessageTemplate', communication.PreviewTemplateSchema)
+  registerSchema('MessageTemplatePreview', communication.TemplatePreviewSchema)
 
   /**
    * @swagger
@@ -126,7 +130,11 @@ export const routes = (router: KoaRouter) => {
    * /message-templates:
    *   post:
    *     summary: Create an SMS template
-   *     description: Name must be unique among active templates (409 TEMPLATE_NAME_TAKEN otherwise).
+   *     description: |
+   *       The body is markdown; its SMS text may be at most 1600 characters
+   *       (400 SMS_TEXT_TOO_LONG). 400 UNKNOWN_PLACEHOLDER or INVALID_URL
+   *       when it would fail at send time. Name must be unique among active
+   *       templates (409 TEMPLATE_NAME_TAKEN otherwise).
    *     tags:
    *       - Message templates
    *     requestBody:
@@ -147,7 +155,7 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/MessageTemplate'
    *       '400':
-   *         description: Invalid request body
+   *         description: Invalid request body, or a validation code
    *       '409':
    *         description: TEMPLATE_NAME_TAKEN
    *       '500':
@@ -170,7 +178,10 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await templatesAdapter.createTemplate(parsed.data)
+    const result = await templatesAdapter.createTemplate({
+      ...parsed.data,
+      updatedBy: getActingUserName(ctx) ?? null,
+    })
     if (!result.ok) {
       ctx.status = result.statusCode
       ctx.body = { error: result.err, ...metadata }
@@ -185,7 +196,11 @@ export const routes = (router: KoaRouter) => {
    * /message-templates/{id}:
    *   put:
    *     summary: Update a template in place
-   *     description: Only the supplied fields change. Past dispatches keep their sent text; only the "Mall" label follows a rename.
+   *     description: |
+   *       Only the supplied name/body change, and only if the template is
+   *       still at `revision` (409 TEMPLATE_CHANGED when someone saved in
+   *       between). Same body validation as create. Past dispatches keep
+   *       their sent text; only the "Mall" label follows a rename.
    *     tags:
    *       - Message templates
    *     parameters:
@@ -213,11 +228,11 @@ export const routes = (router: KoaRouter) => {
    *                 content:
    *                   $ref: '#/components/schemas/MessageTemplate'
    *       '400':
-   *         description: Invalid or empty request body
+   *         description: Invalid or empty request body, or a validation code
    *       '404':
    *         description: TEMPLATE_NOT_FOUND
    *       '409':
-   *         description: TEMPLATE_NAME_TAKEN
+   *         description: TEMPLATE_NAME_TAKEN or TEMPLATE_CHANGED
    *       '500':
    *         description: Internal server error
    *     security:
@@ -228,7 +243,11 @@ export const routes = (router: KoaRouter) => {
     const parsed = communication.UpdateTemplateSchema.safeParse(
       ctx.request.body
     )
-    if (!parsed.success || Object.keys(parsed.data).length === 0) {
+    const noFields =
+      parsed.success &&
+      parsed.data.name === undefined &&
+      parsed.data.body === undefined
+    if (!parsed.success || noFields) {
       ctx.status = 400
       ctx.body = {
         error: parsed.success ? 'NO_FIELDS' : 'INVALID_BODY',
@@ -238,10 +257,67 @@ export const routes = (router: KoaRouter) => {
       return
     }
 
-    const result = await templatesAdapter.updateTemplate(
-      ctx.params.id,
-      parsed.data
+    const result = await templatesAdapter.updateTemplate(ctx.params.id, {
+      ...parsed.data,
+      updatedBy: getActingUserName(ctx) ?? null,
+    })
+    if (!result.ok) {
+      ctx.status = result.statusCode
+      ctx.body = { error: result.err, ...metadata }
+      return
+    }
+    ctx.status = 200
+    ctx.body = { content: result.data, ...metadata }
+  })
+
+  /**
+   * @swagger
+   * /message-templates/preview:
+   *   post:
+   *     summary: Preview an SMS template
+   *     description: The SMS text of an unsaved body, for the editor's preview and length counter. Not limited to 1600; the editor shows the length.
+   *     tags:
+   *       - Message templates
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/PreviewMessageTemplate'
+   *     responses:
+   *       '200':
+   *         description: The SMS text
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               required: [content]
+   *               properties:
+   *                 content:
+   *                   $ref: '#/components/schemas/MessageTemplatePreview'
+   *       '400':
+   *         description: Invalid request body, or a validation code
+   *       '500':
+   *         description: Internal server error
+   *     security:
+   *       - bearerAuth: []
+   */
+  router.post('(.*)/message-templates/preview', async (ctx) => {
+    const metadata = generateRouteMetadata(ctx)
+    const parsed = communication.PreviewTemplateSchema.safeParse(
+      ctx.request.body
     )
+    if (!parsed.success) {
+      ctx.status = 400
+      ctx.body = {
+        error: 'INVALID_BODY',
+        errors: parsed.error.issues,
+        ...metadata,
+      }
+      return
+    }
+
+    const result = await templatesAdapter.previewTemplate(parsed.data)
     if (!result.ok) {
       ctx.status = result.statusCode
       ctx.body = { error: result.err, ...metadata }

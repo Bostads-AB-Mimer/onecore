@@ -10,18 +10,6 @@ const server = app.listen(PORT, () => {
   logger.info(`listening on http://localhost:${PORT}`)
 })
 
-// Invoice and inspection emails leave out a bank line whose value is empty;
-// say so, since production should always have them (PAYMENT_DETAILS__*).
-const missingPaymentDetails = Object.entries(config.paymentDetails)
-  .filter(([, value]) => !value.trim())
-  .map(([key]) => key)
-if (missingPaymentDetails.length > 0) {
-  logger.warn(
-    { missing: missingPaymentDetails },
-    'payment details are not set; invoice and inspection emails go out without those lines'
-  )
-}
-
 // Missing flag = off: scheduling is only on when explicitly enabled.
 const worker = config.scheduledSends.enabled
   ? createScheduledSendsWorker()

@@ -1,34 +1,95 @@
+import { communication } from '@onecore/types'
+
 import { fillPlaceholders, Placeholders, renderMarkdown } from './render/render'
-import { EmailFooter, wrapInLayout } from './render/layout'
+import { wrapInLayout } from './render/layout'
 
-// Templates the code sends by key (template.systemKey). Ids differ between
-// environments, so code never refers to a system template by id.
-export const SYSTEM_TEMPLATE_KEYS = [
-  'parking_space_offer_additional',
-  'parking_space_offer_replace',
-  'parking_space_accept_offer',
-  'non_scored_parking_space_approved',
-  'non_scored_parking_space_denied',
-  'work_order',
-  'work_order_external_contractor',
-  'invoice_notification',
-  'inspection_protocol',
-  'lease_termination_confirmation',
-] as const
+export const SYSTEM_TEMPLATE_KEYS = communication.SYSTEM_TEMPLATE_KEYS
+export type SystemTemplateKey = communication.SystemTemplateKey
 
-export type SystemTemplateKey = (typeof SYSTEM_TEMPLATE_KEYS)[number]
+export type PlaceholderDef = {
+  token: string
+  label: string // Swedish name shown in the picker
+  kind: communication.PlaceholderKind
+  required?: boolean // the email is useless without it
+}
 
-export const SYSTEM_TEMPLATE_FOOTER: Record<SystemTemplateKey, EmailFooter> = {
-  parking_space_offer_additional: 'contact',
-  parking_space_offer_replace: 'contact',
-  parking_space_accept_offer: 'contact',
-  non_scored_parking_space_approved: 'contact',
-  non_scored_parking_space_denied: 'contact',
-  work_order: 'contact',
-  work_order_external_contractor: 'contact',
-  invoice_notification: 'payment',
-  inspection_protocol: 'payment',
-  lease_termination_confirmation: 'none',
+const text = (token: string, label: string): PlaceholderDef => ({
+  token,
+  label,
+  kind: 'text',
+})
+const url = (token: string, label: string): PlaceholderDef => ({
+  token,
+  label,
+  kind: 'url',
+})
+
+const PARKING_SPACE: PlaceholderDef[] = [
+  text('address', 'Adress'),
+  text('availableFrom', 'Ledig från'),
+  text('parkingSpaceId', 'Bilplatsnummer'),
+  text('objectId', 'Objektsnummer'),
+  text('type', 'Typ'),
+  text('rent', 'Hyra'),
+]
+const OFFER: PlaceholderDef[] = [
+  text('firstName', 'Förnamn'),
+  ...PARKING_SPACE,
+  text('deadlineDate', 'Sista svarsdag'),
+  url('offerURL', 'Länk till erbjudandet'),
+  url('parkingSpaceImage', 'Bild på bilplatsen'),
+]
+const WORK_ORDER_MESSAGE: PlaceholderDef = {
+  token: 'message',
+  label: 'Meddelandet i ärendet',
+  kind: 'block',
+  required: true,
+}
+
+/**
+ * Placeholders each system email's send always supplies (a test keeps this
+ * in step with the builders via the fixtures). Stopgap until MIM-2289.
+ */
+export const SYSTEM_TEMPLATE_PLACEHOLDERS: Record<
+  SystemTemplateKey,
+  readonly PlaceholderDef[]
+> = {
+  parking_space_offer_additional: OFFER,
+  parking_space_offer_replace: OFFER,
+  parking_space_accept_offer: [
+    text('firstName', 'Förnamn'),
+    ...PARKING_SPACE,
+    url('parkingSpaceImage', 'Bild på bilplatsen'),
+  ],
+  non_scored_parking_space_approved: [
+    text('leaseId', 'Kontraktsnummer'),
+    ...PARKING_SPACE,
+    url('parkingSpaceImage', 'Bild på bilplatsen'),
+  ],
+  non_scored_parking_space_denied: PARKING_SPACE,
+  work_order: [WORK_ORDER_MESSAGE],
+  work_order_external_contractor: [
+    WORK_ORDER_MESSAGE,
+    text('externalContractor', 'Entreprenör'),
+  ],
+  invoice_notification: [
+    text('firstName', 'Förnamn'),
+    text('address', 'Adress'),
+    text('invoiceNumber', 'Fakturanummer'),
+    text('dueDate', 'Förfallodatum'),
+    text('totalAmount', 'Belopp'),
+  ],
+  inspection_protocol: [text('firstName', 'Förnamn')],
+  lease_termination_confirmation: [
+    text('firstName', 'Förnamn'),
+    text('lastName', 'Efternamn'),
+    text('leaseId', 'Kontraktsnummer'),
+    text('endDate', 'Kontraktet upphör'),
+    text('preferredMoveOutDate', 'Önskat avflyttningsdatum'),
+    text('rentalObjectAddress', 'Objektets adress'),
+    text('type', 'Objektstyp'),
+    text('tenantNames', 'Hyresgäst(er)'),
+  ],
 }
 
 export type SystemTemplate = {
@@ -70,10 +131,7 @@ export const renderEmail = (
   placeholders: Placeholders
 ): RenderedEmail => {
   const body = renderMarkdown(template.body, placeholders)
-  const { html, text } = wrapInLayout(
-    body,
-    SYSTEM_TEMPLATE_FOOTER[template.systemKey]
-  )
+  const { html, text } = wrapInLayout(body)
   return {
     subject: fillPlaceholders(template.subject, placeholders),
     html,

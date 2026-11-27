@@ -13,7 +13,10 @@ export const EMAIL_STYLES = {
   paragraph: `${FONT}font-size:14px;line-height:140%;color:#000000;margin:0 0 14px 0;`,
   // A sender's <div>: one line, no gap, as a browser shows it.
   line: `${FONT}font-size:14px;line-height:140%;color:#000000;margin:0;`,
-  heading: `${FONT}font-size:18px;line-height:140%;color:#000000;font-weight:bold;margin:0 0 14px 0;`,
+  // Teal like the old templates; 20px bold keeps teal on white readable.
+  heading: `${FONT}font-size:20px;line-height:140%;color:${BRAND_COLOR};font-weight:bold;margin:0 0 14px 0;`,
+  // ### and deeper: a smaller teal title sitting close above its text.
+  subheading: `${FONT}font-size:16px;line-height:140%;color:${BRAND_COLOR};font-weight:bold;margin:0 0 4px 0;`,
   link: 'color:#951b81;text-decoration:underline;',
   button: `${FONT}display:inline-block;background-color:${BRAND_COLOR};color:#ffffff;font-size:14px;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:4px;`,
   image:

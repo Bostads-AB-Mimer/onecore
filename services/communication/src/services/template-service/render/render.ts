@@ -49,6 +49,10 @@ const IMAGE_PROTOCOL = /^https:/i
 // Link title that turns a link into a button: [Svara](url "button").
 const BUTTON_TITLE = 'button'
 
+/** Every {{token}} name in the text, in order, repeats included. */
+export const findTokens = (text: string): string[] =>
+  [...text.matchAll(TOKEN_RE)].map(([, key]) => key)
+
 const hasValue = (placeholders: Placeholders, key: string) =>
   Object.hasOwn(placeholders, key) &&
   (typeof placeholders[key] === 'string' ||
@@ -78,6 +82,7 @@ type RenderEnv = {
   values: PlaceholderValue[]
   htmlBlocks: Set<number>
   column: number
+  checkUrls: boolean // false when values are the tokens' own text, not addresses
 }
 
 const fillSlots = (text: string, env: RenderEnv) =>
@@ -94,7 +99,7 @@ const fillUrl = (url: string, env: RenderEnv, allowed: RegExp): string => {
     }
   }
   const filled = fillSlots(url, env)
-  if (!allowed.test(filled.trim())) {
+  if (env.checkUrls && !allowed.test(filled.trim())) {
     throw new InvalidPlaceholderUrlError(env.names[Number(slot[1])])
   }
   return filled
@@ -170,8 +175,19 @@ const createMarkdown = (): MarkdownIt => {
     }
 
   rules.paragraph_open = renderWithStyle(EMAIL_STYLES.paragraph)
-  rules.heading_open = renderWithStyle(EMAIL_STYLES.heading)
+  // Two looks: # and ## are headings, ### and deeper subheadings.
+  rules.heading_open = (tokens, idx, options) => {
+    const level = Number(tokens[idx].tag.slice(1))
+    tokens[idx].attrSet(
+      'style',
+      level <= 2 ? EMAIL_STYLES.heading : EMAIL_STYLES.subheading
+    )
+    return md.renderer.renderToken(tokens, idx, options)
+  }
   rules.table_open = renderWithStyle(EMAIL_STYLES.table)
+  rules.bullet_list_open = renderWithStyle(EMAIL_STYLES.list)
+  rules.ordered_list_open = renderWithStyle(EMAIL_STYLES.list)
+  rules.list_item_open = renderWithStyle(EMAIL_STYLES.listItem)
 
   rules.tr_open = (tokens, idx, options, env: RenderEnv) => {
     env.column = 0
@@ -220,7 +236,8 @@ const createMarkdown = (): MarkdownIt => {
 const md = createMarkdown()
 
 // Plain-text rendering of the parsed tokens: blocks separated by a blank
-// line, links as "text (url)", fact rows as "label: value", images skipped.
+// line, links as "text (url)", fact rows as "label: value", list items as
+// "- " / "1. " lines, images skipped.
 const inlineToText = (children: Token[], env: RenderEnv): string => {
   let out = ''
   let href: string | null = null
@@ -253,13 +270,44 @@ const inlineToText = (children: Token[], env: RenderEnv): string => {
   return out
 }
 
+type ListState = { ordered: boolean; next: number }
+
 const tokensToText = (tokens: Token[], env: RenderEnv): string => {
   const blocks: string[] = []
   // A table is one block, one line per row.
   let tableRows: string[] | null = null
   let row: string[] | null = null
+  // A list is one block, one line per item; nested lists are indented.
+  const lists: ListState[] = []
+  let listLines: string[] = []
+  let marker: string | null = null
+  const pushBlock = (text: string) =>
+    lists.length > 0 ? listLines.push(text) : blocks.push(text)
   for (const token of tokens) {
-    if (token.type === 'table_open') tableRows = []
+    if (
+      token.type === 'bullet_list_open' ||
+      token.type === 'ordered_list_open'
+    ) {
+      lists.push({
+        ordered: token.type === 'ordered_list_open',
+        next: Number(token.attrGet('start') ?? 1),
+      })
+    } else if (
+      token.type === 'bullet_list_close' ||
+      token.type === 'ordered_list_close'
+    ) {
+      lists.pop()
+      if (lists.length === 0) {
+        blocks.push(listLines.join('\n'))
+        listLines = []
+      }
+    } else if (token.type === 'list_item_open') {
+      const list = lists[lists.length - 1]
+      const bullet = list.ordered ? `${list.next++}.` : '-'
+      marker = `${'  '.repeat(lists.length - 1)}${bullet} `
+    } else if (token.type === 'code_block' || token.type === 'fence') {
+      pushBlock(token.content.replace(/\n$/, ''))
+    } else if (token.type === 'table_open') tableRows = []
     else if (token.type === 'table_close' && tableRows) {
       blocks.push(tableRows.join('\n'))
       tableRows = null
@@ -270,10 +318,77 @@ const tokensToText = (tokens: Token[], env: RenderEnv): string => {
     } else if (token.type === 'inline') {
       const text = inlineToText(token.children ?? [], env)
       if (row) row.push(text.trim())
-      else blocks.push(text)
+      else if (lists.length > 0) {
+        // A second paragraph in the same item continues under its marker.
+        listLines.push((marker ?? '  '.repeat(lists.length)) + text)
+        marker = null
+      } else blocks.push(text)
     }
   }
   return blocks.filter((block) => block.trim() !== '').join('\n\n')
+}
+
+// Swaps each {{token}} for a private-use slot, so markdown can't touch it.
+const protect = (markdown: string) => {
+  const names: string[] = []
+  const protectedMarkdown = markdown.replace(TOKEN_RE, (_m, key: string) => {
+    names.push(key)
+    return `${names.length - 1}`
+  })
+  return { names, protectedMarkdown }
+}
+
+const restoreTokens = (text: string, names: string[]) =>
+  text.replace(SLOT_RE, (_m, i: string) => `{{${names[Number(i)]}}}`)
+
+// Each token's own text as its value: keeps every block, fills nothing.
+const literalEnv = (names: string[]): RenderEnv => ({
+  names,
+  values: names.map((name) => `{{${name}}}`),
+  htmlBlocks: new Set(),
+  column: 0,
+  checkUrls: false,
+})
+
+export type MarkdownUrl = { kind: 'link' | 'image'; href: string }
+
+/**
+ * What the save validation needs from a template, without filling it: every
+ * link and image address (tokens as {{name}}), and how many times each token
+ * stands alone in its own paragraph.
+ */
+export const inspectMarkdown = (
+  markdown: string
+): { urls: MarkdownUrl[]; aloneCounts: Map<string, number> } => {
+  const { names, protectedMarkdown } = protect(markdown)
+  const urls: MarkdownUrl[] = []
+  const aloneCounts = new Map<string, number>()
+  const tokens = md.parse(protectedMarkdown, literalEnv(names))
+  tokens.forEach((token, i) => {
+    if (token.type !== 'inline') return
+    const alone = token.content.trim().match(SLOT_ONE)
+    if (
+      tokens[i - 1]?.type === 'paragraph_open' &&
+      alone?.[0] === token.content.trim()
+    ) {
+      const name = names[Number(alone[1])]
+      aloneCounts.set(name, (aloneCounts.get(name) ?? 0) + 1)
+    }
+    for (const child of token.children ?? []) {
+      if (child.type === 'link_open') {
+        urls.push({
+          kind: 'link',
+          href: restoreTokens(child.attrGet('href') ?? '', names),
+        })
+      } else if (child.type === 'image') {
+        urls.push({
+          kind: 'image',
+          href: restoreTokens(child.attrGet('src') ?? '', names),
+        })
+      }
+    }
+  })
+  return { urls, aloneCounts }
 }
 
 /**
@@ -287,11 +402,7 @@ export const renderMarkdown = (
 ): { html: string; text: string } => {
   assertNoMissing(markdown, placeholders)
 
-  const names: string[] = []
-  const protectedMarkdown = markdown.replace(TOKEN_RE, (_m, key: string) => {
-    names.push(key)
-    return `${names.length - 1}`
-  })
+  const { names, protectedMarkdown } = protect(markdown)
   const env: RenderEnv = {
     names,
     values: names.map((name) => {
@@ -301,6 +412,7 @@ export const renderMarkdown = (
     }),
     htmlBlocks: new Set(),
     column: 0,
+    checkUrls: true,
   }
 
   const rendered = md.render(protectedMarkdown, env)
@@ -323,4 +435,14 @@ export const renderMarkdown = (
   )
 
   return { html, text }
+}
+
+/**
+ * Plain text of a template with nothing filled: each {{token}} stays as
+ * written. Addresses aren't checked here; the send checks the filled value.
+ */
+export const markdownToText = (markdown: string): string => {
+  const { names, protectedMarkdown } = protect(markdown)
+  const env = literalEnv(names)
+  return fillSlots(tokensToText(md.parse(protectedMarkdown, env), env), env)
 }

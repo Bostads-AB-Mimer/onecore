@@ -1823,7 +1823,7 @@ export interface paths {
   '/message-templates': {
     /**
      * List message templates
-     * @description Alphabetical by name. status=active (default) hides archived templates; archived lists only those; all lists both. SMS only for now (channels is always ["sms"]).
+     * @description Alphabetical by name. status=active (default) hides archived templates; archived lists only those; all lists both. SMS only for now (channels is always ["sms"]); smsText is the body with the markdown stripped.
      */
     get: {
       parameters: {
@@ -1843,8 +1843,11 @@ export interface paths {
               channels: ('sms' | 'email' | 'my-pages')[]
               subject: string | null
               body: string
+              smsText: string
               categories: string[]
               isActive: boolean
+              revision: number
+              updatedBy: string | null
               /** Format: date-time */
               createdAt: string
               /** Format: date-time */
@@ -1874,7 +1877,7 @@ export interface paths {
     }
     /**
      * Create an SMS template
-     * @description Name must be unique among active templates (case-insensitive): 409 TEMPLATE_NAME_TAKEN otherwise.
+     * @description The body is markdown; its SMS text (markdown stripped) may be at most 1600 characters (400 SMS_TEXT_TOO_LONG). Name must be unique among active templates (case-insensitive): 409 TEMPLATE_NAME_TAKEN otherwise. 400 with one of UNKNOWN_PLACEHOLDER, MISSING_REQUIRED_PLACEHOLDER, PLACEHOLDER_NOT_ALONE, INVALID_URL, MISSING_PLACEHOLDER, INVALID_PLACEHOLDER_URL when the template would fail or go out broken at send time.
      */
     post: {
       /** @description Request Body */
@@ -1883,6 +1886,7 @@ export interface paths {
           'application/json': {
             name: string
             body: string
+            updatedBy?: string | null
           }
         }
       }
@@ -1897,8 +1901,11 @@ export interface paths {
               channels: ('sms' | 'email' | 'my-pages')[]
               subject: string | null
               body: string
+              smsText: string
               categories: string[]
               isActive: boolean
+              revision: number
+              updatedBy: string | null
               /** Format: date-time */
               createdAt: string
               /** Format: date-time */
@@ -1959,8 +1966,11 @@ export interface paths {
               channels: ('sms' | 'email' | 'my-pages')[]
               subject: string | null
               body: string
+              smsText: string
               categories: string[]
               isActive: boolean
+              revision: number
+              updatedBy: string | null
               /** Format: date-time */
               createdAt: string
               /** Format: date-time */
@@ -1990,7 +2000,7 @@ export interface paths {
     }
     /**
      * Update a template in place
-     * @description Only the supplied fields change. Past dispatches keep their sent text; only the "Mall: <name>" label follows a rename. 409 TEMPLATE_NAME_TAKEN when renaming into an active name.
+     * @description Only the supplied name/body change, and only if the template is still at `revision`: 409 TEMPLATE_CHANGED when someone saved in between. Past dispatches keep their sent text; only the "Mall: <name>" label follows a rename. 409 TEMPLATE_NAME_TAKEN when renaming into an active name. 400 with one of UNKNOWN_PLACEHOLDER, MISSING_REQUIRED_PLACEHOLDER, PLACEHOLDER_NOT_ALONE, INVALID_URL, MISSING_PLACEHOLDER, INVALID_PLACEHOLDER_URL when the template would fail or go out broken at send time.
      */
     put: {
       parameters: {
@@ -2005,6 +2015,8 @@ export interface paths {
           'application/json': {
             name?: string
             body?: string
+            revision: number
+            updatedBy?: string | null
           }
         }
       }
@@ -2019,8 +2031,11 @@ export interface paths {
               channels: ('sms' | 'email' | 'my-pages')[]
               subject: string | null
               body: string
+              smsText: string
               categories: string[]
               isActive: boolean
+              revision: number
+              updatedBy: string | null
               /** Format: date-time */
               createdAt: string
               /** Format: date-time */
@@ -2067,6 +2082,41 @@ export interface paths {
       }
     }
   }
+  '/message-templates/preview': {
+    /**
+     * Preview an SMS template
+     * @description The SMS text of an unsaved body (markdown stripped), for the editor's preview and length counter. 400 with one of UNKNOWN_PLACEHOLDER, MISSING_REQUIRED_PLACEHOLDER, PLACEHOLDER_NOT_ALONE, INVALID_URL, MISSING_PLACEHOLDER, INVALID_PLACEHOLDER_URL when the template would fail or go out broken at send time. SMS_TEXT_TOO_LONG is not reported here: the editor shows the length.
+     */
+    post: {
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            body: string
+          }
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              text: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
   '/message-templates/{id}/archive': {
     /**
      * Archive a template
@@ -2090,8 +2140,11 @@ export interface paths {
               channels: ('sms' | 'email' | 'my-pages')[]
               subject: string | null
               body: string
+              smsText: string
               categories: string[]
               isActive: boolean
+              revision: number
+              updatedBy: string | null
               /** Format: date-time */
               createdAt: string
               /** Format: date-time */
@@ -2143,8 +2196,11 @@ export interface paths {
               channels: ('sms' | 'email' | 'my-pages')[]
               subject: string | null
               body: string
+              smsText: string
               categories: string[]
               isActive: boolean
+              revision: number
+              updatedBy: string | null
               /** Format: date-time */
               createdAt: string
               /** Format: date-time */
@@ -2163,6 +2219,290 @@ export interface paths {
         }
         /** @description Conflict */
         409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/system-templates': {
+    /**
+     * List system email templates
+     * @description The emails ONECore sends by key, alphabetical by name.
+     */
+    get: {
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              key:
+                | 'parking_space_offer_additional'
+                | 'parking_space_offer_replace'
+                | 'parking_space_accept_offer'
+                | 'non_scored_parking_space_approved'
+                | 'non_scored_parking_space_denied'
+                | 'work_order'
+                | 'work_order_external_contractor'
+                | 'invoice_notification'
+                | 'inspection_protocol'
+                | 'lease_termination_confirmation'
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string
+              body: string
+              revision: number
+              updatedBy: string | null
+              /** Format: date-time */
+              updatedAt: string
+              placeholders: {
+                token: string
+                label: string
+                /** @enum {string} */
+                kind: 'text' | 'url' | 'block'
+                required: boolean
+                example: string
+              }[]
+              logoUrl: string | null
+              footerLines: string[]
+            }[]
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/system-templates/{key}': {
+    /** Get a system email template */
+    get: {
+      parameters: {
+        path: {
+          /** @description System template key, the same in every environment */
+          key: string
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              key:
+                | 'parking_space_offer_additional'
+                | 'parking_space_offer_replace'
+                | 'parking_space_accept_offer'
+                | 'non_scored_parking_space_approved'
+                | 'non_scored_parking_space_denied'
+                | 'work_order'
+                | 'work_order_external_contractor'
+                | 'invoice_notification'
+                | 'inspection_protocol'
+                | 'lease_termination_confirmation'
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string
+              body: string
+              revision: number
+              updatedBy: string | null
+              /** Format: date-time */
+              updatedAt: string
+              placeholders: {
+                token: string
+                label: string
+                /** @enum {string} */
+                kind: 'text' | 'url' | 'block'
+                required: boolean
+                example: string
+              }[]
+              logoUrl: string | null
+              footerLines: string[]
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+    /**
+     * Update a system email template
+     * @description Subject and body, live at once for every following send. Only if the template is still at `revision`: 409 TEMPLATE_CHANGED when someone saved in between. 400 with one of UNKNOWN_PLACEHOLDER, MISSING_REQUIRED_PLACEHOLDER, PLACEHOLDER_NOT_ALONE, INVALID_URL, MISSING_PLACEHOLDER, INVALID_PLACEHOLDER_URL when the template would fail or go out broken at send time.
+     */
+    put: {
+      parameters: {
+        path: {
+          /** @description System template key, the same in every environment */
+          key: string
+        }
+      }
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            subject: string
+            body: string
+            revision: number
+            updatedBy?: string | null
+          }
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              /** @enum {string} */
+              key:
+                | 'parking_space_offer_additional'
+                | 'parking_space_offer_replace'
+                | 'parking_space_accept_offer'
+                | 'non_scored_parking_space_approved'
+                | 'non_scored_parking_space_denied'
+                | 'work_order'
+                | 'work_order_external_contractor'
+                | 'invoice_notification'
+                | 'inspection_protocol'
+                | 'lease_termination_confirmation'
+              name: string
+              channels: ('sms' | 'email' | 'my-pages')[]
+              subject: string
+              body: string
+              revision: number
+              updatedBy: string | null
+              /** Format: date-time */
+              updatedAt: string
+              placeholders: {
+                token: string
+                label: string
+                /** @enum {string} */
+                kind: 'text' | 'url' | 'block'
+                required: boolean
+                example: string
+              }[]
+              logoUrl: string | null
+              footerLines: string[]
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Conflict */
+        409: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+      }
+    }
+  }
+  '/system-templates/{key}/preview': {
+    /**
+     * Preview an unsaved system email
+     * @description Renders subject and body into the finished email (layout and footer) with example values. 400 with one of UNKNOWN_PLACEHOLDER, MISSING_REQUIRED_PLACEHOLDER, PLACEHOLDER_NOT_ALONE, INVALID_URL, MISSING_PLACEHOLDER, INVALID_PLACEHOLDER_URL when the template would fail or go out broken at send time. 500 EMAIL_CONFIG_MISSING when the organisation config is empty.
+     */
+    post: {
+      parameters: {
+        path: {
+          /** @description System template key, the same in every environment */
+          key: string
+        }
+      }
+      /** @description Request Body */
+      requestBody?: {
+        content: {
+          'application/json': {
+            subject: string
+            body: string
+          }
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          content: {
+            'application/json': {
+              subject: string
+              html: string
+              text: string
+            }
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          content: {
+            'application/json': {
+              error: string
+              message?: string
+            }
+          }
+        }
+        /** @description Not Found */
+        404: {
           content: {
             'application/json': {
               error: string

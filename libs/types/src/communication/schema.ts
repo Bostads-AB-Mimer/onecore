@@ -72,6 +72,21 @@ export const DispatchAttachmentSchema = z.object({
   createdAt: z.coerce.date(),
 })
 
+// Bodies are markdown. The cap only stops abuse; an SMS template's real
+// limit (1600) applies to its SMS text and is checked by the service.
+export const TEMPLATE_BODY_MAX_LENGTH = 20000
+export const SMS_TEXT_MAX_LENGTH = 1600
+
+const templateBody = z.string().trim().min(1).max(TEMPLATE_BODY_MAX_LENGTH)
+// One line: it becomes an email subject header.
+const templateSubject = z
+  .string()
+  .trim()
+  .min(1)
+  .max(255)
+  .regex(/^[^\r\n]*$/, 'Subject must be one line')
+const revision = z.number().int().positive()
+
 // Template `channels` and `categories` are stored as comma-separated strings
 // in MSSQL but exposed here as arrays — the db adapter splits/joins.
 export const TemplateSchema = z.object({
@@ -79,24 +94,112 @@ export const TemplateSchema = z.object({
   name: z.string(),
   channels: z.array(ChannelSchema),
   subject: z.string().nullable(),
-  body: z.string(),
+  body: z.string(), // markdown
+  smsText: z.string(), // body with the markdown stripped, as an SMS sends it
   categories: z.array(z.string()),
   isActive: z.boolean(), // false = archived: hidden from the picker, still resolves in the log
+  revision, // bumped on every save; an update must send the one it loaded
+  updatedBy: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 })
 
-// SMS templates (first version): name + body only. channels is always 'sms',
+// SMS templates: name + markdown body. channels is always 'sms',
 // subject/categories stay null. Standalone objects, not .partial()/.pick():
 // swagger dedup depends on key order.
 export const CreateTemplateSchema = z.object({
   name: z.string().trim().min(1).max(255),
-  body: z.string().trim().min(1).max(1600),
+  body: templateBody,
 })
 
 export const UpdateTemplateSchema = z.object({
   name: z.string().trim().min(1).max(255).optional(),
-  body: z.string().trim().min(1).max(1600).optional(),
+  body: templateBody.optional(),
+  revision,
+})
+
+// Service-level inputs: core stamps updatedBy from the verified token.
+export const CreateTemplateParamsSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  body: templateBody,
+  updatedBy: z.string().max(255).nullable().optional(),
+})
+
+export const UpdateTemplateParamsSchema = z.object({
+  name: z.string().trim().min(1).max(255).optional(),
+  body: templateBody.optional(),
+  revision,
+  updatedBy: z.string().max(255).nullable().optional(),
+})
+
+export const PreviewTemplateSchema = z.object({ body: templateBody })
+export const TemplatePreviewSchema = z.object({ text: z.string() })
+
+// Emails the code sends by key (template.systemKey). Ids differ between
+// environments, so code never refers to a system template by id.
+export const SYSTEM_TEMPLATE_KEYS = [
+  'parking_space_offer_additional',
+  'parking_space_offer_replace',
+  'parking_space_accept_offer',
+  'non_scored_parking_space_approved',
+  'non_scored_parking_space_denied',
+  'work_order',
+  'work_order_external_contractor',
+  'invoice_notification',
+  'inspection_protocol',
+  'lease_termination_confirmation',
+] as const
+export const SystemTemplateKeySchema = z.enum(SYSTEM_TEMPLATE_KEYS)
+
+// text: a value; url: a link, button or image address; block: sender HTML
+// that must stand alone in its paragraph (the work-order message).
+export const PLACEHOLDER_KIND = ['text', 'url', 'block'] as const
+export const PlaceholderKindSchema = z.enum(PLACEHOLDER_KIND)
+
+export const TemplatePlaceholderSchema = z.object({
+  token: z.string(),
+  label: z.string(), // Swedish name shown in the picker
+  kind: PlaceholderKindSchema,
+  required: z.boolean(),
+  example: z.string(), // value used in the preview
+})
+
+export const SystemTemplateSchema = z.object({
+  key: SystemTemplateKeySchema,
+  name: z.string(),
+  channels: z.array(ChannelSchema),
+  subject: z.string(),
+  body: z.string(), // markdown
+  revision,
+  updatedBy: z.string().nullable(),
+  updatedAt: z.coerce.date(),
+  placeholders: z.array(TemplatePlaceholderSchema),
+  logoUrl: z.string().nullable(), // null when the organisation config is empty
+  footerLines: z.array(z.string()), // the locked footer as plain lines
+})
+
+export const UpdateSystemTemplateSchema = z.object({
+  subject: templateSubject,
+  body: templateBody,
+  revision,
+})
+
+export const UpdateSystemTemplateParamsSchema = z.object({
+  subject: templateSubject,
+  body: templateBody,
+  revision,
+  updatedBy: z.string().max(255).nullable().optional(),
+})
+
+export const PreviewSystemTemplateSchema = z.object({
+  subject: templateSubject,
+  body: templateBody,
+})
+
+export const SystemTemplatePreviewSchema = z.object({
+  subject: z.string(),
+  html: z.string(),
+  text: z.string(),
 })
 
 // List filter: archived templates (isActive = 0) are hidden by default.

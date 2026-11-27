@@ -8,6 +8,7 @@ import { routes as communicationLogRoutes } from './services/communication-log-s
 import { routes as guidesRoutes } from './services/guides-service'
 import { routes as releaseNoteRoutes } from './services/release-note-service'
 import { routes as templateRoutes } from './services/template-service'
+import { routes as systemTemplateRoutes } from './services/template-service/system-routes'
 
 // TODO: Migrate the legacy services (infobip, linear, health) to OkapiRouter
 // so they appear in the OpenAPI spec and we can drop the dual-router setup.
@@ -27,5 +28,6 @@ communicationLogRoutes(okapi)
 guidesRoutes(okapi)
 releaseNoteRoutes(okapi)
 templateRoutes(okapi)
+systemTemplateRoutes(okapi)
 
 export default { legacy: legacyRouter, okapi }

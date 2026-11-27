@@ -12,7 +12,7 @@ type Template = communication.Template
 export type TemplateResult<T> =
   { ok: true; data: T } | { ok: false; err: string; statusCode: number }
 
-const fail = (
+export const fail = (
   response: { status: number },
   error: unknown
 ): { ok: false; err: string; statusCode: number } => ({
@@ -21,7 +21,7 @@ const fail = (
   statusCode: response.status,
 })
 
-const unknownFailure = (
+export const unknownFailure = (
   err: unknown,
   what: string
 ): { ok: false; err: string; statusCode: number } => {
@@ -62,7 +62,7 @@ export const getTemplate = async (
 }
 
 export const createTemplate = async (
-  body: communication.CreateTemplate
+  body: communication.CreateTemplateParams
 ): Promise<TemplateResult<Template>> => {
   try {
     const { data, error, response } = await client.POST('/message-templates', {
@@ -77,7 +77,7 @@ export const createTemplate = async (
 
 export const updateTemplate = async (
   id: string,
-  body: communication.UpdateTemplate
+  body: communication.UpdateTemplateParams
 ): Promise<TemplateResult<Template>> => {
   try {
     const { data, error, response } = await client.PUT(
@@ -118,5 +118,20 @@ export const restoreTemplate = async (
     return { ok: true, data: parseTemplate(data) }
   } catch (err: unknown) {
     return unknownFailure(err, 'POST /message-templates/{id}/restore')
+  }
+}
+
+export const previewTemplate = async (
+  body: communication.PreviewTemplate
+): Promise<TemplateResult<communication.TemplatePreview>> => {
+  try {
+    const { data, error, response } = await client.POST(
+      '/message-templates/preview',
+      { body }
+    )
+    if (error || !response.ok) return fail(response, error)
+    return { ok: true, data: communication.TemplatePreviewSchema.parse(data) }
+  } catch (err: unknown) {
+    return unknownFailure(err, 'POST /message-templates/preview')
   }
 }

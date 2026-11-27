@@ -6,7 +6,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-import config from '../../common/config'
 import { db } from '../../common/db'
 import { sendRenderedEmail } from '../infobip-service/adapters/email-adapter'
 import { getSystemTemplate } from './adapters/db'
@@ -16,17 +15,6 @@ import { SYSTEM_EMAIL_FIXTURES } from './system-email-fixtures'
 const OUT_DIR = path.join(__dirname, '../../../build/email-previews')
 
 const main = async () => {
-  // Previews go to sign-off: a payment footer without bank lines would get
-  // approved looking different from production.
-  const missing = Object.entries(config.paymentDetails)
-    .filter(([, value]) => value.trim() === '')
-    .map(([key]) => key)
-  if (missing.length > 0) {
-    throw new Error(
-      `Set PAYMENT_DETAILS__* in .env before previewing (missing: ${missing.join(', ')})`
-    )
-  }
-
   const sendIndex = process.argv.indexOf('--send')
   const sendTo = sendIndex === -1 ? null : process.argv[sendIndex + 1]
   if (sendIndex !== -1 && !sendTo) throw new Error('--send needs an address')

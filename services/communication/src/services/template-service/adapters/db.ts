@@ -1,7 +1,9 @@
 import { communication } from '@onecore/types'
 import { logger } from '@onecore/utilities'
+import type { Knex } from 'knex'
 
 import { db } from '../../../common/db'
+import { markdownToText } from '../render/render'
 import {
   SystemTemplate,
   SystemTemplateKey,
@@ -10,8 +12,9 @@ import {
 } from '../system-templates'
 
 type Template = communication.Template
-type CreateTemplate = communication.CreateTemplate
-type UpdateTemplate = communication.UpdateTemplate
+type CreateTemplateParams = communication.CreateTemplateParams
+type UpdateTemplateParams = communication.UpdateTemplateParams
+type UpdateSystemTemplateParams = communication.UpdateSystemTemplateParams
 type TemplateStatusFilter = communication.TemplateStatusFilter
 
 const TABLE = 'template'
@@ -19,11 +22,31 @@ const TABLE = 'template'
 // Raw row: channels/categories are comma-separated NVARCHAR columns. A row
 // with a systemKey is a system template; the rep-route queries below skip
 // them with .whereNull('systemKey').
-export type TemplateRow = Omit<Template, 'channels' | 'categories'> & {
+export type TemplateRow = Omit<
+  Template,
+  'channels' | 'categories' | 'smsText'
+> & {
   channels: string
   categories: string | null
   systemKey?: string | null // optional: tests build rows without it
 }
+
+// A system template as stored; the routes add the editor's extras.
+export type SystemTemplateRecord = {
+  key: SystemTemplateKey
+  name: string
+  channels: communication.Channel[]
+  subject: string
+  body: string
+  revision: number
+  updatedBy: string | null
+  updatedAt: Date
+}
+
+// An optimistic update either lands or says why not. 'conflict' means the
+// row exists but someone saved after the caller loaded it.
+export type UpdateResult<T> =
+  { ok: true; template: T } | { ok: false; reason: 'not-found' | 'conflict' }
 
 const splitList = (value: string | null): string[] =>
   value
@@ -33,15 +56,42 @@ const splitList = (value: string | null): string[] =>
         .filter((s) => s.length > 0)
     : []
 
+// The column holds channel names only; the enum parse guards against drift.
+const parseChannels = (value: string) =>
+  communication.TemplateSchema.shape.channels.parse(splitList(value))
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- drop systemKey from the API shape
 export const toTemplate = ({ systemKey, ...row }: TemplateRow): Template => ({
   ...row,
-  // The column holds channel names only; the enum parse guards against drift.
-  channels: communication.TemplateSchema.shape.channels.parse(
-    splitList(row.channels)
-  ),
+  channels: parseChannels(row.channels),
   categories: splitList(row.categories),
+  smsText: markdownToText(row.body),
 })
+
+// Null for a row the code doesn't know (an unknown key, or no subject), so a
+// stray row can't break the list.
+const toSystemTemplateRecord = (
+  row: TemplateRow
+): SystemTemplateRecord | null => {
+  const key = communication.SystemTemplateKeySchema.safeParse(row.systemKey)
+  if (!key.success || row.subject === null) {
+    logger.warn(
+      { systemKey: row.systemKey },
+      'Skipping unknown system template'
+    )
+    return null
+  }
+  return {
+    key: key.data,
+    name: row.name,
+    channels: parseChannels(row.channels),
+    subject: row.subject,
+    body: row.body,
+    revision: row.revision,
+    updatedBy: row.updatedBy,
+    updatedAt: row.updatedAt,
+  }
+}
 
 // MSSQL duplicate-key errors: 2601 = unique index, 2627 = unique constraint.
 // The rep routes never write systemKey, so the only unique index they can
@@ -88,7 +138,7 @@ export async function getTemplateById(id: string): Promise<Template | null> {
 // SMS only for now: channels is fixed, subject/categories stay null. Throws
 // the raw unique violation on a taken active name; the route maps it to 409.
 export async function createTemplate(
-  params: CreateTemplate
+  params: CreateTemplateParams
 ): Promise<Template> {
   try {
     const [created] = await db(TABLE)
@@ -99,6 +149,7 @@ export async function createTemplate(
         body: params.body,
         categories: null,
         isActive: true,
+        updatedBy: params.updatedBy ?? null,
       })
       .returning<TemplateRow[]>('*')
     return toTemplate(created)
@@ -110,18 +161,35 @@ export async function createTemplate(
   }
 }
 
-// Only keys present in `params` are written. Null when the id is unknown.
+// The revision check is part of the UPDATE, so two saves can't both land;
+// this follow-up read (same scope as the update) only picks the error code.
+const missReason = async (
+  scope: (query: Knex.QueryBuilder) => Knex.QueryBuilder
+): Promise<'not-found' | 'conflict'> =>
+  (await scope(db(TABLE)).first('id')) ? 'conflict' : 'not-found'
+
+const repTemplate = (id: string) => (query: Knex.QueryBuilder) =>
+  query.where('id', id).whereNull('systemKey')
+
+// Only name/body keys present in `params` are written, and only if the row
+// is still at `params.revision`.
 export async function updateTemplate(
   id: string,
-  params: UpdateTemplate
-): Promise<Template | null> {
+  params: UpdateTemplateParams
+): Promise<UpdateResult<Template>> {
+  const { revision, updatedBy, ...fields } = params
   try {
-    const [updated] = await db(TABLE)
-      .where('id', id)
-      .whereNull('systemKey')
-      .update({ ...params, updatedAt: new Date() })
+    const [updated] = await repTemplate(id)(db(TABLE))
+      .where('revision', revision)
+      .update({
+        ...fields,
+        updatedBy: updatedBy ?? null,
+        updatedAt: new Date(),
+        revision: db.raw('revision + 1'),
+      })
       .returning<TemplateRow[]>('*')
-    return updated ? toTemplate(updated) : null
+    if (updated) return { ok: true, template: toTemplate(updated) }
+    return { ok: false, reason: await missReason(repTemplate(id)) }
   } catch (err: unknown) {
     if (!isUniqueNameViolation(err)) {
       logger.error({ err, id }, 'template-adapter.updateTemplate')
@@ -170,4 +238,63 @@ export async function getSystemTemplate(
     throw new SystemTemplateNotFoundError(systemKey)
   }
   return { systemKey, subject: row.subject, body: row.body }
+}
+
+export async function listSystemTemplates(): Promise<SystemTemplateRecord[]> {
+  try {
+    const rows = await db<TemplateRow>(TABLE)
+      .whereNotNull('systemKey')
+      .orderBy('name', 'asc')
+    return rows
+      .map(toSystemTemplateRecord)
+      .filter((t): t is SystemTemplateRecord => t !== null)
+  } catch (err: unknown) {
+    logger.error({ err }, 'template-adapter.listSystemTemplates')
+    throw err
+  }
+}
+
+export async function getSystemTemplateRecord(
+  key: SystemTemplateKey
+): Promise<SystemTemplateRecord | null> {
+  try {
+    const row = await db<TemplateRow>(TABLE).where('systemKey', key).first()
+    return row ? toSystemTemplateRecord(row) : null
+  } catch (err: unknown) {
+    logger.error({ err, key }, 'template-adapter.getSystemTemplateRecord')
+    throw err
+  }
+}
+
+// Subject and body, only if the row is still at `params.revision`.
+export async function updateSystemTemplate(
+  key: SystemTemplateKey,
+  params: UpdateSystemTemplateParams
+): Promise<UpdateResult<SystemTemplateRecord>> {
+  try {
+    const [updated] = await db(TABLE)
+      .where('systemKey', key)
+      .where('revision', params.revision)
+      .update({
+        subject: params.subject,
+        body: params.body,
+        updatedBy: params.updatedBy ?? null,
+        updatedAt: new Date(),
+        revision: db.raw('revision + 1'),
+      })
+      .returning<TemplateRow[]>('*')
+    if (!updated) {
+      return {
+        ok: false,
+        reason: await missReason((query) => query.where('systemKey', key)),
+      }
+    }
+    const record = toSystemTemplateRecord(updated)
+    // The write is applied; a row we can't read back is a fault, not a miss.
+    if (!record) throw new Error(`Updated system template ${key} is unreadable`)
+    return { ok: true, template: record }
+  } catch (err: unknown) {
+    logger.error({ err, key }, 'template-adapter.updateSystemTemplate')
+    throw err
+  }
 }

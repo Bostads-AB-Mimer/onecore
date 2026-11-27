@@ -6,6 +6,8 @@ export type CreateMessageTemplate =
   components['schemas']['CreateMessageTemplate']
 export type UpdateMessageTemplate =
   components['schemas']['UpdateMessageTemplate']
+export type MessageTemplatePreview =
+  components['schemas']['MessageTemplatePreview']
 export type MessageTemplateStatusFilter = 'active' | 'archived' | 'all'
 
 export const messageTemplateService = {
@@ -18,6 +20,25 @@ export const messageTemplateService = {
     })
     if (error) throw error
     return data?.content ?? []
+  },
+
+  async get(id: string): Promise<MessageTemplate> {
+    const { data, error } = await GET('/message-templates/{id}', {
+      params: { path: { id } },
+    })
+    if (error) throw error
+    if (!data?.content) throw new Error('Response ok but missing content')
+    return data.content
+  },
+
+  /** The SMS text of an unsaved body (markdown stripped). */
+  async preview(body: string): Promise<MessageTemplatePreview> {
+    const { data, error } = await POST('/message-templates/preview', {
+      body: { body },
+    })
+    if (error) throw error
+    if (!data?.content) throw new Error('Response ok but missing content')
+    return data.content
   },
 
   async create(body: CreateMessageTemplate): Promise<MessageTemplate> {

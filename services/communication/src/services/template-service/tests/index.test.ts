@@ -34,8 +34,11 @@ const template = {
   channels: ['sms'],
   subject: null,
   body: 'Hej! Din nyckel finns att hämta.',
+  smsText: 'Hej! Din nyckel finns att hämta.',
   categories: [],
   isActive: true,
+  revision: 1,
+  updatedBy: null,
   createdAt: '2026-11-06T00:00:00.000Z',
   updatedAt: '2026-11-06T00:00:00.000Z',
 }
@@ -117,6 +120,58 @@ describe('POST /message-templates', () => {
     })
   })
 
+  it('passes updatedBy through', async () => {
+    createMock.mockResolvedValue(template)
+
+    await request(app.callback())
+      .post('/message-templates')
+      .send({ name: 'Nyckel klar', body: 'Hej!', updatedBy: 'Åsa' })
+
+    expect(createMock).toHaveBeenCalledWith({
+      name: 'Nyckel klar',
+      body: 'Hej!',
+      updatedBy: 'Åsa',
+    })
+  })
+
+  it('rejects a body whose SMS text is over 1600 characters', async () => {
+    const res = await request(app.callback())
+      .post('/message-templates')
+      .send({ name: 'Lång', body: 'a'.repeat(1601) })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('SMS_TEXT_TOO_LONG')
+    expect(createMock).not.toHaveBeenCalled()
+  })
+
+  it('counts the SMS text, not the markdown, against the limit', async () => {
+    createMock.mockResolvedValue(template)
+
+    const res = await request(app.callback())
+      .post('/message-templates')
+      .send({ name: 'Fet', body: `**${'a'.repeat(1600)}**` })
+
+    expect(res.status).toBe(201)
+  })
+
+  it('rejects placeholders, which rep templates do not have yet', async () => {
+    const res = await request(app.callback())
+      .post('/message-templates')
+      .send({ name: 'Hej', body: 'Hej {{firstName}}' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('UNKNOWN_PLACEHOLDER')
+  })
+
+  it('rejects an http link typed into the body', async () => {
+    const res = await request(app.callback())
+      .post('/message-templates')
+      .send({ name: 'Länk', body: 'Läs [här](http://www.mimer.nu)' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('INVALID_URL')
+  })
+
   it('rejects an empty body text', async () => {
     const res = await request(app.callback())
       .post('/message-templates')
@@ -139,22 +194,48 @@ describe('POST /message-templates', () => {
 })
 
 describe('PUT /message-templates/:id', () => {
-  it('updates the supplied fields', async () => {
-    updateMock.mockResolvedValue({ ...template, body: 'Ny text' })
+  it('updates the supplied fields at the loaded revision', async () => {
+    updateMock.mockResolvedValue({
+      ok: true,
+      template: { ...template, body: 'Ny text', revision: 2 },
+    })
 
+    const res = await request(app.callback())
+      .put(`/message-templates/${TEMPLATE_ID}`)
+      .send({ body: 'Ny text', revision: 1 })
+
+    expect(res.status).toBe(200)
+    expect(res.body.body).toBe('Ny text')
+    expect(updateMock).toHaveBeenCalledWith(TEMPLATE_ID, {
+      body: 'Ny text',
+      revision: 1,
+    })
+  })
+
+  it('requires the revision the editor loaded', async () => {
     const res = await request(app.callback())
       .put(`/message-templates/${TEMPLATE_ID}`)
       .send({ body: 'Ny text' })
 
-    expect(res.status).toBe(200)
-    expect(res.body.body).toBe('Ny text')
-    expect(updateMock).toHaveBeenCalledWith(TEMPLATE_ID, { body: 'Ny text' })
+    expect(res.status).toBe(400)
+    expect(updateMock).not.toHaveBeenCalled()
+  })
+
+  it('answers 409 TEMPLATE_CHANGED when someone saved in between', async () => {
+    updateMock.mockResolvedValue({ ok: false, reason: 'conflict' })
+
+    const res = await request(app.callback())
+      .put(`/message-templates/${TEMPLATE_ID}`)
+      .send({ body: 'Ny text', revision: 1 })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toBe('TEMPLATE_CHANGED')
   })
 
   it('rejects an empty update', async () => {
     const res = await request(app.callback())
       .put(`/message-templates/${TEMPLATE_ID}`)
-      .send({})
+      .send({ revision: 1 })
 
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('NO_FIELDS')
@@ -162,11 +243,11 @@ describe('PUT /message-templates/:id', () => {
   })
 
   it('returns 404 for an unknown id', async () => {
-    updateMock.mockResolvedValue(null)
+    updateMock.mockResolvedValue({ ok: false, reason: 'not-found' })
 
     const res = await request(app.callback())
       .put(`/message-templates/${TEMPLATE_ID}`)
-      .send({ name: 'Annat' })
+      .send({ name: 'Annat', revision: 1 })
 
     expect(res.status).toBe(404)
     expect(res.body.error).toBe('TEMPLATE_NOT_FOUND')
@@ -177,10 +258,30 @@ describe('PUT /message-templates/:id', () => {
 
     const res = await request(app.callback())
       .put(`/message-templates/${TEMPLATE_ID}`)
-      .send({ name: 'Upptaget' })
+      .send({ name: 'Upptaget', revision: 1 })
 
     expect(res.status).toBe(409)
     expect(res.body.error).toBe('TEMPLATE_NAME_TAKEN')
+  })
+})
+
+describe('POST /message-templates/preview', () => {
+  it('returns the SMS text, also when it is over the limit', async () => {
+    const res = await request(app.callback())
+      .post('/message-templates/preview')
+      .send({ body: `**Hej** ${'a'.repeat(1600)}` })
+
+    expect(res.status).toBe(200)
+    expect(res.body.text).toBe(`Hej ${'a'.repeat(1600)}`)
+  })
+
+  it('reports a validation failure', async () => {
+    const res = await request(app.callback())
+      .post('/message-templates/preview')
+      .send({ body: 'Hej {{x}}' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('UNKNOWN_PLACEHOLDER')
   })
 })
 
