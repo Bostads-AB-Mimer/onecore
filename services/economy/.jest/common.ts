@@ -28,5 +28,6 @@ jest.mock('@onecore/utilities', () => {
     errorName: utilities.errorName,
     redactedMessage: utilities.redactedMessage,
     chunk: utilities.chunk,
+    runWithConcurrency: utilities.runWithConcurrency,
   }
 })

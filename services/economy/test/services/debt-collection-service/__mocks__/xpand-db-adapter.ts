@@ -1,34 +1,31 @@
-import {
-  Contact,
-  Invoice,
-  InvoiceRow,
-  InvoiceTransactionType,
-  PaymentStatus,
-  RentalProperty,
-} from '@onecore/types'
+import { RentalProperty, RentInvoiceRow } from '@onecore/types'
 
-// Mock data factories
-export const createMockContact = (
-  overrides: Partial<Contact> = {}
-): Contact => ({
-  contactCode: 'CONTACT001',
-  contactKey: 'KEY001',
-  firstName: 'John',
+import { InvoiceDeliveryMethod, XpandContact } from '@src/common/types'
+import { RentInvoice } from '@src/services/common/types'
+
+export const createMockXpandContact = (
+  overrides: Partial<XpandContact> = {}
+): XpandContact => ({
+  contactCode: 'XPAND001',
+  contactKey: 'XKEY001',
+  firstName: 'Jane',
   lastName: 'Doe',
-  fullName: 'John Doe',
-  nationalRegistrationNumber: '19900101-1234',
+  fullName: 'Jane Doe',
+  nationalRegistrationNumber: '900101-1234',
   birthDate: new Date('1990-01-01'),
   address: {
-    street: 'Test Street 1',
-    number: '1',
-    postalCode: '12345',
-    city: 'Test City',
+    street: 'Xpand Street 1',
+    number: '',
+    postalCode: '54321',
+    city: 'Xpand City',
   },
   phoneNumbers: [
-    { phoneNumber: '0701234567', type: 'mobile', isMainNumber: true },
+    { phoneNumber: '0709876543', type: 'mobile', isMainNumber: true },
   ],
-  emailAddress: 'john.doe@example.com',
+  emailAddress: '',
   isTenant: true,
+  autogiro: false,
+  invoiceDeliveryMethod: InvoiceDeliveryMethod.Other,
   protectedIdentity: false,
   deceased: false,
   emigrated: false,
@@ -36,36 +33,52 @@ export const createMockContact = (
   ...overrides,
 })
 
-export const createMockRentInvoice = (
-  overrides: Partial<Invoice> = {}
-): Invoice => ({
-  invoiceId: 'INV001',
-  leaseIds: [],
-  amount: 5000,
-  reference: 'RENTAL001/2023',
+export const createMockXpandInvoice = (
+  overrides: Partial<RentInvoice> = {}
+): RentInvoice => ({
+  invoiceNumber: 'XINV001',
+  reference: 'XPA-NDR-00-2002/01',
+  roundoff: 0,
   fromDate: new Date('2023-01-01'),
   toDate: new Date('2023-01-31'),
   invoiceDate: new Date('2023-01-01'),
-  expirationDate: new Date('2023-01-31'),
-  debitStatus: 0,
-  paymentStatus: PaymentStatus.Unpaid,
-  transactionType: InvoiceTransactionType.Rent,
-  transactionTypeName: 'Hyra',
-  type: 'Regular',
-  source: 'legacy',
-  invoiceRows: [],
-  credit: null,
+  expiryDate: new Date('2023-01-31'),
+  lastDebitDate: new Date('2023-06-30'),
+  careOf: undefined,
   ...overrides,
 })
 
-export const createMockRentalProperty = (
+export const createMockXpandInvoiceRow = (
+  overrides: Partial<RentInvoiceRow> = {}
+): RentInvoiceRow => ({
+  type: 'Rent',
+  invoiceNumber: 'XINV001',
+  text: 'Hyra bostad',
+  rentType: null,
+  code: null,
+  rowType: 1,
+  amount: 4000,
+  reduction: 0,
+  vat: 0,
+  fromDate: new Date('2023-01-01'),
+  toDate: new Date('2023-01-31'),
+  printGroup: 'N',
+  ...overrides,
+})
+
+export const createMockXpandRentalProperty = (
   overrides: Partial<RentalProperty> = {}
 ): RentalProperty => ({
-  rentalPropertyId: 'REN-TAL-00-1001',
-  apartmentNumber: 1001,
-  size: 50.5,
-  type: 'Apartment',
-  address: undefined,
+  rentalPropertyId: 'XPA-NDR-00-2002',
+  apartmentNumber: 0,
+  size: 42,
+  type: 'Lägenhet',
+  address: {
+    street: 'Xpand Street 2',
+    number: '',
+    postalCode: '54321',
+    city: 'Xpand City',
+  },
   rentalPropertyType: 'bostad',
   additionsIncludedInRent: '',
   otherInfo: undefined,
@@ -74,53 +87,31 @@ export const createMockRentalProperty = (
   ...overrides,
 })
 
-export const createMockRentInvoiceRow = (
-  overrides: Partial<InvoiceRow> = {}
-): InvoiceRow => ({
-  invoiceNumber: 'INV001',
-  invoiceRowText: 'Rent payment',
-  amount: 5000,
-  deduction: 0,
-  vat: 0,
-  printGroup: 'N',
-  rowType: 0,
-  fromDate: '2023-01-01',
-  invoiceDate: '2023-01-01',
-  invoiceDueDate: '2023-01-31',
-  rentArticle: null,
-  roundoff: 0,
-  toDate: '2023-01-31',
-  totalAmount: 5000,
-  ...overrides,
-})
+/** A header row naming the lease, followed by the rows of its print group. */
+export const createMockXpandInvoiceRows = (): RentInvoiceRow[] => [
+  createMockXpandInvoiceRow({
+    rowType: 3,
+    text: 'XPA-NDR-00-2002/01 Xpand Street 2',
+    printGroup: null,
+    amount: 0,
+  }),
+  createMockXpandInvoiceRow({ text: 'Hyra bostad', amount: 4000 }),
+  createMockXpandInvoiceRow({ text: 'Värme', amount: 500, vat: 125 }),
+]
 
-// Mock functions
 export const getContacts = jest.fn()
 export const getInvoices = jest.fn()
 export const getRentalProperties = jest.fn()
 export const getInvoiceRows = jest.fn()
 
-// Setup default mock implementations
+// By default Tenfast has everything, so Xpand finds nothing
 export const setupDefaultMocks = () => {
-  getContacts.mockResolvedValue([createMockContact()])
-  getInvoices.mockResolvedValue([createMockRentInvoice()])
-  getRentalProperties.mockResolvedValue([createMockRentalProperty()])
-  getInvoiceRows.mockResolvedValue([
-    // Header row with lease ID
-    createMockRentInvoiceRow({
-      rowType: 3,
-      invoiceRowText: 'REN-TAL-00-1001/01',
-      printGroup: null,
-    }),
-    // Rent row
-    createMockRentInvoiceRow({
-      printGroup: 'N',
-      invoiceRowText: 'Hyra bostad',
-    }),
-  ])
+  getContacts.mockResolvedValue([])
+  getInvoices.mockResolvedValue([])
+  getRentalProperties.mockResolvedValue([])
+  getInvoiceRows.mockResolvedValue([])
 }
 
-// Reset all mocks
 export const resetMocks = () => {
   getContacts.mockReset()
   getInvoices.mockReset()

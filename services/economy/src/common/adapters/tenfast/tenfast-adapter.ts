@@ -318,16 +318,13 @@ export const getInvoicesForTenant = async (
 
 export const getContactByContactCode = async (
   contactCode: string
-): Promise<AdapterResult<Contact, string>> => {
+): Promise<AdapterResult<Contact | null, string>> => {
   const tenfastTenantResult = await getTenantByContactCode(contactCode)
   if (!tenfastTenantResult.ok) {
     return { ok: false, err: tenfastTenantResult.err }
   }
   if (!tenfastTenantResult.data) {
-    return {
-      ok: false,
-      err: `Contact with contactCode ${contactCode} not found`,
-    }
+    return { ok: true, data: null }
   }
 
   const contact = transformTenfastTenantToContact(tenfastTenantResult.data)
@@ -430,18 +427,18 @@ const replaceRentArticleIdsWithCodes = async (
 
 export const getRentalProperty = async (
   rentalPropertyCode: string
-): Promise<AdapterResult<RentalProperty, string>> => {
+): Promise<AdapterResult<RentalProperty | null, string>> => {
   try {
     const result = await makeTenfastRequest(
       `/v1/hyresvard/extras/hyresobjekt/${encodeURIComponent(rentalPropertyCode)}`,
-      { params: { hyresvard: companyId } }
+      {
+        params: { hyresvard: companyId },
+        validateStatus: (status) => status === 200 || status === 404,
+      }
     )
 
     if (result.status === 404) {
-      return {
-        ok: false,
-        err: `Rental property with rentalPropertyCode ${rentalPropertyCode} not found`,
-      }
+      return { ok: true, data: null }
     }
 
     if (result.status !== 200) {
@@ -455,9 +452,13 @@ export const getRentalProperty = async (
     }
 
     return { ok: true, data: transformToRentalProperty(parsed.data) }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+  } catch (err: unknown) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { rentalPropertyCode, status, error: errorMessage(err) },
+      'tenfast-adapter.getRentalProperty'
+    )
+    return { ok: false, err: errorMessage(err) }
   }
 }
 
@@ -485,15 +486,18 @@ const transformToRentalProperty = (
 
 export const getLease = async (
   leaseId: string
-): Promise<AdapterResult<Lease, string>> => {
+): Promise<AdapterResult<Lease | null, string>> => {
   try {
     const result = await makeTenfastRequest(
       `/v1/hyresvard/extras/avtal/${encodeURIComponent(leaseId)}`,
-      { params: { hyresvard: companyId, populate: 'hyresobjekt,hyresgaster' } }
+      {
+        params: { hyresvard: companyId, populate: 'hyresobjekt,hyresgaster' },
+        validateStatus: (status) => status === 200 || status === 404,
+      }
     )
 
     if (result.status === 404) {
-      return { ok: false, err: `Lease with leaseId ${leaseId} not found` }
+      return { ok: true, data: null }
     }
 
     if (result.status !== 200) {
@@ -507,9 +511,13 @@ export const getLease = async (
     }
 
     return { ok: true, data: transformToLease(parsed.data) }
-  } catch (err: any) {
-    logger.error(err)
-    return { ok: false, err: err.message }
+  } catch (err: unknown) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined
+    logger.error(
+      { leaseId, status, error: errorMessage(err) },
+      'tenfast-adapter.getLease'
+    )
+    return { ok: false, err: errorMessage(err) }
   }
 }
 

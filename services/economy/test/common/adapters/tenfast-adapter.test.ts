@@ -162,7 +162,7 @@ describe('Tenfast Adapter', () => {
 
       const result = await getRentalProperty(mockProperty.externalId)
 
-      assert(result.ok)
+      assert(result.ok && result.data)
       expect(result.data.rentalPropertyId).toBe(mockProperty.externalId)
       assert(result.data.address !== undefined)
       expect(result.data.address.street).toBe(mockProperty.postadress)
@@ -181,11 +181,11 @@ describe('Tenfast Adapter', () => {
 
       const result = await getRentalProperty(parkingSpace.externalId)
 
-      assert(result.ok)
+      assert(result.ok && result.data)
       expect(result.data.apartmentNumber).toBe(0)
     })
 
-    it('should return error when rental property is not found (404)', async () => {
+    it('should return null when rental property is not found (404)', async () => {
       mockAxios.request.mockResolvedValue({
         status: 404,
         data: { error: 'Not found' },
@@ -193,10 +193,7 @@ describe('Tenfast Adapter', () => {
 
       const result = await getRentalProperty('UNKNOWN-CODE')
 
-      expect(result).toEqual({
-        ok: false,
-        err: 'Rental property with rentalPropertyCode UNKNOWN-CODE not found',
-      })
+      expect(result).toEqual({ ok: true, data: null })
     })
 
     it('should return error when request fails with non-200 status', async () => {
@@ -233,7 +230,7 @@ describe('Tenfast Adapter', () => {
 
       const result = await getLease(mockLease.externalId)
 
-      assert(result.ok)
+      assert(result.ok && result.data)
       expect(result.data.leaseId).toBe(mockLease.externalId)
       expect(mockAxios.request).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -265,7 +262,7 @@ describe('Tenfast Adapter', () => {
 
       const result = await getLease(mockLease.externalId)
 
-      assert(result.ok)
+      assert(result.ok && result.data)
       expect(result.data.type).toBe(expected)
     })
 
@@ -285,7 +282,7 @@ describe('Tenfast Adapter', () => {
       )
     })
 
-    it('should return error when lease is not found (404)', async () => {
+    it('should return null when lease is not found (404)', async () => {
       mockAxios.request.mockResolvedValue({
         status: 404,
         data: {},
@@ -293,10 +290,7 @@ describe('Tenfast Adapter', () => {
 
       const result = await getLease('UNKNOWN-LEASE-ID')
 
-      expect(result).toEqual({
-        ok: false,
-        err: 'Lease with leaseId UNKNOWN-LEASE-ID not found',
-      })
+      expect(result).toEqual({ ok: true, data: null })
     })
 
     it('should return error when request fails with non-200 status', async () => {
