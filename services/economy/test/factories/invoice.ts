@@ -8,6 +8,7 @@ import {
   MiscellaneousInvoice,
   MiscellaneousInvoiceBaseItem,
   PaymentSyncEvent,
+  RentInvoiceRow,
 } from '@onecore/types'
 
 export const InvoiceFactory = Factory.define<Invoice>((options) => {
@@ -62,6 +63,21 @@ export const InvoiceRowFactory = Factory.define<InvoiceRow>(() => ({
   invoiceDueDate: '2023-03-01',
   printGroup: '1234567890',
   printGroupLabel: '1234567890',
+}))
+
+export const RentInvoiceRowFactory = Factory.define<RentInvoiceRow>(() => ({
+  type: 'Rent',
+  invoiceNumber: '5500000001',
+  text: 'Hyra bostad',
+  rentType: null,
+  code: 'HYRAB',
+  rowType: 0,
+  amount: 1000,
+  reduction: 0,
+  vat: 0,
+  fromDate: new Date('2026-12-01'),
+  toDate: new Date('2026-12-31'),
+  printGroup: null,
 }))
 
 export const MiscellaneousInvoiceBaseItemFactory =

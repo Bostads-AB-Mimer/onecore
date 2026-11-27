@@ -1,15 +1,23 @@
-import { getUnpaidInvoicePaymentSummaries } from '../service'
+import { getBosociala, getUnpaidInvoicePaymentSummaries } from '../service'
 import { Factory } from 'fishery'
 
 jest.mock('../../../adapters/economy-adapter', () => ({
   getInvoices: jest.fn(),
   getRentInvoiceRows: jest.fn(),
+  getLeaseDetailsForInvoices: jest.fn(),
+}))
+
+jest.mock('../../../adapters/leasing-adapter', () => ({
+  getLeasesBatch: jest.fn(),
+  getContacts: jest.fn(),
 }))
 
 import {
   getInvoices,
   getRentInvoiceRows,
+  getLeaseDetailsForInvoices,
 } from '../../../adapters/economy-adapter'
+import { getContacts, getLeasesBatch } from '../../../adapters/leasing-adapter'
 import { Invoice, RentInvoiceRow } from '@onecore/types'
 
 const xledgerInvoiceFactory = Factory.define<Invoice>(({ sequence }) => ({
@@ -232,6 +240,67 @@ describe('Report Service', () => {
       )
     })
 
+    it('sums all rows with the same code on an invoice', async () => {
+      const xledgerInvoices = [
+        xledgerInvoiceFactory.build({
+          invoiceId: '5500001',
+          amount: 1000,
+          paidAmount: 500,
+        }),
+      ]
+
+      // Two periods of the same article on one invoice, as Tenfast sends them
+      const invoiceRows = [
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'HEMFÖR',
+          amount: 69,
+        }),
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'HEMFÖR',
+          amount: 69,
+        }),
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'HYRSÄT',
+          amount: 80,
+          vat: 20,
+        }),
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'HYRSÄT',
+          amount: 80,
+          vat: 20,
+        }),
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'VHK906',
+          amount: 100,
+        }),
+        invoiceRowFactory.build({
+          invoiceNumber: '5500001',
+          code: 'VHK906',
+          amount: 50,
+          reduction: -10,
+        }),
+      ]
+
+      mockGetInvoices.mockResolvedValue({ ok: true, data: xledgerInvoices })
+      mockGetInvoiceRows.mockResolvedValue({ ok: true, data: invoiceRows })
+
+      const result = await getUnpaidInvoicePaymentSummaries(fromDate, toDate)
+
+      expect(result[0]).toMatchObject({
+        hemforTotal: 138,
+        hemforDebt: 69,
+        hyrsatTotal: 200,
+        hyrsatDebt: 100,
+        vhk906Total: 140,
+        vhk906Debt: 70,
+      })
+    })
+
     it('should handle partial payments correctly', async () => {
       const xledgerInvoices = [
         xledgerInvoiceFactory.build({
@@ -348,6 +417,42 @@ describe('Report Service', () => {
         vhk934Debt: 0,
         vhk936Debt: 0,
       })
+    })
+  })
+
+  describe('getBosociala', () => {
+    const mockGetLeaseDetails = getLeaseDetailsForInvoices as jest.Mock
+
+    beforeEach(() => {
+      ;(getLeasesBatch as jest.Mock).mockResolvedValue([])
+      ;(getContacts as jest.Mock).mockResolvedValue([])
+    })
+
+    it("uses the main lease's cost centre, and Xledger's when the lease's isn't known", async () => {
+      mockGetInvoices.mockResolvedValue({
+        ok: true,
+        data: [
+          xledgerInvoiceFactory.build({ invoiceId: '1', costCentre: '10000' }),
+          xledgerInvoiceFactory.build({ invoiceId: '2', costCentre: '20000' }),
+        ],
+      })
+      mockGetLeaseDetails.mockResolvedValue({
+        ok: true,
+        data: [
+          {
+            invoiceId: '1',
+            details: [{ leaseId: '216-703-00-0018/01', costCentre: '61110' }],
+          },
+          {
+            invoiceId: '2',
+            details: [{ leaseId: '216-703-00-0019/01', costCentre: null }],
+          },
+        ],
+      })
+
+      const result = await getBosociala()
+
+      expect(result.map((i) => i.costCentre)).toEqual(['61110', '20000'])
     })
   })
 })

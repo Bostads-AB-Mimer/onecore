@@ -647,7 +647,7 @@ export async function getPaymentEvents(
 
 type InvoiceDetails = {
   invoiceId: string
-  details: { leaseId: string; costCentre: string }[]
+  details: { leaseId: string; costCentre: string | null }[]
 }
 
 export async function getLeaseDetailsForInvoices(

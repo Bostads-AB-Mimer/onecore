@@ -15,6 +15,8 @@ import {
   uploadRentalLossCsvFile,
   createLedgerRows,
   createAggregatedTotalRow,
+  fetchInvoiceRows,
+  getLeaseDetails,
 } from '@src/services/invoice-service/service'
 import {
   MimerCompany,
@@ -65,7 +67,16 @@ jest.mock('@src/services/invoice-service/adapters/xpand-db-adapter', () => ({
   getRentalSpecificRules: jest.fn(),
 }))
 
-jest.mock('@src/services/common/adapters/xpand-db-adapter', () => ({}))
+jest.mock('@src/services/common/adapters/xpand-db-adapter', () => ({
+  getInvoiceRows: jest.fn(),
+  getPropertyCodeAndCostCentreForLease: jest.fn(),
+}))
+
+jest.mock('@src/services/invoice-service/tenfast-report-invoices', () => ({
+  getTenfastInvoicesByOcr: jest.fn(),
+  toRentInvoiceRows: jest.fn(),
+  toLeaseDetails: jest.fn(),
+}))
 
 jest.mock(
   '@src/services/invoice-service/adapters/stralfors/stralfors-adapter',
@@ -124,7 +135,20 @@ import {
   getActiveRentalBlocksWithAccounting,
   getRentalSpecificRules,
 } from '@src/services/invoice-service/adapters/xpand-db-adapter'
-import { TenfastAutogiroConsentFactory } from '@test/factories'
+import {
+  getInvoiceRows,
+  getPropertyCodeAndCostCentreForLease,
+} from '@src/services/common/adapters/xpand-db-adapter'
+import {
+  getTenfastInvoicesByOcr,
+  toLeaseDetails,
+  toRentInvoiceRows,
+} from '@src/services/invoice-service/tenfast-report-invoices'
+import {
+  TenfastAutogiroConsentFactory,
+  TenfastInvoiceFactory,
+  rentInvoiceRow,
+} from '@test/factories'
 
 // Assign the mocked functions
 const mockGetInvoiceByInvoiceNumber = getInvoiceByInvoiceNumber as jest.Mock
@@ -143,6 +167,11 @@ const mockUploadFile = uploadFile as jest.Mock
 const mockGetRentalSpecificRules = getRentalSpecificRules as jest.Mock
 const mockGetPeriodInformationFromDateStrings =
   getPeriodInformationFromDateStrings as jest.Mock
+const mockGetXpandInvoiceRows = getInvoiceRows as jest.Mock
+const mockGetCostCentre = getPropertyCodeAndCostCentreForLease as jest.Mock
+const mockGetTenfastInvoicesByOcr = getTenfastInvoicesByOcr as jest.Mock
+const mockToRentInvoiceRows = toRentInvoiceRows as jest.Mock
+const mockToLeaseDetails = toLeaseDetails as jest.Mock
 
 describe('Rental Invoice Service', () => {
   describe('getInvoiceDetails', () => {
@@ -2067,6 +2096,97 @@ describe('Rental Invoice Accounting', () => {
 
       expect(mockUploadFile).toHaveBeenCalledTimes(1)
       expect(mockUploadFile.mock.calls[0][0]).toContain('rental-loss.gl.csv')
+    })
+  })
+})
+
+describe('Report invoices', () => {
+  // Invoice 1 is in Xpand. Rent invoice 55 isn't, so it is looked up in Tenfast.
+  const xpandRows = [
+    rentInvoiceRow.build({
+      invoiceNumber: '1',
+      rowType: 3,
+      text: '216-703-00-0018/01 Testgatan 1',
+    }),
+    rentInvoiceRow.build({ invoiceNumber: '1' }),
+  ]
+  const tenfastInvoice = { ocr: '55', invoice: TenfastInvoiceFactory.build() }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockGetXpandInvoiceRows.mockResolvedValue(xpandRows)
+    mockGetTenfastInvoicesByOcr.mockResolvedValue([tenfastInvoice])
+  })
+
+  describe('fetchInvoiceRows', () => {
+    it('adds Tenfast rows for the invoices Xpand has no rows for', async () => {
+      const tenfastRow = rentInvoiceRow.build({ invoiceNumber: '55' })
+      mockToRentInvoiceRows.mockResolvedValue([tenfastRow])
+
+      const rows = await fetchInvoiceRows(['1', '55'])
+
+      expect(mockGetTenfastInvoicesByOcr).toHaveBeenCalledWith(['55'])
+      expect(mockToRentInvoiceRows).toHaveBeenCalledWith([tenfastInvoice])
+      expect(rows).toEqual([...xpandRows, tenfastRow])
+    })
+
+    it('only looks up rent invoices in Tenfast', async () => {
+      mockToRentInvoiceRows.mockResolvedValue([])
+
+      // 77 is not a rent invoice
+      await fetchInvoiceRows(['1', '55', '77'])
+
+      expect(mockGetTenfastInvoicesByOcr).toHaveBeenCalledWith(['55'])
+    })
+
+    it('does not call Tenfast when Xpand has rows for every invoice', async () => {
+      const rows = await fetchInvoiceRows(['1'])
+
+      expect(mockGetTenfastInvoicesByOcr).not.toHaveBeenCalled()
+      expect(rows).toEqual(xpandRows)
+    })
+  })
+
+  describe('getLeaseDetails', () => {
+    it('combines Xpand and Tenfast leases in the order asked for', async () => {
+      mockGetCostCentre.mockResolvedValue({
+        costCentre: '61110',
+        propertyCode: '01216',
+      })
+      mockGetTenfastInvoicesByOcr.mockResolvedValue([tenfastInvoice])
+      mockToLeaseDetails.mockResolvedValue([
+        {
+          invoiceId: '55',
+          details: [{ leaseId: '705-022-04-0201/01', costCentre: '61120' }],
+        },
+      ])
+
+      // 5599 is in neither Xpand nor Tenfast; 77 is not a rent invoice, so it
+      // isn't looked up in Tenfast
+      const result = await getLeaseDetails(['55', '5599', '77', '1'])
+
+      expect(mockGetTenfastInvoicesByOcr).toHaveBeenCalledWith(['55', '5599'])
+      expect(mockGetCostCentre).toHaveBeenCalledWith('216-703-00-0018', 2026)
+      expect(result).toEqual([
+        {
+          invoiceId: '55',
+          details: [{ leaseId: '705-022-04-0201/01', costCentre: '61120' }],
+        },
+        { invoiceId: '5599', details: [] },
+        { invoiceId: '77', details: [] },
+        {
+          invoiceId: '1',
+          details: [{ leaseId: '216-703-00-0018/01', costCentre: '61110' }],
+        },
+      ])
+    })
+
+    it('does not call Tenfast when Xpand has rows for every invoice', async () => {
+      mockGetCostCentre.mockResolvedValue(null)
+
+      await getLeaseDetails(['1'])
+
+      expect(mockGetTenfastInvoicesByOcr).not.toHaveBeenCalled()
     })
   })
 })
