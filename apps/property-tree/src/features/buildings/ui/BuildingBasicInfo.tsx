@@ -1,3 +1,5 @@
+import { KvvResponsibleField } from '@/entities/kvv-area'
+
 import { Building, Property } from '@/services/types'
 
 import { CollapsibleInfoCard } from '@/shared/ui/CollapsibleInfoCard'
@@ -101,6 +103,8 @@ export const BuildingBasicInfo = ({
         <p className="text-sm text-muted-foreground">Antal lokaler</p>
         <p className="font-medium">{facilitiesCount}</p>
       </div>
+
+      <KvvResponsibleField location={{ buildingCode: building.code }} />
     </div>
   )
 

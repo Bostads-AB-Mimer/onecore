@@ -1,5 +1,7 @@
 import { Loader2 } from 'lucide-react'
 
+import { KvvResponsibleField } from '@/entities/kvv-area'
+
 import { components } from '@/services/api/core/generated/api-types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
@@ -48,6 +50,13 @@ export const FacilityBasicInfo = ({
                 {facility.rentalInformation?.rentalId || '-'}
               </p>
             </div>
+            <KvvResponsibleField
+              location={
+                facility.rentalInformation?.rentalId
+                  ? { rentalId: facility.rentalInformation.rentalId }
+                  : undefined
+              }
+            />
             <div>
               <p className="text-sm text-muted-foreground">Typ</p>
               <p className="font-medium">{facility.type.name || '-'}</p>

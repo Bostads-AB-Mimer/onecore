@@ -1,3 +1,5 @@
+import { PropertyKvvResponsibleField } from '@/entities/kvv-area'
+
 import type { PropertyDetail } from '@/shared/types/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
 interface PropertyBasicInfoProps {
@@ -65,6 +67,11 @@ export const PropertyBasicInfo = ({
             <p className="text-sm text-muted-foreground">Antal byggnader</p>
             <p className="font-medium">{propertyDetail.buildings.length}</p>
           </div>
+
+          <PropertyKvvResponsibleField
+            propertyCode={propertyDetail.code}
+            buildingCodes={propertyDetail.buildings.map((b) => b.code)}
+          />
 
           {/*
             TODO:

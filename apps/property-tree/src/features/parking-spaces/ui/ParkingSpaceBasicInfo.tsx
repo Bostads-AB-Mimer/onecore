@@ -1,5 +1,7 @@
 import { Loader2 } from 'lucide-react'
 
+import { KvvResponsibleField } from '@/entities/kvv-area'
+
 import { components } from '@/services/api/core/generated/api-types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
@@ -58,6 +60,9 @@ export const ParkingSpaceBasicInfo = ({
               <p className="text-sm text-muted-foreground">Objektsnummer</p>
               <p className="font-medium">{parkingSpace.rentalId}</p>
             </div>
+            <KvvResponsibleField
+              location={{ rentalId: parkingSpace.rentalId }}
+            />
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
               <p className="font-medium">
