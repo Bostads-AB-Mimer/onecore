@@ -9,7 +9,8 @@ import {
 import { messageTemplateService } from '@/services/api/core/messageTemplateService'
 
 import { toast } from '@/shared/hooks/useToast'
-import { errorCodeOf, templateErrorText } from '@/shared/lib/templateErrorText'
+
+import { failToast } from '../lib/failToast'
 
 function useInvalidateMessageTemplates() {
   const queryClient = useQueryClient()
@@ -17,13 +18,6 @@ function useInvalidateMessageTemplates() {
   return () =>
     queryClient.invalidateQueries({ queryKey: [MESSAGE_TEMPLATES_QUERY_KEY] })
 }
-
-const failToast = (title: string, error: unknown) =>
-  toast({
-    title,
-    description: templateErrorText(errorCodeOf(error)) ?? undefined,
-    variant: 'destructive',
-  })
 
 export function useCreateMessageTemplate() {
   const invalidate = useInvalidateMessageTemplates()

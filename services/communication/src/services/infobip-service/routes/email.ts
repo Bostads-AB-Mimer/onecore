@@ -4,7 +4,6 @@ import fs from 'node:fs'
 import {
   Email,
   ParkingSpaceOfferEmail,
-  ParkingSpaceNotificationEmail,
   ParkingSpaceAcceptOfferEmail,
   WorkOrderEmail,
   InspectionProtocolEmail,
@@ -20,43 +19,35 @@ import { generateRouteMetadata, logger } from '@onecore/utilities'
 import z from 'zod'
 
 import {
+  emailSender,
   sendEmail,
   sendParkingSpaceOffer,
-  sendParkingSpaceAssignedToOther,
   sendWorkOrderEmail,
   sendParkingSpaceAcceptOffer,
   sendBulkEmail,
   sendNonScoredParkingSpaceApproved,
   sendNonScoredParkingSpaceDenied,
   sendInvoiceNotificationEmail,
+  sendInspectionProtocolEmail,
   sendLeaseTerminationConfirmation,
 } from '../adapters/email-adapter'
-import {
-  getEmailTemplate,
-  renderTemplate,
-  renderTemplateWithPlaceholders,
-} from '../adapters/email-template-render'
-import { buildLeaseTerminationPlaceholders } from '../adapters/lease-termination-placeholders'
-import {
-  AdditionalParkingSpaceOfferTemplateId,
-  ReplaceParkingSpaceOfferTemplateId,
-  AcceptParkingSpaceOfferTemplateId,
-  NonScoredParkingSpaceApprovedTemplateId,
-  NonScoredParkingSpaceDeniedTemplateId,
-  LeaseTerminationConfirmationTemplateId,
-} from '../adapters/infobip-template-ids'
-import {
-  sendEmailInfobipSdk,
-  sendInspectionProtocolEmail,
-} from '../adapters/infobip-adapter'
+import { sendEmailInfobipSdk } from '../adapters/infobip-adapter'
 import { parseRequestBody } from '../../../middlewares/parse-request-body'
+import { ProviderResponseError } from '../adapters/provider-error'
+import {
+  InvalidPlaceholderUrlError,
+  InvalidPlaceholderValueError,
+  MissingPlaceholderError,
+} from '../../template-service/render/render'
+import {
+  SystemTemplateLookupError,
+  SystemTemplateNotFoundError,
+} from '../../template-service/system-templates'
+import { EmailLayoutConfigError } from '../../template-service/render/layout'
 import { logOutboundDispatch } from '../../communication-log-service/adapters/db'
 import { runBulkSend } from '../bulk-send'
 import { evaluateSendAt, getScheduleRules } from '../../scheduled-sends/rules'
 
-// Email sender used for fromAddress when logging outbound email dispatches.
-// Mirrors the constant in email-adapter.ts (kept private there).
-const EMAIL_SENDER = 'Bostads Mimer AB <noreply@mimer.nu>'
 const EMAIL_PROVIDER = 'infobip'
 
 // triggeredByUser value for emails with no human initiator (the automated
@@ -83,7 +74,7 @@ const logParkingSpaceEmail = async (params: {
   try {
     await logOutboundDispatch({
       channel: 'email',
-      fromAddress: EMAIL_SENDER,
+      fromAddress: emailSender(),
       subject: params.subject,
       body: params.body,
       messageType: params.messageType,
@@ -125,7 +116,7 @@ const logWorkOrderTenantEmail = async (params: {
   try {
     await logOutboundDispatch({
       channel: 'email',
-      fromAddress: EMAIL_SENDER,
+      fromAddress: emailSender(),
       subject: params.subject,
       body: params.body,
       messageType: 'work_order_tenant_mail',
@@ -151,6 +142,23 @@ const logWorkOrderTenantEmail = async (params: {
     )
     return ['Communication log failed']
   }
+}
+
+// Typed reason for a failed system email. All but PROVIDER_REJECTED and
+// SEND_FAILED fail before anything is sent; those two may not have.
+const sendFailureReason = (err: unknown): string => {
+  if (
+    err instanceof MissingPlaceholderError ||
+    err instanceof InvalidPlaceholderUrlError ||
+    err instanceof InvalidPlaceholderValueError ||
+    err instanceof SystemTemplateNotFoundError ||
+    err instanceof SystemTemplateLookupError ||
+    err instanceof EmailLayoutConfigError
+  ) {
+    return err.code
+  }
+  if (err instanceof ProviderResponseError) return 'PROVIDER_REJECTED'
+  return 'SEND_FAILED'
 }
 
 const toArray = (input: unknown) => {
@@ -221,27 +229,20 @@ export const routes = (router: KoaRouter) => {
     }
     try {
       const result = await sendParkingSpaceOffer(emailData)
-      const templateId =
-        emailData.applicationType === 'Replace'
-          ? ReplaceParkingSpaceOfferTemplateId
-          : AdditionalParkingSpaceOfferTemplateId
-      const template = await getEmailTemplate(templateId)
-      const rendered = template ? renderTemplate(template, emailData) : null
       await logParkingSpaceEmail({
         messageType: 'parking_space_offer',
         to: emailData.to,
         contactCode: emailData.contactCode,
-        // `||` not `??`: an empty rendered subject/body (e.g. a template with no
-        // subject) is never the intended log value, so fall back to the label.
-        subject: rendered?.subject || emailData.subject,
-        body: rendered?.body || emailData.text,
-        sendResult: result,
+        subject: result.rendered.subject,
+        body: result.rendered.bodyText,
+        sendResult: result.response,
       })
       ctx.status = 200
-      ctx.body = { content: result, ...metadata }
+      ctx.body = { content: result.response, ...metadata }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
+        reason: sendFailureReason(error),
         error: error.message,
         ...metadata,
       }
@@ -270,27 +271,20 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendParkingSpaceAcceptOffer(body)
-        const template = await getEmailTemplate(
-          AcceptParkingSpaceOfferTemplateId
-        )
-        const rendered = template ? renderTemplate(template, body) : null
         await logParkingSpaceEmail({
           messageType: 'parking_space_accept_offer',
           to: body.to,
           contactCode: body.contactCode,
-          subject: rendered?.subject || body.subject,
-          body: rendered?.body || body.text,
-          sendResult: result,
+          subject: result.rendered.subject,
+          body: result.rendered.bodyText,
+          sendResult: result.response,
         })
         ctx.status = 204
-        ctx.body = { content: result, ...metadata }
+        ctx.body = { content: result.response, ...metadata }
       } catch (error: any) {
-        logger.error(
-          { error: error.message },
-          'Error in sendParkingSpaceAcceptOffer'
-        )
         ctx.status = 500
         ctx.body = {
+          reason: sendFailureReason(error),
           error: error.message,
           ...metadata,
         }
@@ -321,28 +315,21 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendNonScoredParkingSpaceApproved(body)
-        const template = await getEmailTemplate(
-          NonScoredParkingSpaceApprovedTemplateId
-        )
-        const rendered = template ? renderTemplate(template, body) : null
         await logParkingSpaceEmail({
           messageType: 'non_scored_parking_space_approved',
           to: body.to,
           contactCode: body.contactCode,
           triggeredBy: body.triggeredBy,
-          subject: rendered?.subject || body.subject,
-          body: rendered?.body || body.text,
-          sendResult: result,
+          subject: result.rendered.subject,
+          body: result.rendered.bodyText,
+          sendResult: result.response,
         })
         ctx.status = 204
-        ctx.body = { content: result, ...metadata }
+        ctx.body = { content: result.response, ...metadata }
       } catch (error: any) {
-        logger.error(
-          { error: error.message },
-          'Error in sendNonScoredParkingSpaceApproved'
-        )
         ctx.status = 500
         ctx.body = {
+          reason: sendFailureReason(error),
           error: error.message,
           ...metadata,
         }
@@ -372,36 +359,27 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendNonScoredParkingSpaceDenied(body)
-        const template = await getEmailTemplate(
-          NonScoredParkingSpaceDeniedTemplateId
-        )
-        const rendered = template ? renderTemplate(template, body) : null
         await logParkingSpaceEmail({
           messageType: 'non_scored_parking_space_denied',
           to: body.to,
           contactCode: body.contactCode,
           triggeredBy: body.triggeredBy,
-          subject: rendered?.subject || body.subject,
-          body: rendered?.body || body.text,
-          sendResult: result,
+          subject: result.rendered.subject,
+          body: result.rendered.bodyText,
+          sendResult: result.response,
         })
         ctx.status = 204
-        ctx.body = { content: result, ...metadata }
+        ctx.body = { content: result.response, ...metadata }
       } catch (error: any) {
-        logger.error(
-          { error: error.message },
-          'Error in sendNonScoredParkingSpaceDenied'
-        )
         ctx.status = 500
         ctx.body = {
+          reason: sendFailureReason(error),
           error: error.message,
           ...metadata,
         }
       }
     }
   )
-
-  const LEASE_TERMINATION_CONFIRMATION_SUBJECT = 'Bekräftelse på uppsägning'
 
   router.post(
     '(.*)/sendLeaseTerminationConfirmation',
@@ -412,14 +390,6 @@ export const routes = (router: KoaRouter) => {
 
       try {
         const result = await sendLeaseTerminationConfirmation(body)
-        const template = await getEmailTemplate(
-          LeaseTerminationConfirmationTemplateId
-        )
-        const rendered = template
-          ? renderTemplateWithPlaceholders(template, () =>
-              buildLeaseTerminationPlaceholders(body)
-            )
-          : null
         await logParkingSpaceEmail({
           messageType: LeaseTerminationConfirmationMessageType,
           to: body.to,
@@ -428,47 +398,22 @@ export const routes = (router: KoaRouter) => {
           audienceCriteria: body.correlationId
             ? { correlationId: body.correlationId, leaseId: body.leaseId }
             : { leaseId: body.leaseId },
-          subject: rendered?.subject || LEASE_TERMINATION_CONFIRMATION_SUBJECT,
-          body:
-            rendered?.body ||
-            `${LEASE_TERMINATION_CONFIRMATION_SUBJECT} av ${body.rentalType}, avtal ${body.leaseId}.`,
-          sendResult: result,
+          subject: result.rendered.subject,
+          body: result.rendered.bodyText,
+          sendResult: result.response,
         })
         ctx.status = 204
-        ctx.body = { content: result, ...metadata }
+        ctx.body = { content: result.response, ...metadata }
       } catch (error: any) {
-        logger.error(
-          { error: error.message },
-          'Error in sendLeaseTerminationConfirmation'
-        )
         ctx.status = 500
         ctx.body = {
+          reason: sendFailureReason(error),
           error: error.message,
           ...metadata,
         }
       }
     }
   )
-
-  router.post('(.*)/sendNotification', async (ctx) => {
-    const { applicants } = ctx.request.body as {
-      applicants: ParkingSpaceNotificationEmail[]
-    }
-    if (!Array.isArray(applicants)) {
-      ctx.throw(400, 'Message is not an email object')
-      return
-    }
-    try {
-      const result = await sendParkingSpaceAssignedToOther(applicants)
-      ctx.status = 200
-      ctx.body = result
-    } catch (error: any) {
-      ctx.status = 500
-      ctx.body = {
-        message: error.message,
-      }
-    }
-  })
 
   router.post('(.*)/sendWorkOrderEmail', async (ctx) => {
     const metadata = generateRouteMetadata(ctx)
@@ -491,23 +436,24 @@ export const routes = (router: KoaRouter) => {
         ? await logWorkOrderTenantEmail({
             to: emailData.to,
             contactCode: emailData.contactCode,
-            subject: emailData.subject,
-            body: emailData.text,
+            subject: result.rendered.subject,
+            body: result.rendered.bodyText,
             triggeredByUser: emailData.triggeredByUser,
             workOrderCode: emailData.workOrderCode,
-            sendResult: result,
+            sendResult: result.response,
           })
         : []
 
       ctx.status = 200
       ctx.body = {
-        content: result,
+        content: result.response,
         ...(warnings.length && { warnings }),
         ...metadata,
       }
     } catch (error: any) {
       ctx.status = 500
       ctx.body = {
+        reason: sendFailureReason(error),
         error: error.message,
         ...metadata,
       }
@@ -539,14 +485,11 @@ export const routes = (router: KoaRouter) => {
       try {
         const result = await sendInspectionProtocolEmail(body)
         ctx.status = 204
-        ctx.body = { content: result.data, ...metadata }
+        ctx.body = { content: result.response, ...metadata }
       } catch (error: any) {
-        logger.error(
-          { error: error.message },
-          'Error in sendInspectionProtocolEmail'
-        )
         ctx.status = 500
         ctx.body = {
+          reason: sendFailureReason(error),
           error: error.message,
           ...metadata,
         }
@@ -676,7 +619,7 @@ export const routes = (router: KoaRouter) => {
         const outcome = await runBulkSend({
           channel: 'email',
           messageType: 'bulk_email',
-          fromAddress: EMAIL_SENDER,
+          fromAddress: emailSender(),
           provider: EMAIL_PROVIDER,
           subject: body.subject,
           body: body.text,
@@ -757,14 +700,11 @@ export const routes = (router: KoaRouter) => {
       try {
         const result = await sendInvoiceNotificationEmail(body)
         ctx.status = 204
-        ctx.body = { content: result.data, ...metadata }
+        ctx.body = { content: result.response, ...metadata }
       } catch (error: any) {
-        logger.error(
-          { error: error.message },
-          'Error in sendInvoiceNotificationEmail'
-        )
         ctx.status = 500
         ctx.body = {
+          reason: sendFailureReason(error),
           error: error.message,
           ...metadata,
         }

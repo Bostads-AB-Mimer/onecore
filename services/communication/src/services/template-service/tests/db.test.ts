@@ -27,6 +27,8 @@ describe('toTemplate', () => {
     body: 'Hej!',
     categories: null,
     isActive: true,
+    revision: 1,
+    updatedBy: null,
     createdAt: new Date('2026-11-06T00:00:00.000Z'),
     updatedAt: new Date('2026-11-06T00:00:00.000Z'),
   }
@@ -35,6 +37,12 @@ describe('toTemplate', () => {
     expect(
       toTemplate({ ...row, channels: 'sms,email', categories: 'a,b' })
     ).toMatchObject({ channels: ['sms', 'email'], categories: ['a', 'b'] })
+  })
+
+  it('derives the SMS text from the markdown body', () => {
+    expect(
+      toTemplate({ ...row, body: '**Hej!** Läs [här](https://a.se)' }).smsText
+    ).toBe('Hej! Läs här (https://a.se)')
   })
 
   it('maps null/empty categories to an empty array', () => {

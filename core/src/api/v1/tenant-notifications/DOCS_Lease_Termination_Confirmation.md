@@ -4,8 +4,8 @@ Tenfast calls `POST /v1/tenant-notifications/lease-termination-confirmation`
 after a parking space or garage lease termination is confirmed (both are
 `Bilplats` in the email). OneCore enriches the
 notification from the lease and the contacts service and emails every lease
-holder through the communication service (Infobip template
-`LeaseTerminationConfirmationTemplateId`).
+holder through the communication service (system template
+`lease_termination_confirmation`, rendered by the communication service).
 
 Only `leaseId` (and the optional `correlationId`, stored in the communication
 log) is used. Tenfast still sends `to`, `contactCode`, `firstName`, `endDate`
@@ -63,7 +63,7 @@ sequenceDiagram
     end
     loop each holder with an email, in parallel (claim per-holder key; a key held by another payload or in flight counts as failed)
         C->>M: POST /sendLeaseTerminationConfirmation
-        M->>M: send via Infobip, write communication log
+        M->>M: render template, send via Infobip, write communication log
     end
     Note over C: waits for every send to settle before releasing the request key, even if one throws
     alt any send failed

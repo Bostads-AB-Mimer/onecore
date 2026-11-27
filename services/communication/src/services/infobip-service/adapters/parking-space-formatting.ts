@@ -1,7 +1,4 @@
-// Value formatting for parking-space email placeholders, shared by the send
-// path (email-adapter.ts) and the communication-log render path
-// (email-template-render.ts) so the logged copy is formatted exactly like the
-// email that was sent.
+// Value formatting for system email placeholders (email-adapter.ts builders).
 
 export const dateFormatter = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'UTC',

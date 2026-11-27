@@ -3,6 +3,7 @@ import {
   AudienceCriterionSchema,
   CancelDispatchResponseSchema,
   ChannelSchema,
+  CreateTemplateParamsSchema,
   CreateTemplateSchema,
   CreateReleaseNoteParamsSchema,
   CreateReleaseNoteSchema,
@@ -17,15 +18,26 @@ import {
   LogOutboundParamsSchema,
   LogOutboundRecipientSchema,
   MessageRecipientSchema,
+  PlaceholderKindSchema,
+  PreviewSystemTemplateSchema,
+  PreviewTemplateSchema,
   RecipientStatusSchema,
   ReleaseNoteAppSchema,
   ReleaseNoteCategorySchema,
   ReleaseNoteSchema,
   RescheduleDispatchResponseSchema,
   ScheduleConfigSchema,
+  SystemTemplateKeySchema,
+  SystemTemplatePreviewSchema,
+  SystemTemplateSchema,
+  TemplatePlaceholderSchema,
+  TemplatePreviewSchema,
   TemplateSchema,
   TemplateStatusFilterSchema,
   UpdateReleaseNoteSchema,
+  UpdateSystemTemplateParamsSchema,
+  UpdateSystemTemplateSchema,
+  UpdateTemplateParamsSchema,
   UpdateTemplateSchema,
 } from './schema'
 
@@ -40,6 +52,21 @@ export type Template = z.infer<typeof TemplateSchema>
 export type CreateTemplate = z.infer<typeof CreateTemplateSchema>
 export type UpdateTemplate = z.infer<typeof UpdateTemplateSchema>
 export type TemplateStatusFilter = z.infer<typeof TemplateStatusFilterSchema>
+export type CreateTemplateParams = z.infer<typeof CreateTemplateParamsSchema>
+export type UpdateTemplateParams = z.infer<typeof UpdateTemplateParamsSchema>
+export type PreviewTemplate = z.infer<typeof PreviewTemplateSchema>
+export type TemplatePreview = z.infer<typeof TemplatePreviewSchema>
+
+export type SystemTemplateKey = z.infer<typeof SystemTemplateKeySchema>
+export type PlaceholderKind = z.infer<typeof PlaceholderKindSchema>
+export type TemplatePlaceholder = z.infer<typeof TemplatePlaceholderSchema>
+export type SystemTemplate = z.infer<typeof SystemTemplateSchema>
+export type UpdateSystemTemplate = z.infer<typeof UpdateSystemTemplateSchema>
+export type UpdateSystemTemplateParams = z.infer<
+  typeof UpdateSystemTemplateParamsSchema
+>
+export type PreviewSystemTemplate = z.infer<typeof PreviewSystemTemplateSchema>
+export type SystemTemplatePreview = z.infer<typeof SystemTemplatePreviewSchema>
 
 export type LogOutboundRecipient = z.infer<typeof LogOutboundRecipientSchema>
 export type LogOutboundParams = z.infer<typeof LogOutboundParamsSchema>

@@ -14,14 +14,21 @@ const template = {
   channels: ['sms' as const],
   subject: null,
   body: 'Hej! Din nyckel finns att hämta.',
+  smsText: 'Hej! Din nyckel finns att hämta.',
   categories: [],
   isActive: true,
+  revision: 1,
+  updatedBy: null,
   createdAt: new Date('2026-11-06T00:00:00.000Z'),
   updatedAt: new Date('2026-11-06T00:00:00.000Z'),
 }
 
 const app = new Koa()
 const router = new KoaRouter()
+app.use(async (ctx, next) => {
+  ctx.state.user = { name: 'Åsa Öberg', realm_access: { roles: [] } }
+  await next()
+})
 app.use(bodyParser())
 routes(router)
 app.use(router.routes())
@@ -79,6 +86,22 @@ describe('POST /message-templates', () => {
     expect(res.body.content.name).toBe('Nyckel klar')
   })
 
+  it('stamps updatedBy from the token, not the client', async () => {
+    const spy = jest
+      .spyOn(templatesAdapter, 'createTemplate')
+      .mockResolvedValue({ ok: true, data: template })
+
+    await request(app.callback())
+      .post('/message-templates')
+      .send({ name: 'Nyckel klar', body: 'Hej', updatedBy: 'Någon annan' })
+
+    expect(spy).toHaveBeenCalledWith({
+      name: 'Nyckel klar',
+      body: 'Hej',
+      updatedBy: 'Åsa Öberg',
+    })
+  })
+
   it('forwards the upstream 409 code', async () => {
     jest.spyOn(templatesAdapter, 'createTemplate').mockResolvedValue({
       ok: false,
@@ -101,7 +124,7 @@ describe('PUT /message-templates/:id', () => {
 
     const res = await request(app.callback())
       .put(`/message-templates/${TEMPLATE_ID}`)
-      .send({})
+      .send({ revision: 1 })
 
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('NO_FIELDS')
@@ -117,10 +140,68 @@ describe('PUT /message-templates/:id', () => {
 
     const res = await request(app.callback())
       .put(`/message-templates/${TEMPLATE_ID}`)
-      .send({ body: 'Ny text' })
+      .send({ body: 'Ny text', revision: 1 })
 
     expect(res.status).toBe(404)
     expect(res.body.error).toBe('TEMPLATE_NOT_FOUND')
+  })
+
+  it('forwards 409 TEMPLATE_CHANGED and passes the revision on', async () => {
+    const spy = jest
+      .spyOn(templatesAdapter, 'updateTemplate')
+      .mockResolvedValue({
+        ok: false,
+        err: 'TEMPLATE_CHANGED',
+        statusCode: 409,
+      })
+
+    const res = await request(app.callback())
+      .put(`/message-templates/${TEMPLATE_ID}`)
+      .send({ body: 'Ny text', revision: 4 })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toBe('TEMPLATE_CHANGED')
+    expect(spy).toHaveBeenCalledWith(TEMPLATE_ID, {
+      body: 'Ny text',
+      revision: 4,
+      updatedBy: 'Åsa Öberg',
+    })
+  })
+
+  it('requires a revision', async () => {
+    const spy = jest.spyOn(templatesAdapter, 'updateTemplate')
+
+    const res = await request(app.callback())
+      .put(`/message-templates/${TEMPLATE_ID}`)
+      .send({ body: 'Ny text' })
+
+    expect(res.status).toBe(400)
+    expect(spy).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /message-templates/preview', () => {
+  it('returns the SMS text and forwards validation codes', async () => {
+    jest
+      .spyOn(templatesAdapter, 'previewTemplate')
+      .mockResolvedValueOnce({ ok: true, data: { text: 'Hej' } })
+      .mockResolvedValueOnce({
+        ok: false,
+        err: 'INVALID_URL',
+        statusCode: 400,
+      })
+
+    const ok = await request(app.callback())
+      .post('/message-templates/preview')
+      .send({ body: '**Hej**' })
+    const bad = await request(app.callback())
+      .post('/message-templates/preview')
+      .send({ body: '[a](http://x.se)' })
+
+    expect(ok.status).toBe(200)
+    expect(ok.body.content.text).toBe('Hej')
+    expect(bad.status).toBe(400)
+    expect(bad.body.error).toBe('INVALID_URL')
   })
 })
 

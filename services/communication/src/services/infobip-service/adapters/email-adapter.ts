@@ -1,32 +1,33 @@
+import { randomUUID } from 'node:crypto'
+
 import config from '../../../common/config'
 import {
   Email,
   ParkingSpaceOfferEmail,
-  ParkingSpaceNotificationEmail,
   WorkOrderEmail,
   ParkingSpaceAcceptOfferEmail,
   NonScoredParkingSpaceApprovedEmail,
   NonScoredParkingSpaceDeniedEmail,
   InvoiceNotificationEmail,
+  InspectionProtocolEmail,
   LeaseTerminationConfirmationEmail,
 } from '@onecore/types'
 import { logger } from '@onecore/utilities'
 
 import { EmailAttachment } from '@onecore/types'
+import { getSystemTemplate } from '../../template-service/adapters/db'
+import {
+  RenderedEmail,
+  renderEmail,
+  SystemTemplateKey,
+} from '../../template-service/system-templates'
+import {
+  InvalidPlaceholderValueError,
+  type Placeholders,
+} from '../../template-service/render/render'
+import { TrustedHtml } from '../../template-service/render/trusted-html'
 import { EmailV4Message, EmailV4Response } from './types'
 import { ProviderResponseError } from './provider-error'
-import {
-  AcceptParkingSpaceOfferTemplateId,
-  AdditionalParkingSpaceOfferTemplateId,
-  InvoiceNotificationEmailTemplateId,
-  LeaseTerminationConfirmationTemplateId,
-  NonScoredParkingSpaceApprovedTemplateId,
-  NonScoredParkingSpaceDeniedTemplateId,
-  ParkingSpaceAssignedToOtherTemplateId,
-  ReplaceParkingSpaceOfferTemplateId,
-  WorkOrderEmailTemplateId,
-  WorkOrderExternalContractorEmailTemplateId,
-} from './infobip-template-ids'
 import {
   dateFormatter,
   formatToSwedishCurrency,
@@ -38,8 +39,13 @@ import { buildLeaseTerminationPlaceholders } from './lease-termination-placehold
 // Order of `messages` matches the destinations array passed in.
 export type InfobipSendEmailResponse = EmailV4Response
 
-// Email sender identity
-const EMAIL_SENDER = 'Bostads Mimer AB <noreply@mimer.nu>'
+// A system email that went out: the provider's answer plus exactly what was
+// sent, which the routes write to the communication log.
+export type SentEmail = { response: EmailV4Response; rendered: RenderedEmail }
+
+/** Sender identity, e.g. "Bostads AB Mimer <noreply@mimer.nu>". */
+export const emailSender = () =>
+  `${config.organisation.name} <${config.organisation.noReplyEmail}>`
 
 // TODO: set applicationId on each message (env public hostname, e.g.
 // epic-mim-1838.dev.mimer.nu / api.mimer.nu) and filter each Infobip
@@ -77,27 +83,28 @@ const sendEmailV4 = async (
   return response.json() as Promise<EmailV4Response>
 }
 
-// Uses /email/3/send (multipart) for template emails with attachments.
-// Constructs multipart body manually to avoid undici adding ;charset=UTF-8
-// to the Content-Type boundary, which Infobip rejects.
-const sendTemplateEmailWithAttachments = async (params: {
+// Uses /email/3/send (multipart) for emails with attachments. Constructs the
+// multipart body manually to avoid undici adding ;charset=UTF-8 to the
+// Content-Type boundary, which Infobip rejects.
+const sendEmailWithAttachments = async (params: {
   to: string
-  placeholders: string
-  templateId: number
+  rendered: RenderedEmail
   attachments: EmailAttachment[]
 }): Promise<void> => {
   const baseUrl = config.infobip.baseUrl.replace(/\/$/, '')
   const url = `${baseUrl}/email/3/send`
   const apiKey = config.infobip.apiKey
   const crlf = '\r\n'
-  const boundary = `----InfobipBoundary${Date.now()}`
+  // Random, so no rendered value can guess it and open a new form part.
+  const boundary = `----InfobipBoundary${randomUUID()}`
   const enc = new TextEncoder()
 
   const formFields: Record<string, string> = {
-    from: EMAIL_SENDER,
+    from: emailSender(),
     to: params.to,
-    templateId: String(params.templateId),
-    placeholders: params.placeholders,
+    subject: params.rendered.subject,
+    html: params.rendered.html,
+    text: params.rendered.text,
   }
 
   const parts: Uint8Array[] = []
@@ -148,11 +155,133 @@ const sendTemplateEmailWithAttachments = async (params: {
 
   if (!response.ok) {
     const errorBody = await response.text()
-    throw new Error(
-      `Infobip Email API error: ${response.status} - ${errorBody}`
-    )
+    throw new ProviderResponseError('infobip-email', response.status, errorBody)
   }
 }
+
+// Loads and renders before anything is sent: a missing template, a missing
+// placeholder or a bad URL value throws here and no email goes out.
+const renderSystemEmail = async (
+  key: SystemTemplateKey,
+  placeholders: Placeholders
+): Promise<RenderedEmail> =>
+  renderEmail(await getSystemTemplate(key), placeholders)
+
+/** Sends already-rendered content (also used by the template preview script). */
+export const sendRenderedEmail = (
+  to: string,
+  rendered: RenderedEmail
+): Promise<EmailV4Response> =>
+  sendEmailV4([
+    {
+      sender: emailSender(),
+      destinations: [{ to: [{ destination: to }] }],
+      content: {
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+      },
+    },
+  ])
+
+const sendSystemEmail = async (
+  to: string,
+  key: SystemTemplateKey,
+  placeholders: Placeholders
+): Promise<SentEmail> => {
+  const rendered = await renderSystemEmail(key, placeholders)
+  const response = await sendRenderedEmail(to, rendered)
+  return { response, rendered }
+}
+
+// Building runs before anything is sent, so a failure there (e.g. an
+// unparseable date) is invalid send data, not an unknown send outcome.
+const placeholdersFrom = <T>(
+  build: (email: T) => Placeholders,
+  email: T
+): Placeholders => {
+  try {
+    return build(email)
+  } catch (err: unknown) {
+    throw new InvalidPlaceholderValueError({ cause: err })
+  }
+}
+
+export const buildParkingSpaceOfferPlaceholders = (
+  email: ParkingSpaceOfferEmail
+): Record<string, string> => ({
+  address: email.address,
+  firstName: email.firstName,
+  availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+  deadlineDate: dateFormatter.format(new Date(email.deadlineDate)),
+  rent: formatToSwedishCurrency(email.rent),
+  type: email.type,
+  parkingSpaceId: email.parkingSpaceId,
+  objectId: email.objectId,
+  offerURL: email.offerURL,
+  parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
+})
+
+export const buildAcceptOfferPlaceholders = (
+  email: ParkingSpaceAcceptOfferEmail
+): Record<string, string> => ({
+  firstName: email.firstName,
+  address: email.address,
+  availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+  parkingSpaceId: email.parkingSpaceId,
+  objectId: email.objectId,
+  type: email.type,
+  rent: formatToSwedishCurrency(email.rent),
+  parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
+})
+
+export const buildNonScoredApprovedPlaceholders = (
+  email: NonScoredParkingSpaceApprovedEmail
+): Record<string, string> => ({
+  leaseId: email.leaseId,
+  address: email.address,
+  availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+  parkingSpaceId: email.parkingSpaceId,
+  objectId: email.objectId,
+  type: email.type,
+  rent: formatToSwedishCurrency(email.rent),
+  parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
+})
+
+export const buildNonScoredDeniedPlaceholders = (
+  email: NonScoredParkingSpaceDeniedEmail
+): Record<string, string> => ({
+  address: email.address,
+  availableFrom: dateFormatter.format(new Date(email.availableFrom)),
+  parkingSpaceId: email.parkingSpaceId,
+  objectId: email.objectId,
+  type: email.type,
+  rent: formatToSwedishCurrency(email.rent),
+})
+
+export const buildWorkOrderPlaceholders = (
+  email: WorkOrderEmail
+): Placeholders => ({
+  // Odoo sends HTML (contractors write it too): kept as HTML, but sanitized.
+  message: TrustedHtml.fromUntrusted(email.text),
+  ...(email.externalContractorName && {
+    externalContractor: email.externalContractorName,
+  }),
+})
+
+export const buildInvoiceNotificationPlaceholders = (
+  email: InvoiceNotificationEmail
+): Record<string, string> => ({
+  firstName: email.firstName,
+  address: email.address,
+  invoiceNumber: email.invoiceNumber,
+  dueDate: dateFormatter.format(new Date(email.dueDate)),
+  totalAmount: formatToSwedishCurrency(email.totalAmount),
+})
+
+export const buildInspectionProtocolPlaceholders = (
+  email: InspectionProtocolEmail
+): Record<string, string> => ({ firstName: email.firstName })
 
 export const sendEmail = async (message: Email) => {
   logger.info({ subject: message.subject }, 'Sending email')
@@ -160,7 +289,7 @@ export const sendEmail = async (message: Email) => {
   try {
     const response = await sendEmailV4([
       {
-        sender: EMAIL_SENDER,
+        sender: emailSender(),
         destinations: [{ to: [{ destination: message.to }] }],
         content: { subject: message.subject, text: message.text },
       },
@@ -169,220 +298,106 @@ export const sendEmail = async (message: Email) => {
     logger.info({ subject: message.subject }, 'Sending email complete')
     return response
   } catch (error) {
-    logger.error(error)
+    logger.error({ err: error }, 'email-adapter.sendEmail')
     throw error
   }
 }
 
-export const sendParkingSpaceOffer = async (email: ParkingSpaceOfferEmail) => {
+export const sendParkingSpaceOffer = async (
+  email: ParkingSpaceOfferEmail
+): Promise<SentEmail> => {
   logger.info({ baseUrl: config.infobip.baseUrl }, 'Sending template email')
   try {
-    const placeholders = JSON.stringify({
-      address: email.address,
-      firstName: email.firstName,
-      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
-      deadlineDate: dateFormatter.format(new Date(email.deadlineDate)),
-      rent: formatToSwedishCurrency(email.rent),
-      type: email.type,
-      parkingSpaceId: email.parkingSpaceId,
-      objectId: email.objectId,
-      offerURL: email.offerURL,
-      parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
-    })
-
-    const templateId =
+    return await sendSystemEmail(
+      email.to,
       email.applicationType === 'Replace'
-        ? ReplaceParkingSpaceOfferTemplateId
-        : AdditionalParkingSpaceOfferTemplateId
-
-    const response = await sendEmailV4([
-      {
-        sender: EMAIL_SENDER,
-        destinations: [
-          {
-            to: [{ destination: email.to, placeholders }],
-          },
-        ],
-        content: { templateId },
-      },
-    ])
-
-    return response
+        ? 'parking_space_offer_replace'
+        : 'parking_space_offer_additional',
+      placeholdersFrom(buildParkingSpaceOfferPlaceholders, email)
+    )
   } catch (error) {
-    logger.error(error)
+    logger.error({ err: error }, 'email-adapter.sendParkingSpaceOffer')
     throw error
   }
 }
 
 export const sendParkingSpaceAcceptOffer = async (
   email: ParkingSpaceAcceptOfferEmail
-) => {
+): Promise<SentEmail> => {
   logger.info(
     { baseUrl: config.infobip.baseUrl },
     'Sending Parking Space Accept Offer Email'
   )
-
   try {
-    const placeholders = JSON.stringify({
-      firstName: email.firstName,
-      address: email.address,
-      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
-      parkingSpaceId: email.parkingSpaceId,
-      objectId: email.objectId,
-      type: email.type,
-      rent: formatToSwedishCurrency(email.rent),
-      parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
-    })
-
-    const response = await sendEmailV4([
-      {
-        sender: EMAIL_SENDER,
-        destinations: [
-          {
-            to: [{ destination: email.to, placeholders }],
-          },
-        ],
-        content: { templateId: AcceptParkingSpaceOfferTemplateId },
-      },
-    ])
-
-    return response
+    return await sendSystemEmail(
+      email.to,
+      'parking_space_accept_offer',
+      placeholdersFrom(buildAcceptOfferPlaceholders, email)
+    )
   } catch (error) {
-    logger.error(error)
+    logger.error({ err: error }, 'email-adapter.sendParkingSpaceAcceptOffer')
     throw error
   }
 }
 
 export const sendNonScoredParkingSpaceApproved = async (
   email: NonScoredParkingSpaceApprovedEmail
-) => {
+): Promise<SentEmail> => {
   logger.info(
     { baseUrl: config.infobip.baseUrl },
     'Sending Non-Scored Parking Space Approved Email'
   )
-
   try {
-    const placeholders = JSON.stringify({
-      leaseId: email.leaseId,
-      address: email.address,
-      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
-      parkingSpaceId: email.parkingSpaceId,
-      objectId: email.objectId,
-      type: email.type,
-      rent: formatToSwedishCurrency(email.rent),
-      parkingSpaceImage: getParkingSpaceImageUrl(email.parkingSpaceId),
-    })
-
-    const response = await sendEmailV4([
-      {
-        sender: EMAIL_SENDER,
-        destinations: [
-          {
-            to: [{ destination: email.to, placeholders }],
-          },
-        ],
-        content: { templateId: NonScoredParkingSpaceApprovedTemplateId },
-      },
-    ])
-
-    return response
+    return await sendSystemEmail(
+      email.to,
+      'non_scored_parking_space_approved',
+      placeholdersFrom(buildNonScoredApprovedPlaceholders, email)
+    )
   } catch (error) {
-    logger.error(error)
+    logger.error(
+      { err: error },
+      'email-adapter.sendNonScoredParkingSpaceApproved'
+    )
     throw error
   }
 }
 
 export const sendNonScoredParkingSpaceDenied = async (
   email: NonScoredParkingSpaceDeniedEmail
-) => {
+): Promise<SentEmail> => {
   logger.info(
     { baseUrl: config.infobip.baseUrl },
     'Sending Non-Scored Parking Space Denied Email'
   )
-
   try {
-    const placeholders = JSON.stringify({
-      address: email.address,
-      availableFrom: dateFormatter.format(new Date(email.availableFrom)),
-      parkingSpaceId: email.parkingSpaceId,
-      objectId: email.objectId,
-      type: email.type,
-      rent: formatToSwedishCurrency(email.rent),
-    })
-
-    const response = await sendEmailV4([
-      {
-        sender: EMAIL_SENDER,
-        destinations: [
-          {
-            to: [{ destination: email.to, placeholders }],
-          },
-        ],
-        content: { templateId: NonScoredParkingSpaceDeniedTemplateId },
-      },
-    ])
-
-    return response
+    return await sendSystemEmail(
+      email.to,
+      'non_scored_parking_space_denied',
+      placeholdersFrom(buildNonScoredDeniedPlaceholders, email)
+    )
   } catch (error) {
-    logger.error(error)
+    logger.error(
+      { err: error },
+      'email-adapter.sendNonScoredParkingSpaceDenied'
+    )
     throw error
   }
 }
 
-export const sendParkingSpaceAssignedToOther = async (
-  emails: ParkingSpaceNotificationEmail[]
-) => {
-  try {
-    const recipients = emails.map((email) => ({
-      destination: email.to,
-      placeholders: JSON.stringify({
-        address: email.address,
-        parkingSpaceId: email.parkingSpaceId,
-      }),
-    }))
-
-    const response = await sendEmailV4([
-      {
-        sender: EMAIL_SENDER,
-        destinations: [{ to: recipients }],
-        content: { templateId: ParkingSpaceAssignedToOtherTemplateId },
-      },
-    ])
-
-    return response
-  } catch (error) {
-    logger.error(error)
-    throw error
-  }
-}
-
-export const sendWorkOrderEmail = async (email: WorkOrderEmail) => {
+export const sendWorkOrderEmail = async (
+  email: WorkOrderEmail
+): Promise<SentEmail> => {
   logger.info({ baseUrl: config.infobip.baseUrl }, 'Sending work order email')
   try {
-    const placeholders = JSON.stringify({
-      message: email.text,
-      externalContractor: email.externalContractorName,
-    })
-
-    const templateId = email.externalContractorName
-      ? WorkOrderExternalContractorEmailTemplateId
-      : WorkOrderEmailTemplateId
-
-    const response = await sendEmailV4([
-      {
-        sender: EMAIL_SENDER,
-        destinations: [
-          {
-            to: [{ destination: email.to, placeholders }],
-          },
-        ],
-        content: { templateId },
-      },
-    ])
-
-    return response
+    return await sendSystemEmail(
+      email.to,
+      email.externalContractorName
+        ? 'work_order_external_contractor'
+        : 'work_order',
+      placeholdersFrom(buildWorkOrderPlaceholders, email)
+    )
   } catch (error) {
-    logger.error(error)
+    logger.error({ err: error }, 'email-adapter.sendWorkOrderEmail')
     throw error
   }
 }
@@ -405,7 +420,7 @@ export const sendBulkEmail = async (email: {
     const response = await sendEmailV4(
       [
         {
-          sender: EMAIL_SENDER,
+          sender: emailSender(),
           destinations: email.emails.map((addr) => ({
             to: [{ destination: addr }],
           })),
@@ -426,6 +441,22 @@ export const sendBulkEmail = async (email: {
   }
 }
 
+// Sends via multipart when there are attachments; that endpoint returns no
+// message ids, so `response` is null then.
+const sendSystemEmailWithOptionalAttachments = async (
+  to: string,
+  key: SystemTemplateKey,
+  placeholders: Placeholders,
+  attachments: EmailAttachment[] | undefined
+): Promise<{ response: EmailV4Response | null; rendered: RenderedEmail }> => {
+  if (!attachments || attachments.length === 0) {
+    return sendSystemEmail(to, key, placeholders)
+  }
+  const rendered = await renderSystemEmail(key, placeholders)
+  await sendEmailWithAttachments({ to, rendered, attachments })
+  return { response: null, rendered }
+}
+
 export const sendInvoiceNotificationEmail = async (
   email: InvoiceNotificationEmail
 ) => {
@@ -433,75 +464,54 @@ export const sendInvoiceNotificationEmail = async (
     { baseUrl: config.infobip.baseUrl },
     'Sending invoice notification email'
   )
-
   try {
-    const placeholders = JSON.stringify({
-      firstName: email.firstName,
-      address: email.address,
-      invoiceNumber: email.invoiceNumber,
-      dueDate: dateFormatter.format(new Date(email.dueDate)),
-      totalAmount: formatToSwedishCurrency(email.totalAmount),
-    })
-
-    if (email.attachments && email.attachments.length > 0) {
-      await sendTemplateEmailWithAttachments({
-        to: email.to,
-        placeholders,
-        templateId: InvoiceNotificationEmailTemplateId,
-        attachments: email.attachments,
-      })
-      return { data: null }
-    }
-
-    const response = await sendEmailV4([
-      {
-        sender: EMAIL_SENDER,
-        destinations: [{ to: [{ destination: email.to, placeholders }] }],
-        content: { templateId: InvoiceNotificationEmailTemplateId },
-      },
-    ])
-
-    return { data: response }
+    return await sendSystemEmailWithOptionalAttachments(
+      email.to,
+      'invoice_notification',
+      placeholdersFrom(buildInvoiceNotificationPlaceholders, email),
+      email.attachments
+    )
   } catch (error) {
-    logger.error(error)
+    logger.error({ err: error }, 'email-adapter.sendInvoiceNotificationEmail')
+    throw error
+  }
+}
+
+export const sendInspectionProtocolEmail = async (
+  email: InspectionProtocolEmail
+) => {
+  logger.info({ to: email.to }, 'Sending inspection protocol email')
+  try {
+    return await sendSystemEmailWithOptionalAttachments(
+      email.to,
+      'inspection_protocol',
+      placeholdersFrom(buildInspectionProtocolPlaceholders, email),
+      email.attachments
+    )
+  } catch (error) {
+    logger.error({ err: error }, 'email-adapter.sendInspectionProtocolEmail')
     throw error
   }
 }
 
 export const sendLeaseTerminationConfirmation = async (
   email: LeaseTerminationConfirmationEmail
-) => {
+): Promise<SentEmail> => {
   logger.info(
     { baseUrl: config.infobip.baseUrl, leaseId: email.leaseId },
     'Sending lease termination confirmation email'
   )
-
-  if (!LeaseTerminationConfirmationTemplateId) {
-    throw new Error(
-      'Lease termination confirmation Infobip template id is not configured'
-    )
-  }
-
   try {
-    const placeholders = JSON.stringify(
-      buildLeaseTerminationPlaceholders(email)
+    return await sendSystemEmail(
+      email.to,
+      'lease_termination_confirmation',
+      placeholdersFrom(buildLeaseTerminationPlaceholders, email)
     )
-
-    const response = await sendEmailV4([
-      {
-        sender: EMAIL_SENDER,
-        destinations: [
-          {
-            to: [{ destination: email.to, placeholders }],
-          },
-        ],
-        content: { templateId: LeaseTerminationConfirmationTemplateId },
-      },
-    ])
-
-    return response
   } catch (error) {
-    logger.error(error)
+    logger.error(
+      { err: error },
+      'email-adapter.sendLeaseTerminationConfirmation'
+    )
     throw error
   }
 }

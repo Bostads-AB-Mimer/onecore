@@ -142,10 +142,11 @@ export function SmsModal(props: SmsModalProps) {
     setPendingTemplate(null)
   }, [])
 
+  // smsText, not body: the body is markdown, smsText is what an SMS sends.
   const applyTemplate = useCallback((template: MessageTemplate) => {
-    setMessage(template.body.slice(0, MAX_SMS_LENGTH))
+    setMessage(template.smsText.slice(0, MAX_SMS_LENGTH))
     setSelectedTemplateId(template.id)
-    setAppliedTemplateBody(template.body)
+    setAppliedTemplateBody(template.smsText)
     setPendingTemplate(null)
   }, [])
 

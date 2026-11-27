@@ -1,10 +1,9 @@
 import config from '../../../common/config'
 import { ParkingSpaceOfferSms, WorkOrderSms } from '@onecore/types'
 import { logger } from '@onecore/utilities'
-import striptags from 'striptags'
-import he from 'he'
 
 import { ProviderResponseError } from './provider-error'
+import { TrustedHtml } from '../../template-service/render/trusted-html'
 
 // SMS sender ID registered with Infobip
 const SMS_SENDER = 'Mimer'
@@ -116,7 +115,8 @@ export const sendParkingSpaceOfferSms = async (sms: ParkingSpaceOfferSms) => {
 
 export const sendWorkOrderSms = async (sms: WorkOrderSms) => {
   logger.info({ baseUrl: config.tele2.baseUrl }, 'Sending work order sms')
-  const message = he.decode(striptags(sms.text.replace(/<br\s*\/?>/gi, '\n')))
+  // Odoo sends HTML; cleaned first, like the email, then turned into text.
+  const message = TrustedHtml.fromUntrusted(sms.text).text
   const noreply = sms.externalContractorName
     ? `Hälsningar, ${sms.externalContractorName} i uppdrag från Mimer`
     : 'Detta sms går ej att svara på. Det går bra att återkoppla i ärendet på "Mina sidor".'

@@ -205,6 +205,156 @@ export interface paths {
     }
   }
   openapi: {}
+  '/system-templates': {
+    /**
+     * List system email templates
+     * @description Alphabetical. `capabilities.canEdit` tells the client whether to offer editing.
+     */
+    get: {
+      responses: {
+        /** @description System templates */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['SystemTemplate'][]
+              capabilities: components['schemas']['SystemTemplateCapabilities']
+            }
+          }
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/system-templates/{key}': {
+    /** Get a system email template */
+    get: {
+      parameters: {
+        path: {
+          key: string
+        }
+      }
+      responses: {
+        /** @description The template, with its placeholders, logo and footer */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['SystemTemplate']
+              capabilities: components['schemas']['SystemTemplateCapabilities']
+            }
+          }
+        }
+        /** @description SYSTEM_TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+    /**
+     * Update a system email template
+     * @description Requires the `system-message-templates:write` realm role. Live at
+     * once. Only if the template is still at `revision` (409
+     * TEMPLATE_CHANGED when someone saved in between). 400 with a code
+     * (UNKNOWN_PLACEHOLDER, MISSING_REQUIRED_PLACEHOLDER,
+     * PLACEHOLDER_NOT_ALONE, INVALID_URL, MISSING_PLACEHOLDER,
+     * INVALID_PLACEHOLDER_URL) when the email would fail or go out broken.
+     */
+    put: {
+      parameters: {
+        path: {
+          key: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateSystemTemplate']
+        }
+      }
+      responses: {
+        /** @description The saved template */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['SystemTemplate']
+            }
+          }
+        }
+        /** @description Invalid request body, or a validation code */
+        400: {
+          content: never
+        }
+        /** @description Caller lacks the `system-message-templates:write` role */
+        403: {
+          content: never
+        }
+        /** @description SYSTEM_TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description TEMPLATE_CHANGED */
+        409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/system-templates/{key}/preview': {
+    /**
+     * Preview an unsaved system email
+     * @description Requires the `system-message-templates:write` realm role. Renders
+     * the finished email (layout and footer) with example values. Same
+     * 400 codes as the update; 500 EMAIL_CONFIG_MISSING when the
+     * organisation config is empty.
+     */
+    post: {
+      parameters: {
+        path: {
+          key: string
+        }
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['PreviewSystemTemplate']
+        }
+      }
+      responses: {
+        /** @description The rendered email */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['SystemTemplatePreview']
+            }
+          }
+        }
+        /** @description Invalid request body, or a validation code */
+        400: {
+          content: never
+        }
+        /** @description Caller lacks the `system-message-templates:write` role */
+        403: {
+          content: never
+        }
+        /** @description SYSTEM_TEMPLATE_NOT_FOUND */
+        404: {
+          content: never
+        }
+        /** @description EMAIL_CONFIG_MISSING or internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
   '/release-notes': {
     /**
      * List release notes
@@ -399,7 +549,10 @@ export interface paths {
     }
     /**
      * Create an SMS template
-     * @description Name must be unique among active templates (409 TEMPLATE_NAME_TAKEN otherwise).
+     * @description The body is markdown; its SMS text may be at most 1600 characters
+     * (400 SMS_TEXT_TOO_LONG). 400 UNKNOWN_PLACEHOLDER or INVALID_URL
+     * when it would fail at send time. Name must be unique among active
+     * templates (409 TEMPLATE_NAME_TAKEN otherwise).
      */
     post: {
       requestBody: {
@@ -416,7 +569,7 @@ export interface paths {
             }
           }
         }
-        /** @description Invalid request body */
+        /** @description Invalid request body, or a validation code */
         400: {
           content: never
         }
@@ -460,7 +613,10 @@ export interface paths {
     }
     /**
      * Update a template in place
-     * @description Only the supplied fields change. Past dispatches keep their sent text; only the "Mall" label follows a rename.
+     * @description Only the supplied name/body change, and only if the template is
+     * still at `revision` (409 TEMPLATE_CHANGED when someone saved in
+     * between). Same body validation as create. Past dispatches keep
+     * their sent text; only the "Mall" label follows a rename.
      */
     put: {
       parameters: {
@@ -482,7 +638,7 @@ export interface paths {
             }
           }
         }
-        /** @description Invalid or empty request body */
+        /** @description Invalid or empty request body, or a validation code */
         400: {
           content: never
         }
@@ -490,8 +646,39 @@ export interface paths {
         404: {
           content: never
         }
-        /** @description TEMPLATE_NAME_TAKEN */
+        /** @description TEMPLATE_NAME_TAKEN or TEMPLATE_CHANGED */
         409: {
+          content: never
+        }
+        /** @description Internal server error */
+        500: {
+          content: never
+        }
+      }
+    }
+  }
+  '/message-templates/preview': {
+    /**
+     * Preview an SMS template
+     * @description The SMS text of an unsaved body, for the editor's preview and length counter. Not limited to 1600; the editor shows the length.
+     */
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['PreviewMessageTemplate']
+        }
+      }
+      responses: {
+        /** @description The SMS text */
+        200: {
+          content: {
+            'application/json': {
+              content: components['schemas']['MessageTemplatePreview']
+            }
+          }
+        }
+        /** @description Invalid request body, or a validation code */
+        400: {
           content: never
         }
         /** @description Internal server error */
@@ -18443,8 +18630,11 @@ export interface components {
       channels: ('sms' | 'email' | 'my-pages')[]
       subject: string | null
       body: string
+      smsText: string
       categories: string[]
       isActive: boolean
+      revision: number
+      updatedBy: string | null
       /** Format: date-time */
       createdAt: string
       /** Format: date-time */
@@ -18457,6 +18647,62 @@ export interface components {
     UpdateMessageTemplate: {
       name?: string
       body?: string
+      revision: number
+    }
+    PreviewMessageTemplate: {
+      body: string
+    }
+    MessageTemplatePreview: {
+      text: string
+    }
+    SystemTemplate: {
+      /** @enum {string} */
+      key:
+        | 'parking_space_offer_additional'
+        | 'parking_space_offer_replace'
+        | 'parking_space_accept_offer'
+        | 'non_scored_parking_space_approved'
+        | 'non_scored_parking_space_denied'
+        | 'work_order'
+        | 'work_order_external_contractor'
+        | 'invoice_notification'
+        | 'inspection_protocol'
+        | 'lease_termination_confirmation'
+      name: string
+      channels: ('sms' | 'email' | 'my-pages')[]
+      subject: string
+      body: string
+      revision: number
+      updatedBy: string | null
+      /** Format: date-time */
+      updatedAt: string
+      placeholders: {
+        token: string
+        label: string
+        /** @enum {string} */
+        kind: 'text' | 'url' | 'block'
+        required: boolean
+        example: string
+      }[]
+      logoUrl: string | null
+      footerLines: string[]
+    }
+    UpdateSystemTemplate: {
+      subject: string
+      body: string
+      revision: number
+    }
+    PreviewSystemTemplate: {
+      subject: string
+      body: string
+    }
+    SystemTemplatePreview: {
+      subject: string
+      html: string
+      text: string
+    }
+    SystemTemplateCapabilities: {
+      canEdit: boolean
     }
     GuideCategory: {
       /** Format: uuid */

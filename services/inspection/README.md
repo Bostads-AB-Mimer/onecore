@@ -25,19 +25,7 @@ JSDoc comments and tags for comprehensive documentation. The Swagger document is
 
 ### Inspection Protocol Email
 
-The inspection protocol email is sent via an Infobip template. The template ID constant is defined in `services/communication/src/services/infobip-service/adapters/infobip-adapter.ts` as `InspectionProtocolEmailTemplateId`.
-
-The template must be created in the Infobip dashboard with the following placeholders:
-
-- `address` - The property address (e.g. "Testgatan 1")
-- `inspectionType` - The type of inspection (e.g. "Inflyttningsbesiktning", "Avflyttningsbesiktning")
-- `inspectionDate` - The date of the inspection formatted as sv-SE (e.g. "2024-01-15")
-- `apartmentCode` - The apartment code (e.g. "A101")
-
-Expected email content (Swedish):
-
-- **Subject:** Besiktningsprotokoll - {inspectionType} {address}
-- **Body:** A message informing the tenant that the inspection protocol for {address} is attached as a PDF, including the inspection type, date, and apartment code.
+The inspection protocol email is the `inspection_protocol` system template in the communication service (`services/communication/migrations/system-email-templates/inspection_protocol.md`), rendered there and sent with the protocol PDF attached. Its only placeholder is `firstName`; see `services/communication/src/services/template-service/DOCS_Message_Templates.md`.
 
 The protocol PDF is included as an email attachment.
 
