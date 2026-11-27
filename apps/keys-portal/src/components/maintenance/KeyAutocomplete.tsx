@@ -1,18 +1,18 @@
 import { useCallback, useMemo, useState } from 'react'
-import { X } from 'lucide-react'
 import { keyService } from '@/services/api/keyService'
 import { keySystemSearchService } from '@/services/api/keySystemSearchService'
-import { Badge } from '@/components/ui/badge'
-import type { Key, KeySystem } from '@/services/types'
+import { SelectedKeyBadge } from '@/components/shared/SelectedKeyBadge'
+import type { KeyDetails, KeySystem } from '@/services/types'
 import { KeyTypeLabels } from '@/services/types'
 import { SearchDropdown } from '@/components/ui/search-dropdown'
 import { SearchInput } from '@/components/shared/layout'
 import { sortKeys } from '@/utils/sortKeys'
 import { parseNumberFilter } from '@/utils/parseNumberFilter'
+import { formatKeySystemLabel } from '@/utils/formatKeySystem'
 
 interface KeyAutocompleteProps {
-  selectedKeys: Key[]
-  onAddKey: (key: Key) => void
+  selectedKeys: KeyDetails[]
+  onAddKey: (key: KeyDetails) => void
   onRemoveKey: (keyId: string) => void
   disabled?: boolean
   existingKeyIds?: Set<string>
@@ -40,14 +40,20 @@ export function KeyAutocomplete({
 
   // Search function that filters out disposed keys and optionally filters by key system and sequence number
   const searchKeys = useCallback(
-    async (query: string): Promise<Key[]> => {
+    async (query: string): Promise<KeyDetails[]> => {
       const seqFilter = parseNumberFilter(keySequenceNumberInput)
-      const results = await keyService.searchKeys({
-        q: query,
-        disposed: 'false',
-        ...(selectedKeySystem?.id && { keySystemId: selectedKeySystem.id }),
-        ...(seqFilter && { keySequenceNumber: seqFilter }),
-      })
+      const results = await keyService.searchKeys(
+        {
+          q: query,
+          disposed: 'false',
+          ...(selectedKeySystem?.id && { keySystemId: selectedKeySystem.id }),
+          ...(seqFilter && { keySequenceNumber: seqFilter }),
+        },
+        1,
+        60,
+        // includeKeySystem: badges and result rows show the key system name
+        true
+      )
       return sortKeys(results.content)
     },
     [keySequenceNumberInput, selectedKeySystem?.id]
@@ -67,7 +73,7 @@ export function KeyAutocomplete({
     [selectedKeys]
   )
 
-  const handleSelect = (key: Key | null) => {
+  const handleSelect = (key: KeyDetails | null) => {
     if (key) {
       if (selectedKeyIds.has(key.id)) {
         onRemoveKey(key.id)
@@ -77,8 +83,8 @@ export function KeyAutocomplete({
     }
   }
 
-  const isKeyDisabled = (key: Key) => existingKeyIds.has(key.id)
-  const isKeySelected = (key: Key) => selectedKeyIds.has(key.id)
+  const isKeyDisabled = (key: KeyDetails) => existingKeyIds.has(key.id)
+  const isKeySelected = (key: KeyDetails) => selectedKeyIds.has(key.id)
 
   return (
     <div className="space-y-3">
@@ -86,28 +92,12 @@ export function KeyAutocomplete({
       {selectedKeys.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {selectedKeys.map((key) => (
-            <Badge
+            <SelectedKeyBadge
               key={key.id}
-              variant="secondary"
-              className="pl-3 pr-1 py-1.5 flex items-center gap-2"
-            >
-              <span className="text-sm">
-                {key.keyName}
-                {key.keySequenceNumber && (
-                  <span className="text-muted-foreground ml-1">
-                    · {key.keySequenceNumber}
-                  </span>
-                )}
-              </span>
-              <button
-                type="button"
-                onClick={() => onRemoveKey(key.id)}
-                disabled={disabled}
-                className="hover:bg-muted rounded-full p-0.5 transition-colors"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
+              selectedKey={key}
+              onRemove={() => onRemoveKey(key.id)}
+              disabled={disabled}
+            />
           ))}
         </div>
       )}
@@ -151,6 +141,7 @@ export function KeyAutocomplete({
               primaryText: key.keyName,
               secondaryText: [
                 KeyTypeLabels[key.keyType],
+                key.keySystem ? formatKeySystemLabel(key.keySystem) : null,
                 key.rentalObjectCode,
                 key.keySequenceNumber
                   ? `Löpnr: ${key.keySequenceNumber}`
