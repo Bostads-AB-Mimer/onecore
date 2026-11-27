@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 
-import { leaseColumns, LeaseMobileCard } from '@/features/leases'
+import {
+  leaseColumns,
+  LeaseMobileCard,
+  LeaseMobileSelectAll,
+} from '@/features/leases'
 import { usePropertySearch } from '@/features/properties'
 import { useCostCenters } from '@/features/property-areas'
 
@@ -17,6 +21,7 @@ import { leaseSearchService } from '@/services/api/core/leaseSearchService'
 import { tenantService } from '@/services/api/core/tenantService'
 
 import { useBulkMessaging } from '@/shared/hooks/useBulkMessaging'
+import { useIsMobile } from '@/shared/hooks/useMobile'
 import { BulkActionBar } from '@/shared/ui/BulkActionBar'
 import { Button } from '@/shared/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/Card'
@@ -55,6 +60,7 @@ const LeasesPage = () => {
   const cardRef = useRef<HTMLDivElement>(null)
   const [isExporting, setIsExporting] = useState(false)
   const filters = useLeaseFilters()
+  const isMobile = useIsMobile()
   const searchProperties = usePropertySearch()
   const { data: costCenters } = useCostCenters()
 
@@ -375,11 +381,31 @@ const LeasesPage = () => {
                   </div>
                 </div>
               )}
+              {isMobile && (
+                <LeaseMobileSelectAll
+                  checked={
+                    allResultsSelected
+                      ? true
+                      : selectedLeaseIds.length > 0
+                        ? 'indeterminate'
+                        : false
+                  }
+                  onToggle={toggleSelectAll}
+                  totalCount={filters.meta?.totalRecords ?? 0}
+                  pageCount={filters.leases.length}
+                />
+              )}
               <ResponsiveTable
                 data={filters.leases}
                 columns={[selectColumn, ...leaseColumns]}
                 keyExtractor={(lease) => lease.leaseId}
-                mobileCardRenderer={LeaseMobileCard}
+                mobileCardRenderer={(lease: LeaseSearchResult) => (
+                  <LeaseMobileCard
+                    lease={lease}
+                    checked={isSelected(lease.leaseId)}
+                    onToggle={() => toggleSelection(lease.leaseId)}
+                  />
+                )}
                 sortBy={filters.sortBy}
                 sortOrder={filters.sortOrder}
                 onSort={filters.handleSort}
