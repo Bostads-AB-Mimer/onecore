@@ -12,8 +12,9 @@ type Options = {
   onError?: (error: Error, variables: Variables) => void
 }
 
-// Intentionally does NOT invalidate ['costCenterTree'] on each success — the
-// caller batches mutations and invalidates once after all settle.
+// Intentionally does NOT invalidate ['costCenterTree'] or ['kvvAreaResolve'] on
+// each success — the caller batches mutations and invalidates once after all
+// settle.
 export const useUpdatePropertyKvvArea = (options: Options = {}) => {
   return useMutation({
     mutationFn: ({ propertyCode, kvvAreaId }: Variables) =>

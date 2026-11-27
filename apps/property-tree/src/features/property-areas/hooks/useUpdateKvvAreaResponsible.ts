@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { KVV_AREA_RESOLVE_QUERY_KEY } from '@/entities/kvv-area'
+
 import { kvvAreaService } from '@/services/api/core'
 import type { components } from '@/services/api/core/generated/api-types'
 
@@ -92,6 +94,7 @@ export function useUpdateKvvAreaResponsible() {
     },
 
     onSettled: (_data, _err, _vars, context) => {
+      queryClient.invalidateQueries({ queryKey: [KVV_AREA_RESOLVE_QUERY_KEY] })
       if (context?.costCenterId) {
         queryClient.invalidateQueries({
           queryKey: ['costCenterTree', context.costCenterId],

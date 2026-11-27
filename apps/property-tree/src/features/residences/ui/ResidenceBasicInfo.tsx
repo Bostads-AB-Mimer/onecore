@@ -1,6 +1,6 @@
 import { Bug, MapPin, TriangleAlert } from 'lucide-react'
 
-import { KvvResponsibleField } from '@/features/property-areas'
+import { KvvResponsibleField } from '@/entities/kvv-area'
 
 import { components } from '@/services/api/core/generated/api-types'
 

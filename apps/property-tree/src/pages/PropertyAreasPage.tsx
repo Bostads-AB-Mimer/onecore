@@ -33,6 +33,8 @@ import {
   mapProperties,
 } from '@/features/property-areas/utils/treeMappers'
 
+import { KVV_AREA_RESOLVE_QUERY_KEY } from '@/entities/kvv-area'
+
 import type { components } from '@/services/api/core/generated/api-types'
 
 import { useIsMobile } from '@/shared/hooks/useMobile'
@@ -313,7 +315,10 @@ export function PropertyAreasPage() {
         })
       )
     )
-    await queryClient.invalidateQueries({ queryKey: ['costCenterTree'] })
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['costCenterTree'] }),
+      queryClient.invalidateQueries({ queryKey: [KVV_AREA_RESOLVE_QUERY_KEY] }),
+    ])
 
     const failed = results.filter((r) => r.status === 'rejected').length
     const succeeded = results.length - failed

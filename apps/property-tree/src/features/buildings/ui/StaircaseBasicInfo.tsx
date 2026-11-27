@@ -1,4 +1,4 @@
-import { KvvResponsibleField } from '@/features/property-areas'
+import { KvvResponsibleField } from '@/entities/kvv-area'
 
 import { Building, Staircase } from '@/services/types'
 
