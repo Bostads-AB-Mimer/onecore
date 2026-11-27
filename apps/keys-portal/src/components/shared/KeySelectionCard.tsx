@@ -2,15 +2,17 @@ import { useState } from 'react'
 import { KeyAutocomplete } from '@/components/maintenance/KeyAutocomplete'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import type { Key } from '@/services/types'
+import type { KeyDetails } from '@/services/types'
 import type { LucideIcon } from 'lucide-react'
 
 interface KeySelectionCardProps {
   title: string
   buttonText: string
   buttonIcon: LucideIcon
-  onValidateKey?: (key: Key) => { valid: boolean } | Promise<{ valid: boolean }>
-  onAccept: (selectedKeys: Key[]) => Promise<void>
+  onValidateKey?: (
+    key: KeyDetails
+  ) => { valid: boolean } | Promise<{ valid: boolean }>
+  onAccept: (selectedKeys: KeyDetails[]) => Promise<void>
   disabled?: boolean
   existingKeyIds?: Set<string>
 }
@@ -28,10 +30,10 @@ export function KeySelectionCard({
   disabled = false,
   existingKeyIds,
 }: KeySelectionCardProps) {
-  const [selectedKeys, setSelectedKeys] = useState<Key[]>([])
+  const [selectedKeys, setSelectedKeys] = useState<KeyDetails[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const handleAddKey = async (key: Key) => {
+  const handleAddKey = async (key: KeyDetails) => {
     // Run validation if provided (supports both sync and async validators)
     if (onValidateKey) {
       const validation = await onValidateKey(key)

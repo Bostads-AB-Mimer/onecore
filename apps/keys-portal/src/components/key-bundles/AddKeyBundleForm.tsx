@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { KeyBundle, Key } from '@/services/types'
+import { KeyBundle, KeyDetails } from '@/services/types'
 import { KeyAutocomplete } from '@/components/maintenance/KeyAutocomplete'
 
 type KeyBundleFormData = {
@@ -33,7 +33,7 @@ export function AddKeyBundleForm({
   editingKeyIds = [],
 }: AddKeyBundleFormProps) {
   const [formData, setFormData] = useState<KeyBundleFormData>(emptyFormData)
-  const [selectedKeys, setSelectedKeys] = useState<Key[]>([])
+  const [selectedKeys, setSelectedKeys] = useState<KeyDetails[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   const existingKeyIds = useMemo(() => new Set(formData.keys), [formData.keys])
@@ -69,7 +69,7 @@ export function AddKeyBundleForm({
     }
   }
 
-  const handleAddKey = (key: Key) => {
+  const handleAddKey = (key: KeyDetails) => {
     setSelectedKeys((prev) => [...prev, key])
   }
 
